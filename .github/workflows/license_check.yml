@@ -14,7 +14,7 @@
 
 name: License Check
 
-on: [push, pull_request]
+on: [pull_request]
 
 permissions:
   contents: read
