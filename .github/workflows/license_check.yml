@@ -39,8 +39,6 @@ jobs:
           addlicense -check -l apache -c 'The Sigstore Authors' -ignore "third_party/**" -v *
 
   dependency-license-review:
-    runs-on: ubuntu-latest
-    steps:
-      - name: 'Dependency Review'
-        uses: sigstore/community/.github/workflows/reusable-dependency-review.yml@9b1b5aca605f92ec5b1bf3681b1e61b3dbc420cc
+    name: License and Vulnerability Scan
+    uses: sigstore/community/.github/workflows/reusable-dependency-review.yml@9b1b5aca605f92ec5b1bf3681b1e61b3dbc420cc
 
