@@ -16,7 +16,7 @@ limitations under the License.
 
 // Heavily borrowed from https://gist.githubusercontent.com/AlCutter/c6c69076dc55652e2d278900ccc1a5e7/raw/aac2bafc17a8efa162bd99b4453070b724779307/ecdsa_note.go - thanks, Al
 
-package tessera
+package note
 
 import (
 	"bytes"
