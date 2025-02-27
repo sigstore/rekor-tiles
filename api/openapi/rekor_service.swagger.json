@@ -21,13 +21,12 @@
   "paths": {
     "/api/v2/log/entries": {
       "post": {
-        "summary": "Create an entry in the log",
         "operationId": "Rekor_CreateEntry",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v2TransparencyLogEntry"
+              "$ref": "#/definitions/v2LogEntry"
             }
           },
           "default": {
@@ -52,80 +51,8 @@
         ]
       }
     },
-    "/api/v2/tile/entries/{N}": {
-      "get": {
-        "summary": "Get an entry bundle from the log (cacheable)",
-        "operationId": "RekorLog_GetEntryBundle",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/apiHttpBody"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "N",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "RekorLog"
-        ]
-      }
-    },
-    "/api/v2/tile/entries/{N}/{W}": {
-      "get": {
-        "summary": "Get a partial entry bundle from the log (not cacheable)\nTODO: I might have misunderstood the cacheability of this object",
-        "operationId": "RekorLog_GetPartialEntryBundle",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/apiHttpBody"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "N",
-            "description": "must match \u003cint32\u003e.p",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "W",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "RekorLog"
-        ]
-      }
-    },
     "/api/v2/tile/{L}/{N}": {
       "get": {
-        "summary": "Get a tile from the log (cacheable)",
         "operationId": "RekorLog_GetTile",
         "responses": {
           "200": {
@@ -164,7 +91,6 @@
     },
     "/api/v2/tile/{L}/{N}/{W}": {
       "get": {
-        "summary": "Get a partial tile from the log (not cacheable)",
         "operationId": "RekorLog_GetPartialTile",
         "responses": {
           "200": {
@@ -190,7 +116,7 @@
           },
           {
             "name": "N",
-            "description": "must match \u003cint32\u003e.p",
+            "description": "must match \u003cN\u003e.p",
             "in": "path",
             "required": true,
             "type": "string"
@@ -270,7 +196,6 @@
           "type": "string"
         }
       },
-      "title": "The checkpoint MUST contain an origin string as a unique log identifier,\nthe tree size, and the root hash. It MAY also be followed by optional data,\nand clients MUST NOT assume optional data. The checkpoint MUST also contain\na signature over the root hash (tree head). The checkpoint MAY contain additional\nsignatures, but the first SHOULD be the signature from the log. Checkpoint contents\nare concatenated with newlines into a single string.\nThe checkpoint format is described in\nhttps://github.com/transparency-dev/formats/blob/main/log/README.md\nand https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md.\nAn example implementation can be found in https://github.com/sigstore/rekor/blob/main/pkg/util/signed_note.go",
       "required": [
         "envelope"
       ]
@@ -285,7 +210,6 @@
           "$ref": "#/definitions/v2DSSERequest"
         }
       },
-      "title": "Create a new HashedRekord or DSSE",
       "required": [
         "hashedRekordRequest",
         "dsseRequest"
@@ -295,42 +219,36 @@
       "type": "object",
       "properties": {
         "envelope": {
-          "type": "string",
-          "title": "The full dsse envelope specified as a stringified JSON object"
+          "type": "string"
         },
         "verifiers": {
           "type": "array",
           "items": {
-            "type": "object",
-            "$ref": "#/definitions/v2Verifier"
-          },
-          "title": "collection of verification material used to verify\nsignatures over envelope's payload"
+            "type": "string",
+            "format": "byte"
+          }
         }
-      },
-      "title": "A request to add a dsse entry to the log",
-      "required": [
-        "envelope",
-        "verifiers"
-      ]
+      }
+    },
+    "v2Data": {
+      "type": "object",
+      "properties": {
+        "hash": {
+          "$ref": "#/definitions/v2Hash"
+        }
+      }
     },
     "v2Hash": {
       "type": "object",
       "properties": {
         "algorithm": {
-          "$ref": "#/definitions/v2HashAlgorithm",
-          "title": "The hash algorithm used"
+          "$ref": "#/definitions/v2HashAlgorithm"
         },
         "value": {
           "type": "string",
-          "format": "byte",
-          "title": "The resulting hash over the content"
+          "format": "byte"
         }
-      },
-      "title": "A hashed content",
-      "required": [
-        "algorithm",
-        "value"
-      ]
+      }
     },
     "v2HashAlgorithm": {
       "type": "string",
@@ -340,26 +258,18 @@
         "SHA2_384",
         "SHA2_512"
       ],
-      "default": "HASH_ALGORITHM_UNSPECIFIED",
-      "description": "Only a subset of the secure hash standard algorithms are supported.\nSee \u003chttps://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf\u003e for more\ndetails.\nUNSPECIFIED SHOULD not be used, primary reason for inclusion is to force\nany proto JSON serialization to emit the used hash algorithm, as default\noption is to *omit* the default value of an enum (which is the first\nvalue), represented by '0'."
+      "default": "HASH_ALGORITHM_UNSPECIFIED"
     },
     "v2HashedRekordRequest": {
       "type": "object",
       "properties": {
         "signature": {
-          "$ref": "#/definitions/v2Signature",
-          "title": "A single signature over the hashed data"
+          "$ref": "#/definitions/v2Signature"
         },
         "data": {
-          "$ref": "#/definitions/v2Hash",
-          "title": "The hashed data"
+          "$ref": "#/definitions/v2Data"
         }
-      },
-      "title": "A request to add a hashedrekord to the log",
-      "required": [
-        "signature",
-        "data"
-      ]
+      }
     },
     "v2InclusionPromise": {
       "type": "object",
@@ -369,7 +279,6 @@
           "format": "byte"
         }
       },
-      "title": "Compat for rekor v1, DO NOT USE",
       "required": [
         "signedEntryTimestamp"
       ]
@@ -379,33 +288,27 @@
       "properties": {
         "logIndex": {
           "type": "string",
-          "format": "int64",
-          "description": "The index of the entry in the tree it was written to."
+          "format": "int64"
         },
         "rootHash": {
           "type": "string",
-          "format": "byte",
-          "description": "The hash digest stored at the root of the merkle tree at the time\nthe proof was generated."
+          "format": "byte"
         },
         "treeSize": {
           "type": "string",
-          "format": "int64",
-          "description": "The size of the merkle tree at the time the proof was generated."
+          "format": "int64"
         },
         "hashes": {
           "type": "array",
           "items": {
             "type": "string",
             "format": "byte"
-          },
-          "description": "A list of hashes required to compute the inclusion proof, sorted\nin order from leaf to root.\nNote that leaf and root hashes are not included.\nThe root hash is available separately in this message, and the\nleaf hash should be calculated by the client."
+          }
         },
         "checkpoint": {
-          "$ref": "#/definitions/v2Checkpoint",
-          "description": "Signature of the tree head, as of the time of this proof was\ngenerated. See above info on 'Checkpoint' for more details."
+          "$ref": "#/definitions/v2Checkpoint"
         }
       },
-      "description": "InclusionProof is the proof returned from the transparency log. Can\nbe used for offline or online verification against the log.",
       "required": [
         "logIndex",
         "rootHash",
@@ -418,18 +321,52 @@
       "type": "object",
       "properties": {
         "kind": {
-          "type": "string",
-          "title": "Kind is the type of entry being stored in the log.\nSee here for a list: https://github.com/sigstore/rekor/tree/main/pkg/types"
+          "type": "string"
         },
         "version": {
-          "type": "string",
-          "description": "The specific api version of the type."
+          "type": "string"
         }
       },
-      "description": "KindVersion contains the entry's kind and api version.",
       "required": [
         "kind",
         "version"
+      ]
+    },
+    "v2LogEntry": {
+      "type": "object",
+      "properties": {
+        "logIndex": {
+          "type": "string",
+          "format": "int64"
+        },
+        "logId": {
+          "$ref": "#/definitions/v2LogId"
+        },
+        "kindVersion": {
+          "$ref": "#/definitions/v2KindVersion"
+        },
+        "integratedTime": {
+          "type": "string",
+          "format": "int64",
+          "title": "v1 compat"
+        },
+        "inclusionPromise": {
+          "$ref": "#/definitions/v2InclusionPromise",
+          "title": "v1 compat"
+        },
+        "inclusionProof": {
+          "$ref": "#/definitions/v2InclusionProof"
+        },
+        "canonicalizedBody": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "required": [
+        "logIndex",
+        "logId",
+        "kindVersion",
+        "inclusionProof"
       ]
     },
     "v2LogId": {
@@ -437,11 +374,9 @@
       "properties": {
         "keyId": {
           "type": "string",
-          "format": "byte",
-          "description": "The unique identity of the log, represented by its public key."
+          "format": "byte"
         }
       },
-      "description": "LogId captures the identity of a transparency log.",
       "required": [
         "keyId"
       ]
@@ -451,104 +386,21 @@
       "properties": {
         "content": {
           "type": "string",
-          "format": "byte",
-          "title": "raw key or x509 code signing certificate"
+          "format": "byte"
         }
-      },
-      "title": "A public key. This can be a raw public key or an X509 code signing certificate\nthat contains the raw public key information",
-      "required": [
-        "content"
-      ]
+      }
     },
     "v2Signature": {
       "type": "object",
       "properties": {
         "content": {
           "type": "string",
-          "format": "byte",
-          "title": "The signature over the content"
-        },
-        "verifier": {
-          "$ref": "#/definitions/v2Verifier",
-          "title": "The key and scheme used to verify the signature"
-        }
-      },
-      "title": "A signature over some content",
-      "required": [
-        "content",
-        "verifier"
-      ]
-    },
-    "v2SignatureScheme": {
-      "type": "string",
-      "enum": [
-        "SCHEME_UNSPECIFIED"
-      ],
-      "default": "SCHEME_UNSPECIFIED",
-      "description": "Only a subset of signature schemes are supported. Schemes must define both\nhashed and unhashed versions of supported signature types.\n\n - SCHEME_UNSPECIFIED: TODO: I think we need schemes for crypto agility"
-    },
-    "v2TransparencyLogEntry": {
-      "type": "object",
-      "properties": {
-        "logIndex": {
-          "type": "string",
-          "format": "int64",
-          "description": "The global index of the entry, used when querying the log by index."
-        },
-        "logId": {
-          "$ref": "#/definitions/v2LogId",
-          "description": "The unique identifier of the log."
-        },
-        "kindVersion": {
-          "$ref": "#/definitions/v2KindVersion",
-          "description": "The kind (type) and version of the object associated with this\nentry. These values are required to construct the entry during\nverification."
-        },
-        "integratedTime": {
-          "type": "string",
-          "format": "int64",
-          "description": "v1 compat",
-          "title": "Rekor v2 does not provide any value for integrated_time, clients\nmust include another source of time"
-        },
-        "inclusionPromise": {
-          "$ref": "#/definitions/v2InclusionPromise",
-          "description": "v1 compat",
-          "title": "Rekor v2 does not provide any value for inclusion promise, clients\nmust include another source for inclusion verification"
-        },
-        "inclusionProof": {
-          "$ref": "#/definitions/v2InclusionProof",
-          "description": "The inclusion proof can be used for offline or online verification\nthat the entry was appended to the log, and that the log has not been\naltered."
-        },
-        "canonicalizedBody": {
-          "type": "string",
-          "format": "byte",
-          "description": "Optional. The canonicalized transparency log entry, used to\nreconstruct the Signed Entry Timestamp (SET) during verification.\nThe contents of this field are the same as the `body` field in\na Rekor response, meaning that it does **not** include the \"full\"\ncanonicalized form (of log index, ID, etc.) which are\nexposed as separate fields. The verifier is responsible for\ncombining the `canonicalized_body`, `log_index`, `log_id`,\nand `integrated_time` into the payload that the SET's signature\nis generated over.\nThis field is intended to be used in cases where the SET cannot be\nproduced determinisitically (e.g. inconsistent JSON field ordering,\ndiffering whitespace, etc).\n\nIf set, clients MUST verify that the signature referenced in the\n`canonicalized_body` matches the signature provided in the\n`Bundle.content`.\nIf not set, clients are responsible for constructing an equivalent\npayload from other sources to verify the signature."
-        }
-      },
-      "description": "TransparencyLogEntry captures all the details required from Rekor to\nreconstruct an entry, given that the payload is provided via other means.\nThis type can easily be created from the existing response from Rekor.",
-      "required": [
-        "logIndex",
-        "logId",
-        "kindVersion",
-        "inclusionProof"
-      ]
-    },
-    "v2Verifier": {
-      "type": "object",
-      "properties": {
-        "scheme": {
-          "$ref": "#/definitions/v2SignatureScheme",
-          "title": "The signing scheme used to create a signature"
+          "format": "byte"
         },
         "publicKey": {
-          "$ref": "#/definitions/v2PublicKey",
-          "title": "The public key used to verify a signature"
+          "$ref": "#/definitions/v2PublicKey"
         }
-      },
-      "title": "A Key and Scheme used to verify a signature",
-      "required": [
-        "scheme",
-        "publicKey"
-      ]
+      }
     }
   }
 }

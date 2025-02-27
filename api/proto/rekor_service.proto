@@ -16,17 +16,83 @@ syntax = "proto3";
 package dev.sigstore.rekor.v2;
 
 import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/httpbody.proto";
+import "logentry.proto";
+import "hashedrekord.proto";
+import "dsse.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
+// A service for sigstore clients to connect to to create log entries
 service Rekor {
-    rpc Echo (StringMessage) returns (StringMessage) {
+    // Create an entry in the log
+    rpc CreateEntry (CreateEntryRequest) returns (TransparencyLogEntry) {
         option (google.api.http) = {
-            get: "/api/v2/echo"
+            post: "/api/v2/log/entries"
+            body: "*"
         };
     }
 }
 
-message StringMessage {
-  string value = 1;
+// Create a new HashedRekord or DSSE
+message CreateEntryRequest {
+    oneof spec {
+        HashedRekordRequest hashed_rekord_request = 1 [(google.api.field_behavior) = REQUIRED];
+        DSSERequest dsse_request  = 2 [(google.api.field_behavior) = REQUIRED];
+    }
+}
+
+// A service for log monitors and witnesses to audit/inspect the log
+service RekorLog {
+    // Get a tile from the log (cacheable)
+    rpc GetTile (TileRequest) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/api/v2/tile/{L}/{N}"
+        };
+    }
+    // Get a partial tile from the log (not cacheable)
+    rpc GetPartialTile (PartialTileRequest) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/api/v2/tile/{L}/{N}/{W}"
+        };
+    }
+
+    // Get an entry bundle from the log (cacheable)
+    rpc GetEntryBundle (EntryBundleRequest) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/api/v2/tile/entries/{N}"
+        };
+    }
+    // Get a partial entry bundle from the log (not cacheable)
+    // TODO: I might have misunderstood the cacheability of this object
+    rpc GetPartialEntryBundle (PartialEntryBundleRequest) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/api/v2/tile/entries/{N}/{W}"
+        };
+    }
+}
+
+// a request for a full tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
+message TileRequest {
+    int32 L = 1;
+    int32 N = 2;
+}
+
+// a request for a partial tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
+message PartialTileRequest {
+    int32 L = 1;
+    string N = 2; // must match <int32>.p
+    int32 W = 3;
+}
+
+// a request for an entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
+message EntryBundleRequest {
+    int32 N = 1;
+}
+
+// a request for a partial entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
+message PartialEntryBundleRequest {
+    string N = 1; // must match <int32>.p
+    int32 W = 2;
 }
