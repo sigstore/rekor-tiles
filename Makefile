@@ -43,6 +43,9 @@ GOBIN ?= $(shell go env GOPATH)/bin
 lint: ## Run golangci-lint checks
 	$(GOBIN)/golangci-lint run -v ./...
 
+addlicense: ## Add licenses to source files
+	$(GOBIN)/addlicense -l apache -c "The Sigstore Authors" -ignore "third_party/**" -v *
+
 gosec: ## Run gosec security scanner
 	$(GOBIN)/gosec ./...
 
@@ -58,10 +61,14 @@ ko-local: ## Build container images locally using ko
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
 		github.com/sigstore/rekor-tiles/cmd/rekor-server
 
+protos:
+	$(MAKE) -C protoc-builder protos
+
 clean: ## Remove built binaries and artifacts
 	rm -rf dist
 	rm -rf hack/tools/bin
 	rm -rf rekor-server
+	$(MAKE) -C protoc-builder clean
 
 ##################
 # help
