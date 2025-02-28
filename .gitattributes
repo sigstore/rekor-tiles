@@ -1,0 +1,3 @@
+/api/openapi/** linguist-generated
+/docs/** linguist-generated
+/pkg/generated/protobuf/** linguist-generated
