@@ -88,3 +88,14 @@ jobs:
         if: ${{ runner.os == 'Linux' }}
         run: go test -race $(go list ./... | grep -v third_party/)
 
+  e2e-tests:
+    name: Run E2E tests
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Run docker compose
+        run: docker compose -f compose.yml up -d --build

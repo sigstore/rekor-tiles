@@ -36,7 +36,7 @@ FROM golang:1.24.0@sha256:2b1cbf278ce05a2a310a3d695ebb176420117a8cfcfcc4e5e68a1b
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 
 # Set the binary as the entrypoint of the container
-CMD ["rekor-server", "server"]
+CMD ["rekor-server", "serve"]
 
 # debug compile options & debugger
 FROM deploy as debug
