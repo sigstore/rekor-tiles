@@ -19,6 +19,29 @@
     "application/json"
   ],
   "paths": {
+    "/api/v2/checkpoint": {
+      "get": {
+        "summary": "Get a checkpoint from the log",
+        "operationId": "RekorLog_GetCheckpoint",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiHttpBody"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RekorLog"
+        ]
+      }
+    },
     "/api/v2/log/entries": {
       "post": {
         "summary": "Create an entry in the log",
@@ -27,7 +50,7 @@
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v2TransparencyLogEntry"
+              "$ref": "#/definitions/v1TransparencyLogEntry"
             }
           },
           "default": {
@@ -54,7 +77,7 @@
     },
     "/api/v2/tile/entries/{N}": {
       "get": {
-        "summary": "Get an entry bundle from the log (cacheable)",
+        "summary": "Get an entry bundle from the log",
         "operationId": "RekorLog_GetEntryBundle",
         "responses": {
           "200": {
@@ -86,7 +109,7 @@
     },
     "/api/v2/tile/entries/{N}/{W}": {
       "get": {
-        "summary": "Get a partial entry bundle from the log (not cacheable)\nTODO: I might have misunderstood the cacheability of this object",
+        "summary": "Get a partial entry bundle from the log",
         "operationId": "RekorLog_GetPartialEntryBundle",
         "responses": {
           "200": {
@@ -125,7 +148,7 @@
     },
     "/api/v2/tile/{L}/{N}": {
       "get": {
-        "summary": "Get a tile from the log (cacheable)",
+        "summary": "Get a tile from the log",
         "operationId": "RekorLog_GetTile",
         "responses": {
           "200": {
@@ -164,7 +187,7 @@
     },
     "/api/v2/tile/{L}/{N}/{W}": {
       "get": {
-        "summary": "Get a partial tile from the log (not cacheable)",
+        "summary": "Get a partial tile from the log",
         "operationId": "RekorLog_GetPartialTile",
         "responses": {
           "200": {
@@ -244,6 +267,25 @@
       "additionalProperties": {},
       "description": "`Any` contains an arbitrary serialized protocol buffer message along with a\nURL that describes the type of the serialized message.\n\nProtobuf library provides support to pack/unpack Any values in the form\nof utility functions or additional generated methods of the Any type.\n\nExample 1: Pack and unpack a message in C++.\n\n    Foo foo = ...;\n    Any any;\n    any.PackFrom(foo);\n    ...\n    if (any.UnpackTo(\u0026foo)) {\n      ...\n    }\n\nExample 2: Pack and unpack a message in Java.\n\n    Foo foo = ...;\n    Any any = Any.pack(foo);\n    ...\n    if (any.is(Foo.class)) {\n      foo = any.unpack(Foo.class);\n    }\n    // or ...\n    if (any.isSameTypeAs(Foo.getDefaultInstance())) {\n      foo = any.unpack(Foo.getDefaultInstance());\n    }\n\n Example 3: Pack and unpack a message in Python.\n\n    foo = Foo(...)\n    any = Any()\n    any.Pack(foo)\n    ...\n    if any.Is(Foo.DESCRIPTOR):\n      any.Unpack(foo)\n      ...\n\n Example 4: Pack and unpack a message in Go\n\n     foo := \u0026pb.Foo{...}\n     any, err := anypb.New(foo)\n     if err != nil {\n       ...\n     }\n     ...\n     foo := \u0026pb.Foo{}\n     if err := any.UnmarshalTo(foo); err != nil {\n       ...\n     }\n\nThe pack methods provided by protobuf library will by default use\n'type.googleapis.com/full.type.name' as the type URL and the unpack\nmethods only use the fully qualified type name after the last '/'\nin the type URL, for example \"foo.bar.com/x/y.z\" will yield type\nname \"y.z\".\n\nJSON\n====\nThe JSON representation of an `Any` value uses the regular\nrepresentation of the deserialized, embedded message, with an\nadditional field `@type` which contains the type URL. Example:\n\n    package google.profile;\n    message Person {\n      string first_name = 1;\n      string last_name = 2;\n    }\n\n    {\n      \"@type\": \"type.googleapis.com/google.profile.Person\",\n      \"firstName\": \u003cstring\u003e,\n      \"lastName\": \u003cstring\u003e\n    }\n\nIf the embedded message type is well-known and has a custom JSON\nrepresentation, that representation will be embedded adding a field\n`value` which holds the custom JSON in addition to the `@type`\nfield. Example (for message [google.protobuf.Duration][]):\n\n    {\n      \"@type\": \"type.googleapis.com/google.protobuf.Duration\",\n      \"value\": \"1.212s\"\n    }"
     },
+    "rekorv2PublicKey": {
+      "type": "object",
+      "properties": {
+        "rawBytes": {
+          "type": "string",
+          "format": "byte",
+          "description": "DER-encoded public key, encoding method is specified by the\nkey_details attribute."
+        },
+        "keyDetails": {
+          "$ref": "#/definitions/v1PublicKeyDetails",
+          "description": "Key encoding and signature algorithm to use for this key."
+        }
+      },
+      "title": "Fork of protobuf-specs/sigstore_common PublicKey without validity window",
+      "required": [
+        "rawBytes",
+        "keyDetails"
+      ]
+    },
     "rpcStatus": {
       "type": "object",
       "properties": {
@@ -263,7 +305,7 @@
         }
       }
     },
-    "v2Checkpoint": {
+    "v1Checkpoint": {
       "type": "object",
       "properties": {
         "envelope": {
@@ -275,93 +317,34 @@
         "envelope"
       ]
     },
-    "v2CreateEntryRequest": {
-      "type": "object",
-      "properties": {
-        "hashedRekordRequest": {
-          "$ref": "#/definitions/v2HashedRekordRequest"
-        },
-        "dsseRequest": {
-          "$ref": "#/definitions/v2DSSERequest"
-        }
-      },
-      "title": "Create a new HashedRekord or DSSE",
-      "required": [
-        "hashedRekordRequest",
-        "dsseRequest"
-      ]
-    },
-    "v2DSSERequest": {
-      "type": "object",
-      "properties": {
-        "envelope": {
-          "type": "string",
-          "title": "The full dsse envelope specified as a stringified JSON object"
-        },
-        "verifiers": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v2Verifier"
-          },
-          "title": "collection of verification material used to verify\nsignatures over envelope's payload"
-        }
-      },
-      "title": "A request to add a dsse entry to the log",
-      "required": [
-        "envelope",
-        "verifiers"
-      ]
-    },
-    "v2Hash": {
-      "type": "object",
-      "properties": {
-        "algorithm": {
-          "$ref": "#/definitions/v2HashAlgorithm",
-          "title": "The hash algorithm used"
-        },
-        "value": {
-          "type": "string",
-          "format": "byte",
-          "title": "The resulting hash over the content"
-        }
-      },
-      "title": "A hashed content",
-      "required": [
-        "algorithm",
-        "value"
-      ]
-    },
-    "v2HashAlgorithm": {
+    "v1HashAlgorithm": {
       "type": "string",
       "enum": [
         "HASH_ALGORITHM_UNSPECIFIED",
         "SHA2_256",
         "SHA2_384",
-        "SHA2_512"
+        "SHA2_512",
+        "SHA3_256",
+        "SHA3_384"
       ],
       "default": "HASH_ALGORITHM_UNSPECIFIED",
-      "description": "Only a subset of the secure hash standard algorithms are supported.\nSee \u003chttps://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf\u003e for more\ndetails.\nUNSPECIFIED SHOULD not be used, primary reason for inclusion is to force\nany proto JSON serialization to emit the used hash algorithm, as default\noption is to *omit* the default value of an enum (which is the first\nvalue), represented by '0'."
+      "description": "Only a subset of the secure hash standard algorithms are supported.\nSee \u003chttps://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf\u003e for more\ndetails.\nUNSPECIFIED SHOULD not be used, primary reason for inclusion is to force\nany proto JSON serialization to emit the used hash algorithm, as default\noption is to *omit* the default value of an enum (which is the first\nvalue, represented by '0'."
     },
-    "v2HashedRekordRequest": {
+    "v1HashOutput": {
       "type": "object",
       "properties": {
-        "signature": {
-          "$ref": "#/definitions/v2Signature",
-          "title": "A single signature over the hashed data"
+        "algorithm": {
+          "$ref": "#/definitions/v1HashAlgorithm"
         },
-        "data": {
-          "$ref": "#/definitions/v2Hash",
-          "title": "The hashed data"
+        "digest": {
+          "type": "string",
+          "format": "byte",
+          "description": "This is the raw octets of the message digest as computed by\nthe hash algorithm."
         }
       },
-      "title": "A request to add a hashedrekord to the log",
-      "required": [
-        "signature",
-        "data"
-      ]
+      "description": "HashOutput captures a digest of a 'message' (generic octet sequence)\nand the corresponding hash algorithm used."
     },
-    "v2InclusionPromise": {
+    "v1InclusionPromise": {
       "type": "object",
       "properties": {
         "signedEntryTimestamp": {
@@ -369,12 +352,12 @@
           "format": "byte"
         }
       },
-      "title": "Compat for rekor v1, DO NOT USE",
+      "description": "The inclusion promise is calculated by Rekor. It's calculated as a\nsignature over a canonical JSON serialization of the persisted entry, the\nlog ID, log index and the integration timestamp.\nSee https://github.com/sigstore/rekor/blob/a6e58f72b6b18cc06cefe61808efd562b9726330/pkg/api/entries.go#L54\nThe format of the signature depends on the transparency log's public key.\nIf the signature algorithm requires a hash function and/or a signature\nscheme (e.g. RSA) those has to be retrieved out-of-band from the log's\noperators, together with the public key.\nThis is used to verify the integration timestamp's value and that the log\nhas promised to include the entry.",
       "required": [
         "signedEntryTimestamp"
       ]
     },
-    "v2InclusionProof": {
+    "v1InclusionProof": {
       "type": "object",
       "properties": {
         "logIndex": {
@@ -401,7 +384,7 @@
           "description": "A list of hashes required to compute the inclusion proof, sorted\nin order from leaf to root.\nNote that leaf and root hashes are not included.\nThe root hash is available separately in this message, and the\nleaf hash should be calculated by the client."
         },
         "checkpoint": {
-          "$ref": "#/definitions/v2Checkpoint",
+          "$ref": "#/definitions/v1Checkpoint",
           "description": "Signature of the tree head, as of the time of this proof was\ngenerated. See above info on 'Checkpoint' for more details."
         }
       },
@@ -414,7 +397,7 @@
         "checkpoint"
       ]
     },
-    "v2KindVersion": {
+    "v1KindVersion": {
       "type": "object",
       "properties": {
         "kind": {
@@ -432,7 +415,7 @@
         "version"
       ]
     },
-    "v2LogId": {
+    "v1LogId": {
       "type": "object",
       "properties": {
         "keyId": {
@@ -446,48 +429,33 @@
         "keyId"
       ]
     },
-    "v2PublicKey": {
-      "type": "object",
-      "properties": {
-        "content": {
-          "type": "string",
-          "format": "byte",
-          "title": "raw key or x509 code signing certificate"
-        }
-      },
-      "title": "A public key. This can be a raw public key or an X509 code signing certificate\nthat contains the raw public key information",
-      "required": [
-        "content"
-      ]
-    },
-    "v2Signature": {
-      "type": "object",
-      "properties": {
-        "content": {
-          "type": "string",
-          "format": "byte",
-          "title": "The signature over the content"
-        },
-        "verifier": {
-          "$ref": "#/definitions/v2Verifier",
-          "title": "The key and scheme used to verify the signature"
-        }
-      },
-      "title": "A signature over some content",
-      "required": [
-        "content",
-        "verifier"
-      ]
-    },
-    "v2SignatureScheme": {
+    "v1PublicKeyDetails": {
       "type": "string",
       "enum": [
-        "SCHEME_UNSPECIFIED"
+        "PUBLIC_KEY_DETAILS_UNSPECIFIED",
+        "PKCS1_RSA_PKCS1V5",
+        "PKCS1_RSA_PSS",
+        "PKIX_RSA_PKCS1V5",
+        "PKIX_RSA_PSS",
+        "PKIX_RSA_PKCS1V15_2048_SHA256",
+        "PKIX_RSA_PKCS1V15_3072_SHA256",
+        "PKIX_RSA_PKCS1V15_4096_SHA256",
+        "PKIX_RSA_PSS_2048_SHA256",
+        "PKIX_RSA_PSS_3072_SHA256",
+        "PKIX_RSA_PSS_4096_SHA256",
+        "PKIX_ECDSA_P256_HMAC_SHA_256",
+        "PKIX_ECDSA_P256_SHA_256",
+        "PKIX_ECDSA_P384_SHA_384",
+        "PKIX_ECDSA_P521_SHA_512",
+        "PKIX_ED25519",
+        "PKIX_ED25519_PH",
+        "LMS_SHA256",
+        "LMOTS_SHA256"
       ],
-      "default": "SCHEME_UNSPECIFIED",
-      "description": "Only a subset of signature schemes are supported. Schemes must define both\nhashed and unhashed versions of supported signature types.\n\n - SCHEME_UNSPECIFIED: TODO: I think we need schemes for crypto agility"
+      "default": "PUBLIC_KEY_DETAILS_UNSPECIFIED",
+      "description": "Details of a specific public key, capturing the the key encoding method,\nand signature algorithm.\n\nPublicKeyDetails captures the public key/hash algorithm combinations\nrecommended in the Sigstore ecosystem.\n\nThis is modelled as a linear set as we want to provide a small number of\nopinionated options instead of allowing every possible permutation.\n\nAny changes to this enum MUST be reflected in the algorithm registry.\nSee: docs/algorithm-registry.md\n\nTo avoid the possibility of contradicting formats such as PKCS1 with\nED25519 the valid permutations are listed as a linear set instead of a\ncartesian set (i.e one combined variable instead of two, one for encoding\nand one for the signature algorithm).\n\n - PKCS1_RSA_PKCS1V5: RSA\n\nSee RFC8017\n - PKCS1_RSA_PSS: See RFC8017\n - PKIX_RSA_PKCS1V15_2048_SHA256: RSA public key in PKIX format, PKCS#1v1.5 signature\n - PKIX_RSA_PSS_2048_SHA256: RSA public key in PKIX format, RSASSA-PSS signature\n\nSee RFC4055\n - PKIX_ECDSA_P256_HMAC_SHA_256: ECDSA\n\nSee RFC6979\n - PKIX_ECDSA_P256_SHA_256: See NIST FIPS 186-4\n - PKIX_ED25519: Ed 25519\n\nSee RFC8032\n - LMS_SHA256: LMS and LM-OTS\n\nThese keys and signatures may be used by private Sigstore\ndeployments, but are not currently supported by the public\ngood instance.\n\nUSER WARNING: LMS and LM-OTS are both stateful signature schemes.\nUsing them correctly requires discretion and careful consideration\nto ensure that individual secret keys are not used more than once.\nIn addition, LM-OTS is a single-use scheme, meaning that it\nMUST NOT be used for more than one signature per LM-OTS key.\nIf you cannot maintain these invariants, you MUST NOT use these\nschemes."
     },
-    "v2TransparencyLogEntry": {
+    "v1TransparencyLogEntry": {
       "type": "object",
       "properties": {
         "logIndex": {
@@ -496,26 +464,24 @@
           "description": "The global index of the entry, used when querying the log by index."
         },
         "logId": {
-          "$ref": "#/definitions/v2LogId",
+          "$ref": "#/definitions/v1LogId",
           "description": "The unique identifier of the log."
         },
         "kindVersion": {
-          "$ref": "#/definitions/v2KindVersion",
+          "$ref": "#/definitions/v1KindVersion",
           "description": "The kind (type) and version of the object associated with this\nentry. These values are required to construct the entry during\nverification."
         },
         "integratedTime": {
           "type": "string",
           "format": "int64",
-          "description": "v1 compat",
-          "title": "Rekor v2 does not provide any value for integrated_time, clients\nmust include another source of time"
+          "description": "The UNIX timestamp from the log when the entry was persisted.\nThe integration time MUST NOT be trusted if inclusion_promise\nis omitted."
         },
         "inclusionPromise": {
-          "$ref": "#/definitions/v2InclusionPromise",
-          "description": "v1 compat",
-          "title": "Rekor v2 does not provide any value for inclusion promise, clients\nmust include another source for inclusion verification"
+          "$ref": "#/definitions/v1InclusionPromise",
+          "description": "The inclusion promise/signed entry timestamp from the log.\nRequired for v0.1 bundles, and MUST be verified.\nOptional for \u003e= v0.2 bundles if another suitable source of\ntime is present (such as another source of signed time,\nor the current system time for long-lived certificates).\nMUST be verified if no other suitable source of time is present,\nand SHOULD be verified otherwise."
         },
         "inclusionProof": {
-          "$ref": "#/definitions/v2InclusionProof",
+          "$ref": "#/definitions/v1InclusionProof",
           "description": "The inclusion proof can be used for offline or online verification\nthat the entry was appended to the log, and that the log has not been\naltered."
         },
         "canonicalizedBody": {
@@ -524,30 +490,103 @@
           "description": "Optional. The canonicalized transparency log entry, used to\nreconstruct the Signed Entry Timestamp (SET) during verification.\nThe contents of this field are the same as the `body` field in\na Rekor response, meaning that it does **not** include the \"full\"\ncanonicalized form (of log index, ID, etc.) which are\nexposed as separate fields. The verifier is responsible for\ncombining the `canonicalized_body`, `log_index`, `log_id`,\nand `integrated_time` into the payload that the SET's signature\nis generated over.\nThis field is intended to be used in cases where the SET cannot be\nproduced determinisitically (e.g. inconsistent JSON field ordering,\ndiffering whitespace, etc).\n\nIf set, clients MUST verify that the signature referenced in the\n`canonicalized_body` matches the signature provided in the\n`Bundle.content`.\nIf not set, clients are responsible for constructing an equivalent\npayload from other sources to verify the signature."
         }
       },
-      "description": "TransparencyLogEntry captures all the details required from Rekor to\nreconstruct an entry, given that the payload is provided via other means.\nThis type can easily be created from the existing response from Rekor.",
+      "description": "TransparencyLogEntry captures all the details required from Rekor to\nreconstruct an entry, given that the payload is provided via other means.\nThis type can easily be created from the existing response from Rekor.\nFuture iterations could rely on Rekor returning the minimal set of\nattributes (excluding the payload) that are required for verifying the\ninclusion promise. The inclusion promise (called SignedEntryTimestamp in\nthe response from Rekor) is similar to a Signed Certificate Timestamp\nas described here https://www.rfc-editor.org/rfc/rfc6962.html#section-3.2.",
       "required": [
         "logIndex",
         "logId",
         "kindVersion",
+        "integratedTime",
         "inclusionProof"
+      ]
+    },
+    "v1X509Certificate": {
+      "type": "object",
+      "properties": {
+        "rawBytes": {
+          "type": "string",
+          "format": "byte",
+          "description": "DER-encoded X.509 certificate."
+        }
+      },
+      "required": [
+        "rawBytes"
+      ]
+    },
+    "v2CreateEntryRequest": {
+      "type": "object",
+      "properties": {
+        "hashedRekordRequest": {
+          "$ref": "#/definitions/v2HashedRekordRequest"
+        },
+        "dsseRequest": {
+          "$ref": "#/definitions/v2DSSERequest"
+        }
+      },
+      "title": "Create a new HashedRekord or DSSE",
+      "required": [
+        "hashedRekordRequest",
+        "dsseRequest"
+      ]
+    },
+    "v2DSSERequest": {
+      "type": "object",
+      "properties": {
+        "envelope": {
+          "type": "string",
+          "title": "The full dsse envelope specified as a stringified JSON object"
+        },
+        "verifier": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v2Verifier"
+          },
+          "title": "collection of verification material used to verify"
+        }
+      },
+      "title": "A request to add a dsse entry to the log",
+      "required": [
+        "envelope"
+      ]
+    },
+    "v2HashedRekordRequest": {
+      "type": "object",
+      "properties": {
+        "signature": {
+          "type": "string",
+          "format": "byte",
+          "title": "A single signature over the hashed data"
+        },
+        "data": {
+          "$ref": "#/definitions/v1HashOutput",
+          "title": "The hashed data"
+        },
+        "verifier": {
+          "$ref": "#/definitions/v2Verifier",
+          "title": "A key/cerificate to verify the signature"
+        }
+      },
+      "title": "A request to add a hashedrekord to the log",
+      "required": [
+        "signature",
+        "data",
+        "verifier"
       ]
     },
     "v2Verifier": {
       "type": "object",
       "properties": {
-        "scheme": {
-          "$ref": "#/definitions/v2SignatureScheme",
-          "title": "The signing scheme used to create a signature"
-        },
         "publicKey": {
-          "$ref": "#/definitions/v2PublicKey",
-          "title": "The public key used to verify a signature"
+          "$ref": "#/definitions/rekorv2PublicKey"
+        },
+        "x509Certificate": {
+          "$ref": "#/definitions/v1X509Certificate"
         }
       },
-      "title": "A Key and Scheme used to verify a signature",
+      "title": "Either a raw public key or a x509 cerificiate with embedded publicKey",
       "required": [
-        "scheme",
-        "publicKey"
+        "publicKey",
+        "x509Certificate"
       ]
     }
   }

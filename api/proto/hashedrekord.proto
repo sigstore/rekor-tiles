@@ -15,15 +15,19 @@
 syntax = "proto3";
 package dev.sigstore.rekor.v2;
 
-import "common.proto";
 import "google/api/field_behavior.proto";
+import "sigstore_common.proto";
+
+import "verifier.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
 // A request to add a hashedrekord to the log
 message HashedRekordRequest {
     // A single signature over the hashed data
-    Signature signature = 1 [(google.api.field_behavior) = REQUIRED];
+    bytes signature = 1 [(google.api.field_behavior) = REQUIRED];
     // The hashed data
-    Hash data = 2 [(google.api.field_behavior) = REQUIRED];
+    dev.sigstore.common.v1.HashOutput data = 2 [(google.api.field_behavior) = REQUIRED];
+    // A key/cerificate to verify the signature
+    Verifier verifier = 3 [(google.api.field_behavior) = REQUIRED];
 }

@@ -20,7 +20,7 @@
 FROM debian:bullseye-slim@sha256:6344a6747740d465bff88e833e43ef881a8c4dd51950dba5b30664c93f74cbef AS protoc-builder
 
 # Create output directories
-RUN mkdir /protobuf /googleapis
+RUN mkdir /protobuf /googleapis /protobuf-specs
 # Install needed utilities
 RUN apt-get update && apt-get install -y unzip git
 
@@ -30,7 +30,7 @@ ARG UID
 RUN adduser --uid ${UID} --disabled-password myuser
 
 # Set permissions on the output directories so the user can write to them
-RUN chown myuser /protobuf /googleapis
+RUN chown myuser /protobuf /googleapis /protobuf-specs
 
 # Switch to user to execute the remaining commands
 USER myuser
@@ -53,6 +53,14 @@ RUN git clone --filter=blob:none --no-checkout --depth=1 https://github.com/goog
     git checkout ${GOOGLEAPIS_COMMIT} && \
     rm -rf .git
 
+# fetch HEAD of protobuf-specs (TODO: adjust this to latest release like googleapis)
+ARG PROTOBUF_SPECS_COMMIT
+RUN git clone --filter=blob:none --no-checkout --depth=1 https://github.com/sigstore/protobuf-specs.git /protobuf-specs && \
+    cd /protobuf-specs && \
+    git sparse-checkout set --no-cone '/**/*.proto' && \
+    git checkout ${PROTOBUF_SPECS_COMMIT} && \
+    rm -rf .git
+
 FROM golang:1.24.0-alpine@sha256:2d40d4fc278dad38be0777d5e2a88a2c6dee51b0b29c97a764fc6c6a11ca893c AS go-builder
 
 ADD go.* tools/
@@ -66,5 +74,6 @@ COPY --from=go-builder /go/tools/protoc-* /usr/local/bin/
 COPY --from=protoc-builder /protobuf/bin/protoc /usr/local/bin/
 COPY --from=protoc-builder /protobuf/include/google /opt/include/google
 COPY --from=protoc-builder /googleapis /googleapis
+COPY --from=protoc-builder /protobuf-specs/protos /protobuf-specs
 
 ENTRYPOINT ["/usr/local/bin/protoc", "--plugin=protoc-gen-go=/usr/local/bin/protoc-gen-go", "--plugin=protoc-gen-go-grpc=/usr/local/bin/protoc-gen-go-grpc", "--plugin=protoc-gen-grpc-gateway=/usr/local/bin/protoc-gen-grpc-gateway", "--plugin=protoc-gen-openapiv2=/usr/local/bin/protoc-gen-openapiv2"]

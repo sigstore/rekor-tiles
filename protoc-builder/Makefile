@@ -27,6 +27,7 @@ PROTOC_VERSION_TAG = v29.3
 PROTOC_VERSION = 29.3
 PROTOC_CHECKSUM = sha256:3e866620c5be27664f3d2fa2d656b5f3e09b5152b42f1bedbf427b333e90021a
 GOOGLEAPIS_COMMIT = dd1210af5bee414c9e606f5637e0eb0fd9d894e8
+PROTOBUF_SPECS_COMMIT = 68cc7d273f0a2ade2f8c9c56c0da094f481eabd5 #v0.4.0
 
 GO_MODULE = github.com/sigstore/rekor-tiles
 PROJECT_DIR = $(shell cd ..; pwd)
@@ -42,7 +43,7 @@ protos: proto-image
 	@echo "Generating go protobuf files"
 	@mkdir -p ${PROJECT_DIR}/${OPENAPI_OUT}
 	${DOCKER_RUN} -v ${PROJECT_DIR}:${MOUNT_POINT} ${PROTOC_REKOR_IMAGE} \
-		-I/opt/include -I/googleapis -I${MOUNT_POINT}/api/proto \
+		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
 		--go_out=${MOUNT_POINT} \
 		--go_opt=module=${GO_MODULE} \
 		--go-grpc_opt=module=${GO_MODULE} --go-grpc_out=${MOUNT_POINT} \
@@ -58,7 +59,9 @@ proto-image: Dockerfile
 	  --build-arg PROTOC_VERSION=${PROTOC_VERSION} \
 	  --build-arg PROTOC_VERSION_TAG=${PROTOC_VERSION_TAG} \
 	  --build-arg PROTOC_CHECKSUM=${PROTOC_CHECKSUM} \
-	  --build-arg GOOGLEAPIS_COMMIT=${GOOGLEAPIS_COMMIT} .
+	  --build-arg GOOGLEAPIS_COMMIT=${GOOGLEAPIS_COMMIT} \
+    --build-arg PROTOBUF_SPECS_COMMIT=${PROTOBUF_SPECS_COMMIT} \
+	  .
 
 # to recover from a situation where a stale layer exist, just  purging the
 # docker image via `make clean` is not enough. Re-building without layer

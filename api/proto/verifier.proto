@@ -15,16 +15,25 @@
 syntax = "proto3";
 package dev.sigstore.rekor.v2;
 
+import "sigstore_common.proto";
 import "google/api/field_behavior.proto";
-
-import "verifier.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
-// A request to add a dsse entry to the log
-message DSSERequest {
-    // The full dsse envelope specified as a stringified JSON object
-    string envelope = 1 [(google.api.field_behavior) = REQUIRED];
-    // collection of verification material used to verify
-    repeated Verifier verifier = 2;
+// Fork of protobuf-specs/sigstore_common PublicKey without validity window
+message PublicKey {
+    // DER-encoded public key, encoding method is specified by the
+    // key_details attribute.
+    bytes raw_bytes = 1 [(google.api.field_behavior) = REQUIRED];
+    // Key encoding and signature algorithm to use for this key.
+    dev.sigstore.common.v1.PublicKeyDetails key_details = 2 [(google.api.field_behavior) = REQUIRED];
+
+}
+
+// Either a raw public key or a x509 cerificiate with embedded publicKey
+message Verifier {
+    oneof verifier {
+        PublicKey publicKey = 1 [(google.api.field_behavior) = REQUIRED];
+        dev.sigstore.common.v1.X509Certificate x509_certificate = 2 [(google.api.field_behavior) = REQUIRED];
+    }
 }

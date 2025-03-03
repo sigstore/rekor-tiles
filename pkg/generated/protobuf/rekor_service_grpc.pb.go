@@ -22,10 +22,12 @@ package protobuf
 
 import (
 	context "context"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	httpbody "google.golang.org/genproto/googleapis/api/httpbody"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
+	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -44,7 +46,7 @@ const (
 // A service for sigstore clients to connect to to create log entries
 type RekorClient interface {
 	// Create an entry in the log
-	CreateEntry(ctx context.Context, in *CreateEntryRequest, opts ...grpc.CallOption) (*TransparencyLogEntry, error)
+	CreateEntry(ctx context.Context, in *CreateEntryRequest, opts ...grpc.CallOption) (*v1.TransparencyLogEntry, error)
 }
 
 type rekorClient struct {
@@ -55,9 +57,9 @@ func NewRekorClient(cc grpc.ClientConnInterface) RekorClient {
 	return &rekorClient{cc}
 }
 
-func (c *rekorClient) CreateEntry(ctx context.Context, in *CreateEntryRequest, opts ...grpc.CallOption) (*TransparencyLogEntry, error) {
+func (c *rekorClient) CreateEntry(ctx context.Context, in *CreateEntryRequest, opts ...grpc.CallOption) (*v1.TransparencyLogEntry, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(TransparencyLogEntry)
+	out := new(v1.TransparencyLogEntry)
 	err := c.cc.Invoke(ctx, Rekor_CreateEntry_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -72,7 +74,7 @@ func (c *rekorClient) CreateEntry(ctx context.Context, in *CreateEntryRequest, o
 // A service for sigstore clients to connect to to create log entries
 type RekorServer interface {
 	// Create an entry in the log
-	CreateEntry(context.Context, *CreateEntryRequest) (*TransparencyLogEntry, error)
+	CreateEntry(context.Context, *CreateEntryRequest) (*v1.TransparencyLogEntry, error)
 	mustEmbedUnimplementedRekorServer()
 }
 
@@ -83,7 +85,7 @@ type RekorServer interface {
 // pointer dereference when methods are called.
 type UnimplementedRekorServer struct{}
 
-func (UnimplementedRekorServer) CreateEntry(context.Context, *CreateEntryRequest) (*TransparencyLogEntry, error) {
+func (UnimplementedRekorServer) CreateEntry(context.Context, *CreateEntryRequest) (*v1.TransparencyLogEntry, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateEntry not implemented")
 }
 func (UnimplementedRekorServer) mustEmbedUnimplementedRekorServer() {}
@@ -146,6 +148,7 @@ const (
 	RekorLog_GetPartialTile_FullMethodName        = "/dev.sigstore.rekor.v2.RekorLog/GetPartialTile"
 	RekorLog_GetEntryBundle_FullMethodName        = "/dev.sigstore.rekor.v2.RekorLog/GetEntryBundle"
 	RekorLog_GetPartialEntryBundle_FullMethodName = "/dev.sigstore.rekor.v2.RekorLog/GetPartialEntryBundle"
+	RekorLog_GetCheckpoint_FullMethodName         = "/dev.sigstore.rekor.v2.RekorLog/GetCheckpoint"
 )
 
 // RekorLogClient is the client API for RekorLog service.
@@ -154,15 +157,16 @@ const (
 //
 // A service for log monitors and witnesses to audit/inspect the log
 type RekorLogClient interface {
-	// Get a tile from the log (cacheable)
+	// Get a tile from the log
 	GetTile(ctx context.Context, in *TileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
-	// Get a partial tile from the log (not cacheable)
+	// Get a partial tile from the log
 	GetPartialTile(ctx context.Context, in *PartialTileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
-	// Get an entry bundle from the log (cacheable)
+	// Get an entry bundle from the log
 	GetEntryBundle(ctx context.Context, in *EntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
-	// Get a partial entry bundle from the log (not cacheable)
-	// TODO: I might have misunderstood the cacheability of this object
+	// Get a partial entry bundle from the log
 	GetPartialEntryBundle(ctx context.Context, in *PartialEntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
+	// Get a checkpoint from the log
+	GetCheckpoint(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 }
 
 type rekorLogClient struct {
@@ -213,21 +217,32 @@ func (c *rekorLogClient) GetPartialEntryBundle(ctx context.Context, in *PartialE
 	return out, nil
 }
 
+func (c *rekorLogClient) GetCheckpoint(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, RekorLog_GetCheckpoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RekorLogServer is the server API for RekorLog service.
 // All implementations must embed UnimplementedRekorLogServer
 // for forward compatibility.
 //
 // A service for log monitors and witnesses to audit/inspect the log
 type RekorLogServer interface {
-	// Get a tile from the log (cacheable)
+	// Get a tile from the log
 	GetTile(context.Context, *TileRequest) (*httpbody.HttpBody, error)
-	// Get a partial tile from the log (not cacheable)
+	// Get a partial tile from the log
 	GetPartialTile(context.Context, *PartialTileRequest) (*httpbody.HttpBody, error)
-	// Get an entry bundle from the log (cacheable)
+	// Get an entry bundle from the log
 	GetEntryBundle(context.Context, *EntryBundleRequest) (*httpbody.HttpBody, error)
-	// Get a partial entry bundle from the log (not cacheable)
-	// TODO: I might have misunderstood the cacheability of this object
+	// Get a partial entry bundle from the log
 	GetPartialEntryBundle(context.Context, *PartialEntryBundleRequest) (*httpbody.HttpBody, error)
+	// Get a checkpoint from the log
+	GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error)
 	mustEmbedUnimplementedRekorLogServer()
 }
 
@@ -249,6 +264,9 @@ func (UnimplementedRekorLogServer) GetEntryBundle(context.Context, *EntryBundleR
 }
 func (UnimplementedRekorLogServer) GetPartialEntryBundle(context.Context, *PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetPartialEntryBundle not implemented")
+}
+func (UnimplementedRekorLogServer) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCheckpoint not implemented")
 }
 func (UnimplementedRekorLogServer) mustEmbedUnimplementedRekorLogServer() {}
 func (UnimplementedRekorLogServer) testEmbeddedByValue()                  {}
@@ -343,6 +361,24 @@ func _RekorLog_GetPartialEntryBundle_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _RekorLog_GetCheckpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RekorLogServer).GetCheckpoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: RekorLog_GetCheckpoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RekorLogServer).GetCheckpoint(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // RekorLog_ServiceDesc is the grpc.ServiceDesc for RekorLog service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -365,6 +401,10 @@ var RekorLog_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetPartialEntryBundle",
 			Handler:    _RekorLog_GetPartialEntryBundle_Handler,
+		},
+		{
+			MethodName: "GetCheckpoint",
+			Handler:    _RekorLog_GetCheckpoint_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

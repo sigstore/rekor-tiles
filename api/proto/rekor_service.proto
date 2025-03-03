@@ -18,7 +18,8 @@ package dev.sigstore.rekor.v2;
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/api/httpbody.proto";
-import "logentry.proto";
+import "google/protobuf/empty.proto";
+import "sigstore_rekor.proto";
 import "hashedrekord.proto";
 import "dsse.proto";
 
@@ -27,7 +28,7 @@ option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 // A service for sigstore clients to connect to to create log entries
 service Rekor {
     // Create an entry in the log
-    rpc CreateEntry (CreateEntryRequest) returns (TransparencyLogEntry) {
+    rpc CreateEntry (CreateEntryRequest) returns (dev.sigstore.rekor.v1.TransparencyLogEntry) {
         option (google.api.http) = {
             post: "/api/v2/log/entries"
             body: "*"
@@ -45,30 +46,36 @@ message CreateEntryRequest {
 
 // A service for log monitors and witnesses to audit/inspect the log
 service RekorLog {
-    // Get a tile from the log (cacheable)
+    // Get a tile from the log
     rpc GetTile (TileRequest) returns (google.api.HttpBody) {
         option (google.api.http) = {
             get: "/api/v2/tile/{L}/{N}"
         };
     }
-    // Get a partial tile from the log (not cacheable)
+    // Get a partial tile from the log
     rpc GetPartialTile (PartialTileRequest) returns (google.api.HttpBody) {
         option (google.api.http) = {
             get: "/api/v2/tile/{L}/{N}/{W}"
         };
     }
 
-    // Get an entry bundle from the log (cacheable)
+    // Get an entry bundle from the log
     rpc GetEntryBundle (EntryBundleRequest) returns (google.api.HttpBody) {
         option (google.api.http) = {
             get: "/api/v2/tile/entries/{N}"
         };
     }
-    // Get a partial entry bundle from the log (not cacheable)
-    // TODO: I might have misunderstood the cacheability of this object
+    // Get a partial entry bundle from the log
     rpc GetPartialEntryBundle (PartialEntryBundleRequest) returns (google.api.HttpBody) {
         option (google.api.http) = {
             get: "/api/v2/tile/entries/{N}/{W}"
+        };
+    }
+
+    // Get a checkpoint from the log
+    rpc GetCheckpoint (google.protobuf.Empty) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/api/v2/checkpoint"
         };
     }
 }
