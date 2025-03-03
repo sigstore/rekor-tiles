@@ -1,0 +1,37 @@
+#
+# Copyright 2025 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+services:
+  spanner:
+    image: gcr.io/cloud-spanner-emulator/emulator@sha256:4c5deadfc50f5165270a6d8672290b1545c91dcf54ab69fc3cb2255a6ff736bf
+  gcs:
+    image: fsouza/fake-gcs-server@sha256:d47b4cf8b87006cab8fbbecfa5f06a2a3c5722e464abddc0d107729663d40ec4
+    volumes:
+    - bucket:/data/tiles:rw"
+    command:
+    - "-scheme=http"
+    - "-port=8080"
+  rekor:
+    build:
+      context: .
+      target: deploy
+    environment:
+    - SPANNER_EMULATOR_HOST=spanner:9010
+    - STORAGE_EMULATOR_HOST=gcp:8080
+    depends_on:
+    - spanner
+    - gcs
+volumes:
+  bucket: {}
