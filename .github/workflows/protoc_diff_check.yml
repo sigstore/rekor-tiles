@@ -1,0 +1,54 @@
+#
+# Copyright 2025 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: Check generated code for changes
+
+permissions:
+  contents: read
+
+on:
+  push:
+    paths:
+      - 'api/proto/**'
+      - 'docs/openapi/**'
+      - 'pkg/generated/protobuf/**'
+      - 'protoc-builder/**'
+  pull_request:
+    paths:
+      - 'api/proto/**'
+      - 'docs/openapi/**'
+      - 'pkg/generated/protobuf/**'
+      - 'protoc-builder/**'
+
+jobs:
+  check_generated_protos:
+    name: Check generated protobufs
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      with:
+        persist-credentials: false
+
+    - name: Clear out protobuf directories
+      run: |
+        make clean
+
+    - name: Compile protobufs
+      run: |
+        make protos
+
+    - name: Ensure no files were modified as a result of the codegen
+      run: git update-index --refresh && git diff-index --quiet HEAD -- || git diff --exit-code
