@@ -16,16 +16,19 @@
 package app
 
 import (
+	"context"
 	"log/slog"
 
 	"github.com/spf13/cobra"
 	"sigs.k8s.io/release-utils/version"
+
+	"github.com/sigstore/rekor-tiles/pkg/server"
 )
 
 var serveCmd = &cobra.Command{
 	Use:   "serve",
-	Short: "start the Rekor HTTP server",
-	Long:  "start the Rekor HTTP server",
+	Short: "start the Rekor server",
+	Long:  "start the Rekor server",
 	Run: func(_ *cobra.Command, _ []string) {
 		versionInfo := version.GetVersionInfo()
 		versionInfoStr, err := versionInfo.JSONString()
@@ -33,6 +36,15 @@ var serveCmd = &cobra.Command{
 			versionInfoStr = versionInfo.String()
 		}
 		slog.Info("starting rekor-server", "version", versionInfoStr)
+
+		// TODO: read values from cmdline
+		server.Serve(
+			context.Background(),
+			// TODO: use defaults for now, but really use commandline
+			server.NewHTTPConfig(),
+			server.NewGRPCConfig(),
+			&server.Server{},
+		)
 	},
 }
 
