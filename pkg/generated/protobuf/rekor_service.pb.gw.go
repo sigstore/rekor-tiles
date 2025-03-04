@@ -60,7 +60,7 @@ func local_request_Rekor_CreateEntry_0(ctx context.Context, marshaler runtime.Ma
 	return msg, metadata, err
 }
 
-func request_RekorLog_GetTile_0(ctx context.Context, marshaler runtime.Marshaler, client RekorLogClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Rekor_GetTile_0(ctx context.Context, marshaler runtime.Marshaler, client RekorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq TileRequest
 		metadata runtime.ServerMetadata
@@ -86,7 +86,7 @@ func request_RekorLog_GetTile_0(ctx context.Context, marshaler runtime.Marshaler
 	return msg, metadata, err
 }
 
-func local_request_RekorLog_GetTile_0(ctx context.Context, marshaler runtime.Marshaler, server RekorLogServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Rekor_GetTile_0(ctx context.Context, marshaler runtime.Marshaler, server RekorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq TileRequest
 		metadata runtime.ServerMetadata
@@ -112,7 +112,7 @@ func local_request_RekorLog_GetTile_0(ctx context.Context, marshaler runtime.Mar
 	return msg, metadata, err
 }
 
-func request_RekorLog_GetPartialTile_0(ctx context.Context, marshaler runtime.Marshaler, client RekorLogClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Rekor_GetPartialTile_0(ctx context.Context, marshaler runtime.Marshaler, client RekorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq PartialTileRequest
 		metadata runtime.ServerMetadata
@@ -146,7 +146,7 @@ func request_RekorLog_GetPartialTile_0(ctx context.Context, marshaler runtime.Ma
 	return msg, metadata, err
 }
 
-func local_request_RekorLog_GetPartialTile_0(ctx context.Context, marshaler runtime.Marshaler, server RekorLogServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Rekor_GetPartialTile_0(ctx context.Context, marshaler runtime.Marshaler, server RekorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq PartialTileRequest
 		metadata runtime.ServerMetadata
@@ -180,7 +180,7 @@ func local_request_RekorLog_GetPartialTile_0(ctx context.Context, marshaler runt
 	return msg, metadata, err
 }
 
-func request_RekorLog_GetEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, client RekorLogClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Rekor_GetEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, client RekorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq EntryBundleRequest
 		metadata runtime.ServerMetadata
@@ -198,7 +198,7 @@ func request_RekorLog_GetEntryBundle_0(ctx context.Context, marshaler runtime.Ma
 	return msg, metadata, err
 }
 
-func local_request_RekorLog_GetEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, server RekorLogServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Rekor_GetEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, server RekorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq EntryBundleRequest
 		metadata runtime.ServerMetadata
@@ -216,7 +216,7 @@ func local_request_RekorLog_GetEntryBundle_0(ctx context.Context, marshaler runt
 	return msg, metadata, err
 }
 
-func request_RekorLog_GetPartialEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, client RekorLogClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Rekor_GetPartialEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, client RekorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq PartialEntryBundleRequest
 		metadata runtime.ServerMetadata
@@ -242,7 +242,7 @@ func request_RekorLog_GetPartialEntryBundle_0(ctx context.Context, marshaler run
 	return msg, metadata, err
 }
 
-func local_request_RekorLog_GetPartialEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, server RekorLogServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Rekor_GetPartialEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, server RekorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq PartialEntryBundleRequest
 		metadata runtime.ServerMetadata
@@ -268,7 +268,7 @@ func local_request_RekorLog_GetPartialEntryBundle_0(ctx context.Context, marshal
 	return msg, metadata, err
 }
 
-func request_RekorLog_GetCheckpoint_0(ctx context.Context, marshaler runtime.Marshaler, client RekorLogClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func request_Rekor_GetCheckpoint_0(ctx context.Context, marshaler runtime.Marshaler, client RekorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq emptypb.Empty
 		metadata runtime.ServerMetadata
@@ -277,7 +277,7 @@ func request_RekorLog_GetCheckpoint_0(ctx context.Context, marshaler runtime.Mar
 	return msg, metadata, err
 }
 
-func local_request_RekorLog_GetCheckpoint_0(ctx context.Context, marshaler runtime.Marshaler, server RekorLogServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
+func local_request_Rekor_GetCheckpoint_0(ctx context.Context, marshaler runtime.Marshaler, server RekorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
 	var (
 		protoReq emptypb.Empty
 		metadata runtime.ServerMetadata
@@ -312,115 +312,105 @@ func RegisterRekorHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 		}
 		forward_Rekor_CreateEntry_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-
-	return nil
-}
-
-// RegisterRekorLogHandlerServer registers the http handlers for service RekorLog to "mux".
-// UnaryRPC     :call RekorLogServer directly.
-// StreamingRPC :currently unsupported pending https://github.com/grpc/grpc-go/issues/906.
-// Note that using this registration option will cause many gRPC library features to stop working. Consider using RegisterRekorLogHandlerFromEndpoint instead.
-// GRPC interceptors will not work for this type of registration. To use interceptors, you must use the "runtime.WithMiddlewares" option in the "runtime.NewServeMux" call.
-func RegisterRekorLogHandlerServer(ctx context.Context, mux *runtime.ServeMux, server RekorLogServer) error {
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_RekorLog_GetTile_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Rekor_GetTile_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetPartialTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetPartialTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetPartialTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}/{W}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetPartialTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}/{W}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_RekorLog_GetPartialTile_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Rekor_GetPartialTile_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetPartialTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetPartialTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_RekorLog_GetEntryBundle_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Rekor_GetEntryBundle_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetPartialEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetPartialEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetPartialEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}/{W}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetPartialEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}/{W}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_RekorLog_GetPartialEntryBundle_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Rekor_GetPartialEntryBundle_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetPartialEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetPartialEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetCheckpoint_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetCheckpoint_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetCheckpoint", runtime.WithHTTPPathPattern("/api/v2/checkpoint"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetCheckpoint", runtime.WithHTTPPathPattern("/api/v2/checkpoint"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := local_request_RekorLog_GetCheckpoint_0(annotatedContext, inboundMarshaler, server, req, pathParams)
+		resp, md, err := local_request_Rekor_GetCheckpoint_0(annotatedContext, inboundMarshaler, server, req, pathParams)
 		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetCheckpoint_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetCheckpoint_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 
 	return nil
@@ -479,153 +469,108 @@ func RegisterRekorHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 		}
 		forward_Rekor_CreateEntry_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	return nil
-}
-
-var (
-	pattern_Rekor_CreateEntry_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v2", "log", "entries"}, ""))
-)
-
-var (
-	forward_Rekor_CreateEntry_0 = runtime.ForwardResponseMessage
-)
-
-// RegisterRekorLogHandlerFromEndpoint is same as RegisterRekorLogHandler but
-// automatically dials to "endpoint" and closes the connection when "ctx" gets done.
-func RegisterRekorLogHandlerFromEndpoint(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) (err error) {
-	conn, err := grpc.NewClient(endpoint, opts...)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		if err != nil {
-			if cerr := conn.Close(); cerr != nil {
-				grpclog.Errorf("Failed to close conn to %s: %v", endpoint, cerr)
-			}
-			return
-		}
-		go func() {
-			<-ctx.Done()
-			if cerr := conn.Close(); cerr != nil {
-				grpclog.Errorf("Failed to close conn to %s: %v", endpoint, cerr)
-			}
-		}()
-	}()
-	return RegisterRekorLogHandler(ctx, mux, conn)
-}
-
-// RegisterRekorLogHandler registers the http handlers for service RekorLog to "mux".
-// The handlers forward requests to the grpc endpoint over "conn".
-func RegisterRekorLogHandler(ctx context.Context, mux *runtime.ServeMux, conn *grpc.ClientConn) error {
-	return RegisterRekorLogHandlerClient(ctx, mux, NewRekorLogClient(conn))
-}
-
-// RegisterRekorLogHandlerClient registers the http handlers for service RekorLog
-// to "mux". The handlers forward requests to the grpc endpoint over the given implementation of "RekorLogClient".
-// Note: the gRPC framework executes interceptors within the gRPC handler. If the passed in "RekorLogClient"
-// doesn't go through the normal gRPC flow (creating a gRPC client etc.) then it will be up to the passed in
-// "RekorLogClient" to call the correct interceptors. This client ignores the HTTP middlewares.
-func RegisterRekorLogHandlerClient(ctx context.Context, mux *runtime.ServeMux, client RekorLogClient) error {
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_RekorLog_GetTile_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Rekor_GetTile_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetPartialTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetPartialTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetPartialTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}/{W}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetPartialTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}/{W}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_RekorLog_GetPartialTile_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Rekor_GetPartialTile_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetPartialTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetPartialTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_RekorLog_GetEntryBundle_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Rekor_GetEntryBundle_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetPartialEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetPartialEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetPartialEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}/{W}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetPartialEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}/{W}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_RekorLog_GetPartialEntryBundle_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Rekor_GetPartialEntryBundle_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetPartialEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetPartialEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_RekorLog_GetCheckpoint_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
+	mux.Handle(http.MethodGet, pattern_Rekor_GetCheckpoint_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.RekorLog/GetCheckpoint", runtime.WithHTTPPathPattern("/api/v2/checkpoint"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetCheckpoint", runtime.WithHTTPPathPattern("/api/v2/checkpoint"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		resp, md, err := request_RekorLog_GetCheckpoint_0(annotatedContext, inboundMarshaler, client, req, pathParams)
+		resp, md, err := request_Rekor_GetCheckpoint_0(annotatedContext, inboundMarshaler, client, req, pathParams)
 		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
 		if err != nil {
 			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
 			return
 		}
-		forward_RekorLog_GetCheckpoint_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
+		forward_Rekor_GetCheckpoint_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	return nil
 }
 
 var (
-	pattern_RekorLog_GetTile_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v2", "tile", "L", "N"}, ""))
-	pattern_RekorLog_GetPartialTile_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"api", "v2", "tile", "L", "N", "W"}, ""))
-	pattern_RekorLog_GetEntryBundle_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v2", "tile", "entries", "N"}, ""))
-	pattern_RekorLog_GetPartialEntryBundle_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"api", "v2", "tile", "entries", "N", "W"}, ""))
-	pattern_RekorLog_GetCheckpoint_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"api", "v2", "checkpoint"}, ""))
+	pattern_Rekor_CreateEntry_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v2", "log", "entries"}, ""))
+	pattern_Rekor_GetTile_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v2", "tile", "L", "N"}, ""))
+	pattern_Rekor_GetPartialTile_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"api", "v2", "tile", "L", "N", "W"}, ""))
+	pattern_Rekor_GetEntryBundle_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v2", "tile", "entries", "N"}, ""))
+	pattern_Rekor_GetPartialEntryBundle_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"api", "v2", "tile", "entries", "N", "W"}, ""))
+	pattern_Rekor_GetCheckpoint_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"api", "v2", "checkpoint"}, ""))
 )
 
 var (
-	forward_RekorLog_GetTile_0               = runtime.ForwardResponseMessage
-	forward_RekorLog_GetPartialTile_0        = runtime.ForwardResponseMessage
-	forward_RekorLog_GetEntryBundle_0        = runtime.ForwardResponseMessage
-	forward_RekorLog_GetPartialEntryBundle_0 = runtime.ForwardResponseMessage
-	forward_RekorLog_GetCheckpoint_0         = runtime.ForwardResponseMessage
+	forward_Rekor_CreateEntry_0           = runtime.ForwardResponseMessage
+	forward_Rekor_GetTile_0               = runtime.ForwardResponseMessage
+	forward_Rekor_GetPartialTile_0        = runtime.ForwardResponseMessage
+	forward_Rekor_GetEntryBundle_0        = runtime.ForwardResponseMessage
+	forward_Rekor_GetPartialEntryBundle_0 = runtime.ForwardResponseMessage
+	forward_Rekor_GetCheckpoint_0         = runtime.ForwardResponseMessage
 )

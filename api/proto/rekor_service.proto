@@ -26,6 +26,7 @@ import "dsse.proto";
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
 // A service for sigstore clients to connect to to create log entries
+// and for log monitors and witnesses to audit/inspect the log
 service Rekor {
     // Create an entry in the log
     rpc CreateEntry (CreateEntryRequest) returns (dev.sigstore.rekor.v1.TransparencyLogEntry) {
@@ -34,18 +35,6 @@ service Rekor {
             body: "*"
         };
     }
-}
-
-// Create a new HashedRekord or DSSE
-message CreateEntryRequest {
-    oneof spec {
-        HashedRekordRequest hashed_rekord_request = 1 [(google.api.field_behavior) = REQUIRED];
-        DSSERequest dsse_request  = 2 [(google.api.field_behavior) = REQUIRED];
-    }
-}
-
-// A service for log monitors and witnesses to audit/inspect the log
-service RekorLog {
     // Get a tile from the log
     rpc GetTile (TileRequest) returns (google.api.HttpBody) {
         option (google.api.http) = {
@@ -77,6 +66,14 @@ service RekorLog {
         option (google.api.http) = {
             get: "/api/v2/checkpoint"
         };
+    }
+}
+
+// Create a new HashedRekord or DSSE
+message CreateEntryRequest {
+    oneof spec {
+        HashedRekordRequest hashed_rekord_request = 1 [(google.api.field_behavior) = REQUIRED];
+        DSSERequest dsse_request  = 2 [(google.api.field_behavior) = REQUIRED];
     }
 }
 
