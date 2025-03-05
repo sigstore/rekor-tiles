@@ -20,17 +20,11 @@ permissions:
 
 on:
   push:
-    paths:
-      - 'api/proto/**'
-      - 'docs/openapi/**'
-      - 'pkg/generated/protobuf/**'
-      - 'protoc-builder/**'
+    branches:
+      - main
   pull_request:
-    paths:
-      - 'api/proto/**'
-      - 'docs/openapi/**'
-      - 'pkg/generated/protobuf/**'
-      - 'protoc-builder/**'
+    branches:
+      - main
 
 jobs:
   check_generated_protos:
@@ -42,7 +36,7 @@ jobs:
       with:
         persist-credentials: false
 
-    - name: Clear out protobuf directories
+    - name: Clean
       run: |
         make clean
 
