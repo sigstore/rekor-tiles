@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean lint gosec ko-local
+.PHONY: all test clean lint gosec ko-local tools
 
 all: rekor-server
 
@@ -32,24 +32,27 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
+PROTO_DIRS = pkg/generated/protobuf/ api/proto/ protoc-builder/
+SRC = $(shell find -iname "*.go" | grep -v -e $(subst $() $(), -e ,$(strip $(PROTO_DIRS))))
+PROTO_SRC = $(shell find $(PROTO_DIRS))
+
 REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
               -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
               -X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
               -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
 SERVER_LDFLAGS=$(REKOR_LDFLAGS)
 
-GOBIN ?= $(shell go env GOPATH)/bin
+GOBIN = $(abspath ./tools/bin)
 
-lint: ## Run golangci-lint checks
-	$(GOBIN)/golangci-lint run -v ./...
-
-addlicense: ## Add licenses to source files
+lint: tools
 	$(GOBIN)/addlicense -l apache -c "The Sigstore Authors" -ignore "third_party/**" -v *
+	$(GOBIN)/goimports -w $(SRC)
+	$(GOBIN)/golangci-lint run -v ./...
 
 gosec: ## Run gosec security scanner
 	$(GOBIN)/gosec ./...
 
-rekor-server:
+rekor-server: $(SRC) $(PROTO_SRC)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/rekor-server
 
 test: ## Run all tests
@@ -61,8 +64,13 @@ ko-local: ## Build container images locally using ko
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
 		github.com/sigstore/rekor-tiles/cmd/rekor-server
 
-protos:
+protos: $(PROTO_SRC)
 	$(MAKE) -C protoc-builder protos
+
+tools:
+	GOBIN=$(GOBIN); go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.6
+	GOBIN=$(GOBIN); go install golang.org/x/tools/cmd/goimports@v0.30.0
+	GOBIN=$(GOBIN); go install github.com/google/addlicense@v1.1.1
 
 clean: ## Remove built binaries and artifacts
 	rm -rf dist
