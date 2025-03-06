@@ -1,0 +1,39 @@
+// Copyright 2025 The Sigstore Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dev.sigstore.rekor.v2;
+
+import "sigstore_common.proto";
+import "google/api/field_behavior.proto";
+
+option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
+
+// Fork of protobuf-specs/sigstore_common PublicKey without validity window
+message PublicKey {
+    // DER-encoded public key, encoding method is specified by the
+    // key_details attribute.
+    bytes raw_bytes = 1 [(google.api.field_behavior) = REQUIRED];
+    // Key encoding and signature algorithm to use for this key.
+    dev.sigstore.common.v1.PublicKeyDetails key_details = 2 [(google.api.field_behavior) = REQUIRED];
+
+}
+
+// Either a raw public key or a x509 cerificiate with embedded publicKey
+message Verifier {
+    oneof verifier {
+        PublicKey publicKey = 1 [(google.api.field_behavior) = REQUIRED];
+        dev.sigstore.common.v1.X509Certificate x509_certificate = 2 [(google.api.field_behavior) = REQUIRED];
+    }
+}

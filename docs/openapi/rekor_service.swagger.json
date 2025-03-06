@@ -7,6 +7,9 @@
   "tags": [
     {
       "name": "Rekor"
+    },
+    {
+      "name": "RekorLog"
     }
   ],
   "consumes": [
@@ -16,14 +19,38 @@
     "application/json"
   ],
   "paths": {
-    "/api/v2/echo": {
+    "/api/v2/checkpoint": {
       "get": {
-        "operationId": "Rekor_Echo",
+        "summary": "Get a checkpoint from the log",
+        "operationId": "RekorLog_GetCheckpoint",
         "responses": {
           "200": {
             "description": "A successful response.",
             "schema": {
-              "$ref": "#/definitions/v2StringMessage"
+              "$ref": "#/definitions/apiHttpBody"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "tags": [
+          "RekorLog"
+        ]
+      }
+    },
+    "/api/v2/log/entries": {
+      "post": {
+        "summary": "Create an entry in the log",
+        "operationId": "Rekor_CreateEntry",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1TransparencyLogEntry"
             }
           },
           "default": {
@@ -35,27 +62,229 @@
         },
         "parameters": [
           {
-            "name": "value",
-            "in": "query",
-            "required": false,
-            "type": "string"
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/v2CreateEntryRequest"
+            }
           }
         ],
         "tags": [
           "Rekor"
         ]
       }
+    },
+    "/api/v2/tile/entries/{N}": {
+      "get": {
+        "summary": "Get an entry bundle from the log",
+        "operationId": "RekorLog_GetEntryBundle",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiHttpBody"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "N",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "RekorLog"
+        ]
+      }
+    },
+    "/api/v2/tile/entries/{N}/{W}": {
+      "get": {
+        "summary": "Get a partial entry bundle from the log",
+        "operationId": "RekorLog_GetPartialEntryBundle",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiHttpBody"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "N",
+            "description": "must match \u003cint32\u003e.p",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "W",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "RekorLog"
+        ]
+      }
+    },
+    "/api/v2/tile/{L}/{N}": {
+      "get": {
+        "summary": "Get a tile from the log",
+        "operationId": "RekorLog_GetTile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiHttpBody"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "L",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "N",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "RekorLog"
+        ]
+      }
+    },
+    "/api/v2/tile/{L}/{N}/{W}": {
+      "get": {
+        "summary": "Get a partial tile from the log",
+        "operationId": "RekorLog_GetPartialTile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/apiHttpBody"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "L",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          },
+          {
+            "name": "N",
+            "description": "must match \u003cint32\u003e.p",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "W",
+            "in": "path",
+            "required": true,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "RekorLog"
+        ]
+      }
     }
   },
   "definitions": {
+    "apiHttpBody": {
+      "type": "object",
+      "properties": {
+        "contentType": {
+          "type": "string",
+          "description": "The HTTP Content-Type header value specifying the content type of the body."
+        },
+        "data": {
+          "type": "string",
+          "format": "byte",
+          "description": "The HTTP request/response body as raw binary."
+        },
+        "extensions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          },
+          "description": "Application specific response metadata. Must be set in the first response\nfor streaming APIs."
+        }
+      },
+      "description": "Message that represents an arbitrary HTTP body. It should only be used for\npayload formats that can't be represented as JSON, such as raw binary or\nan HTML page.\n\n\nThis message can be used both in streaming and non-streaming API methods in\nthe request as well as the response.\n\nIt can be used as a top-level request field, which is convenient if one\nwants to extract parameters from either the URL or HTTP template into the\nrequest fields and also want access to the raw HTTP body.\n\nExample:\n\n    message GetResourceRequest {\n      // A unique request id.\n      string request_id = 1;\n\n      // The raw HTTP body is bound to this field.\n      google.api.HttpBody http_body = 2;\n\n    }\n\n    service ResourceService {\n      rpc GetResource(GetResourceRequest)\n        returns (google.api.HttpBody);\n      rpc UpdateResource(google.api.HttpBody)\n        returns (google.protobuf.Empty);\n\n    }\n\nExample with streaming methods:\n\n    service CaldavService {\n      rpc GetCalendar(stream google.api.HttpBody)\n        returns (stream google.api.HttpBody);\n      rpc UpdateCalendar(stream google.api.HttpBody)\n        returns (stream google.api.HttpBody);\n\n    }\n\nUse of this type only changes how the request and response bodies are\nhandled, all other features will continue to work unchanged."
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
         "@type": {
-          "type": "string"
+          "type": "string",
+          "description": "A URL/resource name that uniquely identifies the type of the serialized\nprotocol buffer message. This string must contain at least\none \"/\" character. The last segment of the URL's path must represent\nthe fully qualified name of the type (as in\n`path/google.protobuf.Duration`). The name should be in a canonical form\n(e.g., leading \".\" is not accepted).\n\nIn practice, teams usually precompile into the binary all types that they\nexpect it to use in the context of Any. However, for URLs which use the\nscheme `http`, `https`, or no scheme, one can optionally set up a type\nserver that maps type URLs to message definitions as follows:\n\n* If no scheme is provided, `https` is assumed.\n* An HTTP GET on the URL must yield a [google.protobuf.Type][]\n  value in binary format, or produce an error.\n* Applications are allowed to cache lookup results based on the\n  URL, or have them precompiled into a binary to avoid any\n  lookup. Therefore, binary compatibility needs to be preserved\n  on changes to types. (Use versioned type names to manage\n  breaking changes.)\n\nNote: this functionality is not currently available in the official\nprotobuf release, and it is not used for type URLs beginning with\ntype.googleapis.com. As of May 2023, there are no widely used type server\nimplementations and no plans to implement one.\n\nSchemes other than `http`, `https` (or the empty scheme) might be\nused with implementation specific semantics."
         }
       },
-      "additionalProperties": {}
+      "additionalProperties": {},
+      "description": "`Any` contains an arbitrary serialized protocol buffer message along with a\nURL that describes the type of the serialized message.\n\nProtobuf library provides support to pack/unpack Any values in the form\nof utility functions or additional generated methods of the Any type.\n\nExample 1: Pack and unpack a message in C++.\n\n    Foo foo = ...;\n    Any any;\n    any.PackFrom(foo);\n    ...\n    if (any.UnpackTo(\u0026foo)) {\n      ...\n    }\n\nExample 2: Pack and unpack a message in Java.\n\n    Foo foo = ...;\n    Any any = Any.pack(foo);\n    ...\n    if (any.is(Foo.class)) {\n      foo = any.unpack(Foo.class);\n    }\n    // or ...\n    if (any.isSameTypeAs(Foo.getDefaultInstance())) {\n      foo = any.unpack(Foo.getDefaultInstance());\n    }\n\n Example 3: Pack and unpack a message in Python.\n\n    foo = Foo(...)\n    any = Any()\n    any.Pack(foo)\n    ...\n    if any.Is(Foo.DESCRIPTOR):\n      any.Unpack(foo)\n      ...\n\n Example 4: Pack and unpack a message in Go\n\n     foo := \u0026pb.Foo{...}\n     any, err := anypb.New(foo)\n     if err != nil {\n       ...\n     }\n     ...\n     foo := \u0026pb.Foo{}\n     if err := any.UnmarshalTo(foo); err != nil {\n       ...\n     }\n\nThe pack methods provided by protobuf library will by default use\n'type.googleapis.com/full.type.name' as the type URL and the unpack\nmethods only use the fully qualified type name after the last '/'\nin the type URL, for example \"foo.bar.com/x/y.z\" will yield type\nname \"y.z\".\n\nJSON\n====\nThe JSON representation of an `Any` value uses the regular\nrepresentation of the deserialized, embedded message, with an\nadditional field `@type` which contains the type URL. Example:\n\n    package google.profile;\n    message Person {\n      string first_name = 1;\n      string last_name = 2;\n    }\n\n    {\n      \"@type\": \"type.googleapis.com/google.profile.Person\",\n      \"firstName\": \u003cstring\u003e,\n      \"lastName\": \u003cstring\u003e\n    }\n\nIf the embedded message type is well-known and has a custom JSON\nrepresentation, that representation will be embedded adding a field\n`value` which holds the custom JSON in addition to the `@type`\nfield. Example (for message [google.protobuf.Duration][]):\n\n    {\n      \"@type\": \"type.googleapis.com/google.protobuf.Duration\",\n      \"value\": \"1.212s\"\n    }"
+    },
+    "rekorv2PublicKey": {
+      "type": "object",
+      "properties": {
+        "rawBytes": {
+          "type": "string",
+          "format": "byte",
+          "description": "DER-encoded public key, encoding method is specified by the\nkey_details attribute."
+        },
+        "keyDetails": {
+          "$ref": "#/definitions/v1PublicKeyDetails",
+          "description": "Key encoding and signature algorithm to use for this key."
+        }
+      },
+      "title": "Fork of protobuf-specs/sigstore_common PublicKey without validity window",
+      "required": [
+        "rawBytes",
+        "keyDetails"
+      ]
     },
     "rpcStatus": {
       "type": "object",
@@ -76,13 +305,289 @@
         }
       }
     },
-    "v2StringMessage": {
+    "v1Checkpoint": {
       "type": "object",
       "properties": {
-        "value": {
+        "envelope": {
           "type": "string"
         }
-      }
+      },
+      "title": "The checkpoint MUST contain an origin string as a unique log identifier,\nthe tree size, and the root hash. It MAY also be followed by optional data,\nand clients MUST NOT assume optional data. The checkpoint MUST also contain\na signature over the root hash (tree head). The checkpoint MAY contain additional\nsignatures, but the first SHOULD be the signature from the log. Checkpoint contents\nare concatenated with newlines into a single string.\nThe checkpoint format is described in\nhttps://github.com/transparency-dev/formats/blob/main/log/README.md\nand https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md.\nAn example implementation can be found in https://github.com/sigstore/rekor/blob/main/pkg/util/signed_note.go",
+      "required": [
+        "envelope"
+      ]
+    },
+    "v1HashAlgorithm": {
+      "type": "string",
+      "enum": [
+        "HASH_ALGORITHM_UNSPECIFIED",
+        "SHA2_256",
+        "SHA2_384",
+        "SHA2_512",
+        "SHA3_256",
+        "SHA3_384"
+      ],
+      "default": "HASH_ALGORITHM_UNSPECIFIED",
+      "description": "Only a subset of the secure hash standard algorithms are supported.\nSee \u003chttps://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf\u003e for more\ndetails.\nUNSPECIFIED SHOULD not be used, primary reason for inclusion is to force\nany proto JSON serialization to emit the used hash algorithm, as default\noption is to *omit* the default value of an enum (which is the first\nvalue, represented by '0'."
+    },
+    "v1HashOutput": {
+      "type": "object",
+      "properties": {
+        "algorithm": {
+          "$ref": "#/definitions/v1HashAlgorithm"
+        },
+        "digest": {
+          "type": "string",
+          "format": "byte",
+          "description": "This is the raw octets of the message digest as computed by\nthe hash algorithm."
+        }
+      },
+      "description": "HashOutput captures a digest of a 'message' (generic octet sequence)\nand the corresponding hash algorithm used."
+    },
+    "v1InclusionPromise": {
+      "type": "object",
+      "properties": {
+        "signedEntryTimestamp": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "description": "The inclusion promise is calculated by Rekor. It's calculated as a\nsignature over a canonical JSON serialization of the persisted entry, the\nlog ID, log index and the integration timestamp.\nSee https://github.com/sigstore/rekor/blob/a6e58f72b6b18cc06cefe61808efd562b9726330/pkg/api/entries.go#L54\nThe format of the signature depends on the transparency log's public key.\nIf the signature algorithm requires a hash function and/or a signature\nscheme (e.g. RSA) those has to be retrieved out-of-band from the log's\noperators, together with the public key.\nThis is used to verify the integration timestamp's value and that the log\nhas promised to include the entry.",
+      "required": [
+        "signedEntryTimestamp"
+      ]
+    },
+    "v1InclusionProof": {
+      "type": "object",
+      "properties": {
+        "logIndex": {
+          "type": "string",
+          "format": "int64",
+          "description": "The index of the entry in the tree it was written to."
+        },
+        "rootHash": {
+          "type": "string",
+          "format": "byte",
+          "description": "The hash digest stored at the root of the merkle tree at the time\nthe proof was generated."
+        },
+        "treeSize": {
+          "type": "string",
+          "format": "int64",
+          "description": "The size of the merkle tree at the time the proof was generated."
+        },
+        "hashes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "byte"
+          },
+          "description": "A list of hashes required to compute the inclusion proof, sorted\nin order from leaf to root.\nNote that leaf and root hashes are not included.\nThe root hash is available separately in this message, and the\nleaf hash should be calculated by the client."
+        },
+        "checkpoint": {
+          "$ref": "#/definitions/v1Checkpoint",
+          "description": "Signature of the tree head, as of the time of this proof was\ngenerated. See above info on 'Checkpoint' for more details."
+        }
+      },
+      "description": "InclusionProof is the proof returned from the transparency log. Can\nbe used for offline or online verification against the log.",
+      "required": [
+        "logIndex",
+        "rootHash",
+        "treeSize",
+        "hashes",
+        "checkpoint"
+      ]
+    },
+    "v1KindVersion": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "title": "Kind is the type of entry being stored in the log.\nSee here for a list: https://github.com/sigstore/rekor/tree/main/pkg/types"
+        },
+        "version": {
+          "type": "string",
+          "description": "The specific api version of the type."
+        }
+      },
+      "description": "KindVersion contains the entry's kind and api version.",
+      "required": [
+        "kind",
+        "version"
+      ]
+    },
+    "v1LogId": {
+      "type": "object",
+      "properties": {
+        "keyId": {
+          "type": "string",
+          "format": "byte",
+          "description": "The unique identity of the log, represented by its public key."
+        }
+      },
+      "description": "LogId captures the identity of a transparency log.",
+      "required": [
+        "keyId"
+      ]
+    },
+    "v1PublicKeyDetails": {
+      "type": "string",
+      "enum": [
+        "PUBLIC_KEY_DETAILS_UNSPECIFIED",
+        "PKCS1_RSA_PKCS1V5",
+        "PKCS1_RSA_PSS",
+        "PKIX_RSA_PKCS1V5",
+        "PKIX_RSA_PSS",
+        "PKIX_RSA_PKCS1V15_2048_SHA256",
+        "PKIX_RSA_PKCS1V15_3072_SHA256",
+        "PKIX_RSA_PKCS1V15_4096_SHA256",
+        "PKIX_RSA_PSS_2048_SHA256",
+        "PKIX_RSA_PSS_3072_SHA256",
+        "PKIX_RSA_PSS_4096_SHA256",
+        "PKIX_ECDSA_P256_HMAC_SHA_256",
+        "PKIX_ECDSA_P256_SHA_256",
+        "PKIX_ECDSA_P384_SHA_384",
+        "PKIX_ECDSA_P521_SHA_512",
+        "PKIX_ED25519",
+        "PKIX_ED25519_PH",
+        "LMS_SHA256",
+        "LMOTS_SHA256"
+      ],
+      "default": "PUBLIC_KEY_DETAILS_UNSPECIFIED",
+      "description": "Details of a specific public key, capturing the the key encoding method,\nand signature algorithm.\n\nPublicKeyDetails captures the public key/hash algorithm combinations\nrecommended in the Sigstore ecosystem.\n\nThis is modelled as a linear set as we want to provide a small number of\nopinionated options instead of allowing every possible permutation.\n\nAny changes to this enum MUST be reflected in the algorithm registry.\nSee: docs/algorithm-registry.md\n\nTo avoid the possibility of contradicting formats such as PKCS1 with\nED25519 the valid permutations are listed as a linear set instead of a\ncartesian set (i.e one combined variable instead of two, one for encoding\nand one for the signature algorithm).\n\n - PKCS1_RSA_PKCS1V5: RSA\n\nSee RFC8017\n - PKCS1_RSA_PSS: See RFC8017\n - PKIX_RSA_PKCS1V15_2048_SHA256: RSA public key in PKIX format, PKCS#1v1.5 signature\n - PKIX_RSA_PSS_2048_SHA256: RSA public key in PKIX format, RSASSA-PSS signature\n\nSee RFC4055\n - PKIX_ECDSA_P256_HMAC_SHA_256: ECDSA\n\nSee RFC6979\n - PKIX_ECDSA_P256_SHA_256: See NIST FIPS 186-4\n - PKIX_ED25519: Ed 25519\n\nSee RFC8032\n - LMS_SHA256: LMS and LM-OTS\n\nThese keys and signatures may be used by private Sigstore\ndeployments, but are not currently supported by the public\ngood instance.\n\nUSER WARNING: LMS and LM-OTS are both stateful signature schemes.\nUsing them correctly requires discretion and careful consideration\nto ensure that individual secret keys are not used more than once.\nIn addition, LM-OTS is a single-use scheme, meaning that it\nMUST NOT be used for more than one signature per LM-OTS key.\nIf you cannot maintain these invariants, you MUST NOT use these\nschemes."
+    },
+    "v1TransparencyLogEntry": {
+      "type": "object",
+      "properties": {
+        "logIndex": {
+          "type": "string",
+          "format": "int64",
+          "description": "The global index of the entry, used when querying the log by index."
+        },
+        "logId": {
+          "$ref": "#/definitions/v1LogId",
+          "description": "The unique identifier of the log."
+        },
+        "kindVersion": {
+          "$ref": "#/definitions/v1KindVersion",
+          "description": "The kind (type) and version of the object associated with this\nentry. These values are required to construct the entry during\nverification."
+        },
+        "integratedTime": {
+          "type": "string",
+          "format": "int64",
+          "description": "The UNIX timestamp from the log when the entry was persisted.\nThe integration time MUST NOT be trusted if inclusion_promise\nis omitted."
+        },
+        "inclusionPromise": {
+          "$ref": "#/definitions/v1InclusionPromise",
+          "description": "The inclusion promise/signed entry timestamp from the log.\nRequired for v0.1 bundles, and MUST be verified.\nOptional for \u003e= v0.2 bundles if another suitable source of\ntime is present (such as another source of signed time,\nor the current system time for long-lived certificates).\nMUST be verified if no other suitable source of time is present,\nand SHOULD be verified otherwise."
+        },
+        "inclusionProof": {
+          "$ref": "#/definitions/v1InclusionProof",
+          "description": "The inclusion proof can be used for offline or online verification\nthat the entry was appended to the log, and that the log has not been\naltered."
+        },
+        "canonicalizedBody": {
+          "type": "string",
+          "format": "byte",
+          "description": "Optional. The canonicalized transparency log entry, used to\nreconstruct the Signed Entry Timestamp (SET) during verification.\nThe contents of this field are the same as the `body` field in\na Rekor response, meaning that it does **not** include the \"full\"\ncanonicalized form (of log index, ID, etc.) which are\nexposed as separate fields. The verifier is responsible for\ncombining the `canonicalized_body`, `log_index`, `log_id`,\nand `integrated_time` into the payload that the SET's signature\nis generated over.\nThis field is intended to be used in cases where the SET cannot be\nproduced determinisitically (e.g. inconsistent JSON field ordering,\ndiffering whitespace, etc).\n\nIf set, clients MUST verify that the signature referenced in the\n`canonicalized_body` matches the signature provided in the\n`Bundle.content`.\nIf not set, clients are responsible for constructing an equivalent\npayload from other sources to verify the signature."
+        }
+      },
+      "description": "TransparencyLogEntry captures all the details required from Rekor to\nreconstruct an entry, given that the payload is provided via other means.\nThis type can easily be created from the existing response from Rekor.\nFuture iterations could rely on Rekor returning the minimal set of\nattributes (excluding the payload) that are required for verifying the\ninclusion promise. The inclusion promise (called SignedEntryTimestamp in\nthe response from Rekor) is similar to a Signed Certificate Timestamp\nas described here https://www.rfc-editor.org/rfc/rfc6962.html#section-3.2.",
+      "required": [
+        "logIndex",
+        "logId",
+        "kindVersion",
+        "integratedTime",
+        "inclusionProof"
+      ]
+    },
+    "v1X509Certificate": {
+      "type": "object",
+      "properties": {
+        "rawBytes": {
+          "type": "string",
+          "format": "byte",
+          "description": "DER-encoded X.509 certificate."
+        }
+      },
+      "required": [
+        "rawBytes"
+      ]
+    },
+    "v2CreateEntryRequest": {
+      "type": "object",
+      "properties": {
+        "hashedRekordRequest": {
+          "$ref": "#/definitions/v2HashedRekordRequest"
+        },
+        "dsseRequest": {
+          "$ref": "#/definitions/v2DSSERequest"
+        }
+      },
+      "title": "Create a new HashedRekord or DSSE",
+      "required": [
+        "hashedRekordRequest",
+        "dsseRequest"
+      ]
+    },
+    "v2DSSERequest": {
+      "type": "object",
+      "properties": {
+        "envelope": {
+          "type": "string",
+          "title": "A DSSE envelope (as defined by https://github.com/secure-systems-lab/dsse/blob/master/envelope.proto)\nin stringified JSON"
+        },
+        "verifier": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v2Verifier"
+          },
+          "title": "collection of verification material used to verify"
+        }
+      },
+      "title": "A request to add a dsse entry to the log",
+      "required": [
+        "envelope"
+      ]
+    },
+    "v2HashedRekordRequest": {
+      "type": "object",
+      "properties": {
+        "signature": {
+          "type": "string",
+          "format": "byte",
+          "title": "A single signature over the hashed data"
+        },
+        "data": {
+          "$ref": "#/definitions/v1HashOutput",
+          "title": "The hashed data"
+        },
+        "verifier": {
+          "$ref": "#/definitions/v2Verifier",
+          "title": "A key/cerificate to verify the signature"
+        }
+      },
+      "title": "A request to add a hashedrekord to the log",
+      "required": [
+        "signature",
+        "data",
+        "verifier"
+      ]
+    },
+    "v2Verifier": {
+      "type": "object",
+      "properties": {
+        "publicKey": {
+          "$ref": "#/definitions/rekorv2PublicKey"
+        },
+        "x509Certificate": {
+          "$ref": "#/definitions/v1X509Certificate"
+        }
+      },
+      "title": "Either a raw public key or a x509 cerificiate with embedded publicKey",
+      "required": [
+        "publicKey",
+        "x509Certificate"
+      ]
     }
   }
 }

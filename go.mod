@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.1
+	github.com/sigstore/protobuf-specs v0.4.0
 	github.com/spf13/cobra v1.9.1
 	google.golang.org/genproto/googleapis/api v0.0.0-20250224174004-546df14abb99
 	google.golang.org/grpc v1.70.0
