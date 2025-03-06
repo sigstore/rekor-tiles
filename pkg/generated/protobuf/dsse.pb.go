@@ -39,7 +39,8 @@ const (
 // A request to add a dsse entry to the log
 type DSSERequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The full dsse envelope specified as a stringified JSON object
+	// A DSSE envelope (as defined by https://github.com/secure-systems-lab/dsse/blob/master/envelope.proto)
+	// in stringified JSON
 	Envelope string `protobuf:"bytes,1,opt,name=envelope,proto3" json:"envelope,omitempty"`
 	// collection of verification material used to verify
 	Verifier      []*Verifier `protobuf:"bytes,2,rep,name=verifier,proto3" json:"verifier,omitempty"`

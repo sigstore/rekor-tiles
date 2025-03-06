@@ -23,7 +23,8 @@ option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
 // A request to add a dsse entry to the log
 message DSSERequest {
-    // The full dsse envelope specified as a stringified JSON object
+    // A DSSE envelope (as defined by https://github.com/secure-systems-lab/dsse/blob/master/envelope.proto)
+    // in stringified JSON
     string envelope = 1 [(google.api.field_behavior) = REQUIRED];
     // collection of verification material used to verify
     repeated Verifier verifier = 2;

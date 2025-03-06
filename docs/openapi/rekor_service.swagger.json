@@ -533,7 +533,7 @@
       "properties": {
         "envelope": {
           "type": "string",
-          "title": "The full dsse envelope specified as a stringified JSON object"
+          "title": "A DSSE envelope (as defined by https://github.com/secure-systems-lab/dsse/blob/master/envelope.proto)\nin stringified JSON"
         },
         "verifier": {
           "type": "array",
