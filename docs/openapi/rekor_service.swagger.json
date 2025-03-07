@@ -7,9 +7,6 @@
   "tags": [
     {
       "name": "Rekor"
-    },
-    {
-      "name": "RekorLog"
     }
   ],
   "consumes": [
@@ -22,7 +19,7 @@
     "/api/v2/checkpoint": {
       "get": {
         "summary": "Get a checkpoint from the log",
-        "operationId": "RekorLog_GetCheckpoint",
+        "operationId": "Rekor_GetCheckpoint",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -38,7 +35,7 @@
           }
         },
         "tags": [
-          "RekorLog"
+          "Rekor"
         ]
       }
     },
@@ -78,7 +75,7 @@
     "/api/v2/tile/entries/{N}": {
       "get": {
         "summary": "Get an entry bundle from the log",
-        "operationId": "RekorLog_GetEntryBundle",
+        "operationId": "Rekor_GetEntryBundle",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -103,14 +100,14 @@
           }
         ],
         "tags": [
-          "RekorLog"
+          "Rekor"
         ]
       }
     },
     "/api/v2/tile/entries/{N}/{W}": {
       "get": {
         "summary": "Get a partial entry bundle from the log",
-        "operationId": "RekorLog_GetPartialEntryBundle",
+        "operationId": "Rekor_GetPartialEntryBundle",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -142,14 +139,14 @@
           }
         ],
         "tags": [
-          "RekorLog"
+          "Rekor"
         ]
       }
     },
     "/api/v2/tile/{L}/{N}": {
       "get": {
         "summary": "Get a tile from the log",
-        "operationId": "RekorLog_GetTile",
+        "operationId": "Rekor_GetTile",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -181,14 +178,14 @@
           }
         ],
         "tags": [
-          "RekorLog"
+          "Rekor"
         ]
       }
     },
     "/api/v2/tile/{L}/{N}/{W}": {
       "get": {
         "summary": "Get a partial tile from the log",
-        "operationId": "RekorLog_GetPartialTile",
+        "operationId": "Rekor_GetPartialTile",
         "responses": {
           "200": {
             "description": "A successful response.",
@@ -227,7 +224,7 @@
           }
         ],
         "tags": [
-          "RekorLog"
+          "Rekor"
         ]
       }
     }

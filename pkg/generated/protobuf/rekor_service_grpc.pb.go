@@ -36,7 +36,12 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Rekor_CreateEntry_FullMethodName = "/dev.sigstore.rekor.v2.Rekor/CreateEntry"
+	Rekor_CreateEntry_FullMethodName           = "/dev.sigstore.rekor.v2.Rekor/CreateEntry"
+	Rekor_GetTile_FullMethodName               = "/dev.sigstore.rekor.v2.Rekor/GetTile"
+	Rekor_GetPartialTile_FullMethodName        = "/dev.sigstore.rekor.v2.Rekor/GetPartialTile"
+	Rekor_GetEntryBundle_FullMethodName        = "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle"
+	Rekor_GetPartialEntryBundle_FullMethodName = "/dev.sigstore.rekor.v2.Rekor/GetPartialEntryBundle"
+	Rekor_GetCheckpoint_FullMethodName         = "/dev.sigstore.rekor.v2.Rekor/GetCheckpoint"
 )
 
 // RekorClient is the client API for Rekor service.
@@ -44,9 +49,20 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 //
 // A service for sigstore clients to connect to to create log entries
+// and for log monitors and witnesses to audit/inspect the log
 type RekorClient interface {
 	// Create an entry in the log
 	CreateEntry(ctx context.Context, in *CreateEntryRequest, opts ...grpc.CallOption) (*v1.TransparencyLogEntry, error)
+	// Get a tile from the log
+	GetTile(ctx context.Context, in *TileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
+	// Get a partial tile from the log
+	GetPartialTile(ctx context.Context, in *PartialTileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
+	// Get an entry bundle from the log
+	GetEntryBundle(ctx context.Context, in *EntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
+	// Get a partial entry bundle from the log
+	GetPartialEntryBundle(ctx context.Context, in *PartialEntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
+	// Get a checkpoint from the log
+	GetCheckpoint(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 }
 
 type rekorClient struct {
@@ -67,14 +83,75 @@ func (c *rekorClient) CreateEntry(ctx context.Context, in *CreateEntryRequest, o
 	return out, nil
 }
 
+func (c *rekorClient) GetTile(ctx context.Context, in *TileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, Rekor_GetTile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rekorClient) GetPartialTile(ctx context.Context, in *PartialTileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, Rekor_GetPartialTile_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rekorClient) GetEntryBundle(ctx context.Context, in *EntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, Rekor_GetEntryBundle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rekorClient) GetPartialEntryBundle(ctx context.Context, in *PartialEntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, Rekor_GetPartialEntryBundle_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rekorClient) GetCheckpoint(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, Rekor_GetCheckpoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // RekorServer is the server API for Rekor service.
 // All implementations must embed UnimplementedRekorServer
 // for forward compatibility.
 //
 // A service for sigstore clients to connect to to create log entries
+// and for log monitors and witnesses to audit/inspect the log
 type RekorServer interface {
 	// Create an entry in the log
 	CreateEntry(context.Context, *CreateEntryRequest) (*v1.TransparencyLogEntry, error)
+	// Get a tile from the log
+	GetTile(context.Context, *TileRequest) (*httpbody.HttpBody, error)
+	// Get a partial tile from the log
+	GetPartialTile(context.Context, *PartialTileRequest) (*httpbody.HttpBody, error)
+	// Get an entry bundle from the log
+	GetEntryBundle(context.Context, *EntryBundleRequest) (*httpbody.HttpBody, error)
+	// Get a partial entry bundle from the log
+	GetPartialEntryBundle(context.Context, *PartialEntryBundleRequest) (*httpbody.HttpBody, error)
+	// Get a checkpoint from the log
+	GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error)
 	mustEmbedUnimplementedRekorServer()
 }
 
@@ -87,6 +164,21 @@ type UnimplementedRekorServer struct{}
 
 func (UnimplementedRekorServer) CreateEntry(context.Context, *CreateEntryRequest) (*v1.TransparencyLogEntry, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateEntry not implemented")
+}
+func (UnimplementedRekorServer) GetTile(context.Context, *TileRequest) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetTile not implemented")
+}
+func (UnimplementedRekorServer) GetPartialTile(context.Context, *PartialTileRequest) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPartialTile not implemented")
+}
+func (UnimplementedRekorServer) GetEntryBundle(context.Context, *EntryBundleRequest) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEntryBundle not implemented")
+}
+func (UnimplementedRekorServer) GetPartialEntryBundle(context.Context, *PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetPartialEntryBundle not implemented")
+}
+func (UnimplementedRekorServer) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetCheckpoint not implemented")
 }
 func (UnimplementedRekorServer) mustEmbedUnimplementedRekorServer() {}
 func (UnimplementedRekorServer) testEmbeddedByValue()               {}
@@ -127,6 +219,96 @@ func _Rekor_CreateEntry_Handler(srv interface{}, ctx context.Context, dec func(i
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Rekor_GetTile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RekorServer).GetTile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rekor_GetTile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RekorServer).GetTile(ctx, req.(*TileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rekor_GetPartialTile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PartialTileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RekorServer).GetPartialTile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rekor_GetPartialTile_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RekorServer).GetPartialTile(ctx, req.(*PartialTileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rekor_GetEntryBundle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(EntryBundleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RekorServer).GetEntryBundle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rekor_GetEntryBundle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RekorServer).GetEntryBundle(ctx, req.(*EntryBundleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rekor_GetPartialEntryBundle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PartialEntryBundleRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RekorServer).GetPartialEntryBundle(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rekor_GetPartialEntryBundle_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RekorServer).GetPartialEntryBundle(ctx, req.(*PartialEntryBundleRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rekor_GetCheckpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RekorServer).GetCheckpoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rekor_GetCheckpoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RekorServer).GetCheckpoint(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Rekor_ServiceDesc is the grpc.ServiceDesc for Rekor service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -138,273 +320,25 @@ var Rekor_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "CreateEntry",
 			Handler:    _Rekor_CreateEntry_Handler,
 		},
-	},
-	Streams:  []grpc.StreamDesc{},
-	Metadata: "rekor_service.proto",
-}
-
-const (
-	RekorLog_GetTile_FullMethodName               = "/dev.sigstore.rekor.v2.RekorLog/GetTile"
-	RekorLog_GetPartialTile_FullMethodName        = "/dev.sigstore.rekor.v2.RekorLog/GetPartialTile"
-	RekorLog_GetEntryBundle_FullMethodName        = "/dev.sigstore.rekor.v2.RekorLog/GetEntryBundle"
-	RekorLog_GetPartialEntryBundle_FullMethodName = "/dev.sigstore.rekor.v2.RekorLog/GetPartialEntryBundle"
-	RekorLog_GetCheckpoint_FullMethodName         = "/dev.sigstore.rekor.v2.RekorLog/GetCheckpoint"
-)
-
-// RekorLogClient is the client API for RekorLog service.
-//
-// For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
-//
-// A service for log monitors and witnesses to audit/inspect the log
-type RekorLogClient interface {
-	// Get a tile from the log
-	GetTile(ctx context.Context, in *TileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
-	// Get a partial tile from the log
-	GetPartialTile(ctx context.Context, in *PartialTileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
-	// Get an entry bundle from the log
-	GetEntryBundle(ctx context.Context, in *EntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
-	// Get a partial entry bundle from the log
-	GetPartialEntryBundle(ctx context.Context, in *PartialEntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
-	// Get a checkpoint from the log
-	GetCheckpoint(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
-}
-
-type rekorLogClient struct {
-	cc grpc.ClientConnInterface
-}
-
-func NewRekorLogClient(cc grpc.ClientConnInterface) RekorLogClient {
-	return &rekorLogClient{cc}
-}
-
-func (c *rekorLogClient) GetTile(ctx context.Context, in *TileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(httpbody.HttpBody)
-	err := c.cc.Invoke(ctx, RekorLog_GetTile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rekorLogClient) GetPartialTile(ctx context.Context, in *PartialTileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(httpbody.HttpBody)
-	err := c.cc.Invoke(ctx, RekorLog_GetPartialTile_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rekorLogClient) GetEntryBundle(ctx context.Context, in *EntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(httpbody.HttpBody)
-	err := c.cc.Invoke(ctx, RekorLog_GetEntryBundle_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rekorLogClient) GetPartialEntryBundle(ctx context.Context, in *PartialEntryBundleRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(httpbody.HttpBody)
-	err := c.cc.Invoke(ctx, RekorLog_GetPartialEntryBundle_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *rekorLogClient) GetCheckpoint(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
-	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(httpbody.HttpBody)
-	err := c.cc.Invoke(ctx, RekorLog_GetCheckpoint_FullMethodName, in, out, cOpts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-// RekorLogServer is the server API for RekorLog service.
-// All implementations must embed UnimplementedRekorLogServer
-// for forward compatibility.
-//
-// A service for log monitors and witnesses to audit/inspect the log
-type RekorLogServer interface {
-	// Get a tile from the log
-	GetTile(context.Context, *TileRequest) (*httpbody.HttpBody, error)
-	// Get a partial tile from the log
-	GetPartialTile(context.Context, *PartialTileRequest) (*httpbody.HttpBody, error)
-	// Get an entry bundle from the log
-	GetEntryBundle(context.Context, *EntryBundleRequest) (*httpbody.HttpBody, error)
-	// Get a partial entry bundle from the log
-	GetPartialEntryBundle(context.Context, *PartialEntryBundleRequest) (*httpbody.HttpBody, error)
-	// Get a checkpoint from the log
-	GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error)
-	mustEmbedUnimplementedRekorLogServer()
-}
-
-// UnimplementedRekorLogServer must be embedded to have
-// forward compatible implementations.
-//
-// NOTE: this should be embedded by value instead of pointer to avoid a nil
-// pointer dereference when methods are called.
-type UnimplementedRekorLogServer struct{}
-
-func (UnimplementedRekorLogServer) GetTile(context.Context, *TileRequest) (*httpbody.HttpBody, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetTile not implemented")
-}
-func (UnimplementedRekorLogServer) GetPartialTile(context.Context, *PartialTileRequest) (*httpbody.HttpBody, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPartialTile not implemented")
-}
-func (UnimplementedRekorLogServer) GetEntryBundle(context.Context, *EntryBundleRequest) (*httpbody.HttpBody, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetEntryBundle not implemented")
-}
-func (UnimplementedRekorLogServer) GetPartialEntryBundle(context.Context, *PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPartialEntryBundle not implemented")
-}
-func (UnimplementedRekorLogServer) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetCheckpoint not implemented")
-}
-func (UnimplementedRekorLogServer) mustEmbedUnimplementedRekorLogServer() {}
-func (UnimplementedRekorLogServer) testEmbeddedByValue()                  {}
-
-// UnsafeRekorLogServer may be embedded to opt out of forward compatibility for this service.
-// Use of this interface is not recommended, as added methods to RekorLogServer will
-// result in compilation errors.
-type UnsafeRekorLogServer interface {
-	mustEmbedUnimplementedRekorLogServer()
-}
-
-func RegisterRekorLogServer(s grpc.ServiceRegistrar, srv RekorLogServer) {
-	// If the following call pancis, it indicates UnimplementedRekorLogServer was
-	// embedded by pointer and is nil.  This will cause panics if an
-	// unimplemented method is ever invoked, so we test this at initialization
-	// time to prevent it from happening at runtime later due to I/O.
-	if t, ok := srv.(interface{ testEmbeddedByValue() }); ok {
-		t.testEmbeddedByValue()
-	}
-	s.RegisterService(&RekorLog_ServiceDesc, srv)
-}
-
-func _RekorLog_GetTile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(TileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RekorLogServer).GetTile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RekorLog_GetTile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RekorLogServer).GetTile(ctx, req.(*TileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RekorLog_GetPartialTile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PartialTileRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RekorLogServer).GetPartialTile(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RekorLog_GetPartialTile_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RekorLogServer).GetPartialTile(ctx, req.(*PartialTileRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RekorLog_GetEntryBundle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(EntryBundleRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RekorLogServer).GetEntryBundle(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RekorLog_GetEntryBundle_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RekorLogServer).GetEntryBundle(ctx, req.(*EntryBundleRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RekorLog_GetPartialEntryBundle_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(PartialEntryBundleRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RekorLogServer).GetPartialEntryBundle(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RekorLog_GetPartialEntryBundle_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RekorLogServer).GetPartialEntryBundle(ctx, req.(*PartialEntryBundleRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _RekorLog_GetCheckpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(RekorLogServer).GetCheckpoint(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: RekorLog_GetCheckpoint_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(RekorLogServer).GetCheckpoint(ctx, req.(*emptypb.Empty))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-// RekorLog_ServiceDesc is the grpc.ServiceDesc for RekorLog service.
-// It's only intended for direct use with grpc.RegisterService,
-// and not to be introspected or modified (even as a copy)
-var RekorLog_ServiceDesc = grpc.ServiceDesc{
-	ServiceName: "dev.sigstore.rekor.v2.RekorLog",
-	HandlerType: (*RekorLogServer)(nil),
-	Methods: []grpc.MethodDesc{
 		{
 			MethodName: "GetTile",
-			Handler:    _RekorLog_GetTile_Handler,
+			Handler:    _Rekor_GetTile_Handler,
 		},
 		{
 			MethodName: "GetPartialTile",
-			Handler:    _RekorLog_GetPartialTile_Handler,
+			Handler:    _Rekor_GetPartialTile_Handler,
 		},
 		{
 			MethodName: "GetEntryBundle",
-			Handler:    _RekorLog_GetEntryBundle_Handler,
+			Handler:    _Rekor_GetEntryBundle_Handler,
 		},
 		{
 			MethodName: "GetPartialEntryBundle",
-			Handler:    _RekorLog_GetPartialEntryBundle_Handler,
+			Handler:    _Rekor_GetPartialEntryBundle_Handler,
 		},
 		{
 			MethodName: "GetCheckpoint",
-			Handler:    _RekorLog_GetCheckpoint_Handler,
+			Handler:    _Rekor_GetCheckpoint_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
