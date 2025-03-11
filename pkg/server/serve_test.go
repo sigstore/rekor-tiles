@@ -40,7 +40,7 @@ func TestServe_smoke(t *testing.T) {
 	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	gc := NewGRPCConfig()
 	hc := NewHTTPConfig()
-	s := &testServer{}
+	s := &mockServer{}
 
 	// Start the server
 	var wg sync.WaitGroup

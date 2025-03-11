@@ -25,7 +25,7 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type testServer struct {
+type mockServer struct {
 	pb.UnimplementedRekorServer
 }
 
@@ -52,11 +52,11 @@ var testEntry = pbs.TransparencyLogEntry{
 	CanonicalizedBody: []byte("abcd"),
 }
 
-func (s *testServer) CreateEntry(_ context.Context, _ *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
+func (s *mockServer) CreateEntry(_ context.Context, _ *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
 	return &testEntry, nil
 }
 
-func (s *testServer) GetTile(_ context.Context, in *pb.TileRequest) (*httpbody.HttpBody, error) {
+func (s *mockServer) GetTile(_ context.Context, in *pb.TileRequest) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte(fmt.Sprintf("test-tile:%d,%d", in.L, in.N)),
@@ -64,7 +64,7 @@ func (s *testServer) GetTile(_ context.Context, in *pb.TileRequest) (*httpbody.H
 	}, nil
 }
 
-func (s *testServer) GetPartialTile(_ context.Context, in *pb.PartialTileRequest) (*httpbody.HttpBody, error) {
+func (s *mockServer) GetPartialTile(_ context.Context, in *pb.PartialTileRequest) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte(fmt.Sprintf("test-tile:%d,%s,%d", in.L, in.N, in.W)),
@@ -72,21 +72,21 @@ func (s *testServer) GetPartialTile(_ context.Context, in *pb.PartialTileRequest
 	}, nil
 }
 
-func (s *testServer) GetEntryBundle(_ context.Context, in *pb.EntryBundleRequest) (*httpbody.HttpBody, error) {
+func (s *mockServer) GetEntryBundle(_ context.Context, in *pb.EntryBundleRequest) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte(fmt.Sprintf("test-entries:%d", in.N)),
 		Extensions:  nil,
 	}, nil
 }
-func (s *testServer) GetPartialEntryBundle(_ context.Context, in *pb.PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
+func (s *mockServer) GetPartialEntryBundle(_ context.Context, in *pb.PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte(fmt.Sprintf("test-entries:%s,%d", in.N, in.W)),
 		Extensions:  nil,
 	}, nil
 }
-func (s *testServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*httpbody.HttpBody, error) {
+func (s *mockServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte("test-checkpoint"),
