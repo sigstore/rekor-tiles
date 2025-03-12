@@ -32,7 +32,12 @@ import (
 )
 
 // Storage provides the functions to add entries to a Tessera log.
-type Storage struct {
+type Storage interface {
+	Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error)
+	ReadTile(ctx context.Context, level, index uint64, p uint8) ([]byte, error)
+}
+
+type storage struct {
 	origin     string
 	awaiter    *tessera.IntegrationAwaiter
 	addFn      tessera.AddFn
@@ -40,7 +45,7 @@ type Storage struct {
 }
 
 // NewStorage creates a Tessera storage object for the provided driver and signer.
-func NewStorage(ctx context.Context, origin string, driver tessera.Driver, signer signature.Signer) (*Storage, error) {
+func NewStorage(ctx context.Context, origin string, driver tessera.Driver, signer signature.Signer) (Storage, error) {
 	noteSigner, err := note.NewNoteSigner(ctx, origin, signer)
 	if err != nil {
 		return nil, fmt.Errorf("getting note signer: %w", err)
@@ -52,7 +57,7 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, signe
 		return nil, fmt.Errorf("getting tessera appender: %w", err)
 	}
 	awaiter := tessera.NewIntegrationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
-	return &Storage{
+	return &storage{
 		origin:     origin,
 		awaiter:    awaiter,
 		addFn:      appender.Add,
@@ -62,7 +67,7 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, signe
 
 // Add adds a Tessera entry to the log, waits for it to be sequenced into the log,
 // and returns the log index and inclusion proof as a TransparencyLogEntry object.
-func (s *Storage) Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error) {
+func (s *storage) Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error) {
 	idx, checkpointBody, err := s.addEntry(ctx, entry)
 	if err != nil {
 		return nil, fmt.Errorf("add entry: %w", err)
@@ -79,7 +84,7 @@ func (s *Storage) Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.Tran
 
 // ReadTile looks up the tile at the given level, index within the level, and
 // width of the tile if partial, and returns the raw bytes of the tile.
-func (s *Storage) ReadTile(ctx context.Context, level, index uint64, p uint8) ([]byte, error) {
+func (s *storage) ReadTile(ctx context.Context, level, index uint64, p uint8) ([]byte, error) {
 	tile, err := s.readTileFn(ctx, level, index, p)
 	if err != nil {
 		return nil, fmt.Errorf("reading tile level %d index %d p %d: %w", level, index, p, err)
@@ -87,7 +92,7 @@ func (s *Storage) ReadTile(ctx context.Context, level, index uint64, p uint8) ([
 	return tile, nil
 }
 
-func (s *Storage) addEntry(ctx context.Context, entry *tessera.Entry) (*safeInt64, []byte, error) {
+func (s *storage) addEntry(ctx context.Context, entry *tessera.Entry) (*safeInt64, []byte, error) {
 	idx, checkpointBody, err := s.awaiter.Await(ctx, s.addFn(ctx, entry))
 	if err != nil {
 		return nil, nil, fmt.Errorf("await: %w", err)
@@ -99,7 +104,7 @@ func (s *Storage) addEntry(ctx context.Context, entry *tessera.Entry) (*safeInt6
 	return safeIdx, checkpointBody, nil
 }
 
-func (s *Storage) buildProof(ctx context.Context, idx *safeInt64, signedCheckpoint, leafHash []byte) (*rekor_pb.InclusionProof, error) {
+func (s *storage) buildProof(ctx context.Context, idx *safeInt64, signedCheckpoint, leafHash []byte) (*rekor_pb.InclusionProof, error) {
 	checkpoint, err := unmarshalCheckpoint(signedCheckpoint)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshalling checkpoint: %w", err)
