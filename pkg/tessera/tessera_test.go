@@ -38,7 +38,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 
 — test.origin AAAAAW5vb3AKMQpnYi9BbkVFc0JOcFRvYkRkdVUzT1NOYWlUcDZsaVlmMzFGb0U2QUIvczhvPQo=`), nil
 	}
-	s := Storage{
+	s := storage{
 		awaiter: tessera.NewIntegrationAwaiter(ctx, readCheckpoint, 10*time.Millisecond),
 		readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
 			return hex.DecodeString(tileHash)
@@ -85,7 +85,7 @@ func TestReadTile(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	s := Storage{
+	s := storage{
 		readTileFn: func(_ context.Context, level, index uint64, _ uint8) ([]byte, error) {
 			if level != 0 && index != 1 {
 				return nil, fmt.Errorf("not found")
