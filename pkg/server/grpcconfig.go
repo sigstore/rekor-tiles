@@ -14,6 +14,8 @@
 
 package server
 
+import "strconv"
+
 type GRPCConfig struct {
 	port int
 	host string
@@ -42,4 +44,8 @@ func WithGRPCHost(host string) GRPCOption {
 	return func(config *GRPCConfig) {
 		config.host = host
 	}
+}
+
+func (gc GRPCConfig) GRPCTarget() string {
+	return gc.host + ":" + strconv.Itoa(gc.port)
 }

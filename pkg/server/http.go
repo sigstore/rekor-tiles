@@ -19,12 +19,15 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"sync"
 	"syscall"
 	"time"
+
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
@@ -38,7 +41,20 @@ type httpProxy struct {
 }
 
 func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServer) *httpProxy {
-	mux := runtime.NewServeMux()
+	// configure a custom marshaler to fail on unknown fields
+	strictMarshaler := runtime.HTTPBodyMarshaler{
+		Marshaler: &runtime.JSONPb{
+			MarshalOptions: protojson.MarshalOptions{
+				EmitUnpopulated: true,
+			},
+			UnmarshalOptions: protojson.UnmarshalOptions{
+				DiscardUnknown: false,
+			},
+		},
+	}
+	mux := runtime.NewServeMux(
+		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
+	)
 
 	// TODO: allow TLS if the startup provides a TLS cert, but for now the proxy connects to grpc without TLS
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
@@ -68,6 +84,14 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 
 func (hp *httpProxy) start(wg *sync.WaitGroup) {
 
+	lis, err := net.Listen("tcp", hp.serverEndpoint)
+	if err != nil {
+		slog.Error("failed to create listener:", "errors", err)
+		os.Exit(1)
+	}
+
+	hp.serverEndpoint = lis.Addr().String()
+
 	slog.Info("starting http proxy", "address", hp.serverEndpoint)
 
 	waitToClose := make(chan struct{})
@@ -86,8 +110,9 @@ func (hp *httpProxy) start(wg *sync.WaitGroup) {
 
 	wg.Add(1)
 	go func() {
-		if err := hp.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("could not start http listener", "errors", err)
+
+		if err := hp.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error("could not start http server", "errors", err)
 			os.Exit(1)
 		}
 		<-waitToClose

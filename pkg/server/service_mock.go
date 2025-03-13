@@ -17,6 +17,10 @@ package server
 import (
 	"context"
 	"fmt"
+	"sync"
+	"syscall"
+	"testing"
+	"time"
 
 	pbsc "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
@@ -25,7 +29,39 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-type mockServer struct {
+// A testing mock that wraps server.Server to Start and defer Stop a server
+type MockServer struct {
+	gc *GRPCConfig
+	hc *HTTPConfig
+	wg *sync.WaitGroup
+}
+
+func (ms *MockServer) Start(_ *testing.T) {
+	ms.gc = NewGRPCConfig()
+	ms.hc = NewHTTPConfig()
+	s := &mockRekorServer{}
+
+	// Start the server
+	ms.wg = &sync.WaitGroup{}
+	go func() {
+		Serve(context.Background(), ms.hc, ms.gc, s)
+		ms.wg.Done()
+	}()
+	ms.wg.Add(1)
+
+	// TODO: see if health endpoint is up, but for now just wait a second
+	time.Sleep(1 * time.Second)
+}
+
+func (ms *MockServer) Stop(t *testing.T) {
+	// Simulate SIGTERM to trigger graceful shutdown
+	if err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM); err != nil {
+		t.Fatalf("Could not kill server")
+	}
+	ms.wg.Wait()
+}
+
+type mockRekorServer struct {
 	pb.UnimplementedRekorServer
 }
 
@@ -52,11 +88,11 @@ var testEntry = pbs.TransparencyLogEntry{
 	CanonicalizedBody: []byte("abcd"),
 }
 
-func (s *mockServer) CreateEntry(_ context.Context, _ *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
+func (s *mockRekorServer) CreateEntry(_ context.Context, _ *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
 	return &testEntry, nil
 }
 
-func (s *mockServer) GetTile(_ context.Context, in *pb.TileRequest) (*httpbody.HttpBody, error) {
+func (s *mockRekorServer) GetTile(_ context.Context, in *pb.TileRequest) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte(fmt.Sprintf("test-tile:%d,%d", in.L, in.N)),
@@ -64,7 +100,7 @@ func (s *mockServer) GetTile(_ context.Context, in *pb.TileRequest) (*httpbody.H
 	}, nil
 }
 
-func (s *mockServer) GetPartialTile(_ context.Context, in *pb.PartialTileRequest) (*httpbody.HttpBody, error) {
+func (s *mockRekorServer) GetPartialTile(_ context.Context, in *pb.PartialTileRequest) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte(fmt.Sprintf("test-tile:%d,%s,%d", in.L, in.N, in.W)),
@@ -72,21 +108,21 @@ func (s *mockServer) GetPartialTile(_ context.Context, in *pb.PartialTileRequest
 	}, nil
 }
 
-func (s *mockServer) GetEntryBundle(_ context.Context, in *pb.EntryBundleRequest) (*httpbody.HttpBody, error) {
+func (s *mockRekorServer) GetEntryBundle(_ context.Context, in *pb.EntryBundleRequest) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte(fmt.Sprintf("test-entries:%d", in.N)),
 		Extensions:  nil,
 	}, nil
 }
-func (s *mockServer) GetPartialEntryBundle(_ context.Context, in *pb.PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
+func (s *mockRekorServer) GetPartialEntryBundle(_ context.Context, in *pb.PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte(fmt.Sprintf("test-entries:%s,%d", in.N, in.W)),
 		Extensions:  nil,
 	}, nil
 }
-func (s *mockServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*httpbody.HttpBody, error) {
+func (s *mockRekorServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
 		Data:        []byte("test-checkpoint"),

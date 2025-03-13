@@ -14,7 +14,10 @@
 
 package server
 
-import "time"
+import (
+	"strconv"
+	"time"
+)
 
 type HTTPConfig struct {
 	host        string
@@ -52,4 +55,7 @@ func WithHTTPIdleTimeout(idleTimeout time.Duration) HTTPOption {
 	return func(config *HTTPConfig) {
 		config.idleTimeout = idleTimeout
 	}
+}
+func (hc HTTPConfig) HTTPTarget() string {
+	return hc.host + ":" + strconv.Itoa(hc.port)
 }

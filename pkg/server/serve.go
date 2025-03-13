@@ -26,6 +26,10 @@ import (
 func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s protobuf.RekorServer) {
 	var wg sync.WaitGroup
 
+	if hc.port == 0 || gc.port == 0 {
+		slog.Error("dynamic port allocation '0' is not supported", "http port", hc.port, "grpc port", gc.port)
+		os.Exit(1)
+	}
 	if hc.port == gc.port && hc.host == gc.host {
 		slog.Error("http and grpc cannot serve at the same address", "host", hc.host, "port", hc.port)
 		os.Exit(1)
