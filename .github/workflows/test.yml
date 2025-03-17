@@ -19,6 +19,7 @@ on:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -84,6 +85,7 @@ jobs:
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
         with:
           env_vars: OS
+          fail_ci_if_error: true
       - name: Run Go tests w/ `-race`
         if: ${{ runner.os == 'Linux' }}
         run: go test -race $(go list ./... | grep -v third_party/)
