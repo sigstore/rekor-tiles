@@ -93,7 +93,9 @@ jobs:
         with:
           env_vars: OS
           fail_ci_if_error: true
-          # use_oidc: true # does not work: see workaround above
+          # When github.com/codecov/codecov-action/issues/1791 is fixed,
+          # remove workaround step above and uncomment:
+          # use_oidc: true
       - name: Run Go tests w/ `-race`
         if: ${{ runner.os == 'Linux' }}
         run: go test -race $(go list ./... | grep -v third_party/)
