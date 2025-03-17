@@ -66,6 +66,7 @@ jobs:
     name: Run unit tests
     permissions:
       contents: read
+      id-token: write # to authenticate with codecov
     runs-on: ubuntu-latest
 
     env:
@@ -81,11 +82,18 @@ jobs:
           check-latest: true
       - name: Run Go tests
         run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
+      - name: Workaround buggy Codecov OIDC auth
+        if: github.event_name == 'push'
+        run: |
+          TOKEN_RESPONSE=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://codecov.io")
+          CODECOV_TOKEN=$(echo $TOKEN_RESPONSE | jq -r .value)
+          echo "CODECOV_TOKEN=$CODECOV_TOKEN" >> "$GITHUB_ENV"
       - name: Upload Coverage Report
         uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
         with:
           env_vars: OS
           fail_ci_if_error: true
+          # use_oidc: true # does not work: see workaround above
       - name: Run Go tests w/ `-race`
         if: ${{ runner.os == 'Linux' }}
         run: go test -race $(go list ./... | grep -v third_party/)
