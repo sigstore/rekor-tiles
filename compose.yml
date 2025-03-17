@@ -22,16 +22,54 @@ services:
     - bucket:/data/tiles:rw"
     command:
     - "-scheme=http"
-    - "-port=8080"
+    - "-port=7080"
+  rekor_init:
+    build:
+      context: .
+      dockerfile: Dockerfile.emulator_init
+    environment:
+    - GCP_PROJECT=rekor-tiles-e2e
+    - SPANNER_INSTANCE=rekor-tiles
+    - SPANNER_DB=sequencer
+    - SPANNER_EMULATOR_REST_HOST=http://spanner:9020/
+    - SPANNER_EMULATOR_HOST=spanner:9010
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - "test -f /root/finished"
+      timeout: 10s
+      retries: 4
+    depends_on:
+    - spanner
+    - gcs
   rekor:
     build:
       context: .
       target: deploy
     environment:
     - SPANNER_EMULATOR_HOST=spanner:9010
-    - STORAGE_EMULATOR_HOST=gcp:8080
+    - STORAGE_EMULATOR_HOST=gcs:7080
+    command:
+    - "rekor-server"
+    - "serve"
+    - "--http-address=0.0.0.0"
+    - "--grpc-address=0.0.0.0"
+    - "--hostname=rekor-local"
+    - "--gcp-bucket=tiles"
+    - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
+    - "--signer-filepath=/pki/ed25519-priv-key.pem"
+    ports:
+    - "3000:3000"
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - "curl http://localhost:3000 | grep 'Not Found'"
+      timeout: 30s
+      retries: 10
+    volumes:
+    - ./testdata/signer:/pki
     depends_on:
-    - spanner
-    - gcs
+      rekor_init:
+        condition: service_completed_successfully
 volumes:
   bucket: {}
