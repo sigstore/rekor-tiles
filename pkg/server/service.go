@@ -26,7 +26,9 @@ import (
 	"github.com/sigstore/rekor-tiles/pkg/types/hashedrekord"
 	ttessera "github.com/transparency-dev/trillian-tessera"
 	"google.golang.org/genproto/googleapis/api/httpbody"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -81,6 +83,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		slog.Warn("failed to integrate entry", "error", err.Error())
 		return nil, status.Errorf(codes.Unknown, "failed to integrate entry")
 	}
+	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusHeader, "201"))
 	return tle, nil
 }
 

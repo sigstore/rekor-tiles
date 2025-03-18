@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -33,7 +34,10 @@ import (
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/protobuf/proto"
 )
+
+const httpStatusHeader = "x-http-code"
 
 type httpProxy struct {
 	*http.Server
@@ -54,6 +58,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	}
 	mux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
+		runtime.WithForwardResponseOption(httpResponseModifier),
 	)
 
 	// TODO: allow TLS if the startup provides a TLS cert, but for now the proxy connects to grpc without TLS
@@ -119,4 +124,25 @@ func (hp *httpProxy) start(wg *sync.WaitGroup) {
 		wg.Done()
 		slog.Info("http Server shutdown")
 	}()
+}
+
+func httpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Message) error {
+	md, ok := runtime.ServerMetadataFromContext(ctx)
+	if !ok {
+		return nil
+	}
+
+	// set http status code
+	if vals := md.HeaderMD.Get(httpStatusHeader); len(vals) > 0 {
+		code, err := strconv.Atoi(vals[0])
+		if err != nil {
+			return err
+		}
+		// delete the headers to not expose any grpc-metadata in http response
+		delete(md.HeaderMD, httpStatusHeader)
+		delete(w.Header(), "Grpc-Metadata-X-Http-Code")
+		w.WriteHeader(code)
+	}
+
+	return nil
 }
