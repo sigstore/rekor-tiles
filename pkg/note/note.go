@@ -67,6 +67,24 @@ func (n *noteSigner) Sign(msg []byte) ([]byte, error) {
 	return n.sign(msg)
 }
 
+type noteVerifier struct {
+	name   string
+	hash   uint32
+	verify func(msg, sig []byte) bool
+}
+
+func (n *noteVerifier) Name() string {
+	return n.name
+}
+
+func (n *noteVerifier) KeyHash() uint32 {
+	return n.hash
+}
+
+func (n *noteVerifier) Verify(msg, sig []byte) bool {
+	return n.verify(msg, sig)
+}
+
 // isValidName reports whether the name conforms to the spec for the origin string of the note text
 // as defined in https://github.com/C2SP/C2SP/blob/main/tlog-checkpoint.md#note-text.
 func isValidName(name string) bool {
@@ -115,29 +133,29 @@ func rsaKeyHash(name string, key *rsa.PublicKey) (uint32, error) {
 // NewNoteSigner converts a sigstore/sigstore/pkg/signature.Signer into a note.Signer.
 func NewNoteSigner(ctx context.Context, origin string, signer signature.Signer) (note.Signer, error) {
 	if !isValidName(origin) {
-		return &noteSigner{}, fmt.Errorf("invalid name %s", origin)
+		return nil, fmt.Errorf("invalid name %s", origin)
 	}
 
 	pubKey, err := signer.PublicKey()
 	if err != nil {
-		return &noteSigner{}, fmt.Errorf("getting public key: %w", err)
+		return nil, fmt.Errorf("getting public key: %w", err)
 	}
 	var keyID uint32
 	switch pk := pubKey.(type) {
 	case *ecdsa.PublicKey:
 		keyID, err = ecdsaKeyHash(pk)
 		if err != nil {
-			return &noteSigner{}, fmt.Errorf("getting ECDSA key hash: %w", err)
+			return nil, fmt.Errorf("getting ECDSA key hash: %w", err)
 		}
 	case ed25519.PublicKey:
 		keyID = ed25519KeyHash(origin, pk)
 	case *rsa.PublicKey:
 		keyID, err = rsaKeyHash(origin, pk)
 		if err != nil {
-			return &noteSigner{}, fmt.Errorf("getting RSA key hash: %w", err)
+			return nil, fmt.Errorf("getting RSA key hash: %w", err)
 		}
 	default:
-		return &noteSigner{}, fmt.Errorf("unsupported key type: %T", pubKey)
+		return nil, fmt.Errorf("unsupported key type: %T", pubKey)
 	}
 
 	sign := func(msg []byte) ([]byte, error) {
@@ -148,5 +166,45 @@ func NewNoteSigner(ctx context.Context, origin string, signer signature.Signer) 
 		name: origin,
 		hash: keyID,
 		sign: sign,
+	}, nil
+}
+
+func NewNoteVerifier(ctx context.Context, origin string, verifier signature.Verifier) (note.Verifier, error) {
+	if !isValidName(origin) {
+		return nil, fmt.Errorf("invalid name %s", origin)
+	}
+
+	pubKey, err := verifier.PublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("getting public key: %w", err)
+	}
+
+	var keyID uint32
+	switch pk := pubKey.(type) {
+	case *ecdsa.PublicKey:
+		keyID, err = ecdsaKeyHash(pk)
+		if err != nil {
+			return nil, fmt.Errorf("getting ECDSA key hash: %w", err)
+		}
+	case ed25519.PublicKey:
+		keyID = ed25519KeyHash(origin, pk)
+	case *rsa.PublicKey:
+		keyID, err = rsaKeyHash(origin, pk)
+		if err != nil {
+			return nil, fmt.Errorf("getting RSA key hash: %w", err)
+		}
+	default:
+		return nil, fmt.Errorf("unsupported key type: %T", pubKey)
+	}
+
+	return &noteVerifier{
+		name: origin,
+		hash: keyID,
+		verify: func(msg, sig []byte) bool {
+			if err := verifier.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)); err != nil {
+				return false
+			}
+			return true
+		},
 	}, nil
 }
