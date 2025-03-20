@@ -45,9 +45,10 @@ type grpcServer struct {
 }
 
 func newGRPCService(config *GRPCConfig, server pb.RekorServer) *grpcServer {
-	// Create a gRPC Server object
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()))
 	pb.RegisterRekorServer(s, server)
+
+	getMetrics().serverMetrics.InitializeMetrics(s)
 
 	return &grpcServer{s, fmt.Sprintf("%s:%v", config.host, config.port)}
 }
