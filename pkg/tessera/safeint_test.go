@@ -23,22 +23,22 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_newSafeInt64(t *testing.T) {
+func TestNewSafeInt64(t *testing.T) {
 	tests := []struct {
 		name      string
 		number    any
-		expect    *safeInt64
+		expect    *SafeInt64
 		expectErr error
 	}{
 		{
 			name:   "small uint",
 			number: uint64(42),
-			expect: &safeInt64{u: uint64(42), i: int64(42)},
+			expect: &SafeInt64{u: uint64(42), i: int64(42)},
 		},
 		{
 			name:   "small positive int",
 			number: int64(42),
-			expect: &safeInt64{u: uint64(42), i: int64(42)},
+			expect: &SafeInt64{u: uint64(42), i: int64(42)},
 		},
 		{
 			name:      "too large uint",
@@ -67,7 +67,7 @@ func Test_newSafeInt64(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, gotErr := newSafeInt64(test.number)
+			got, gotErr := NewSafeInt64(test.number)
 			assert.Equal(t, test.expect, got)
 			assert.Equal(t, test.expectErr, gotErr)
 		})

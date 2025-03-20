@@ -77,7 +77,7 @@ func (s *storage) Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.Tran
 		return nil, fmt.Errorf("building inclusion proof: %w", err)
 	}
 	return &rekor_pb.TransparencyLogEntry{
-		LogIndex:       idx.i,
+		LogIndex:       idx.I(),
 		InclusionProof: inclusionProof,
 	}, nil
 }
@@ -92,19 +92,19 @@ func (s *storage) ReadTile(ctx context.Context, level, index uint64, p uint8) ([
 	return tile, nil
 }
 
-func (s *storage) addEntry(ctx context.Context, entry *tessera.Entry) (*safeInt64, []byte, error) {
+func (s *storage) addEntry(ctx context.Context, entry *tessera.Entry) (*SafeInt64, []byte, error) {
 	idx, checkpointBody, err := s.awaiter.Await(ctx, s.addFn(ctx, entry))
 	if err != nil {
 		return nil, nil, fmt.Errorf("await: %w", err)
 	}
-	safeIdx, err := newSafeInt64(idx)
+	safeIdx, err := NewSafeInt64(idx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("invalid index: %w", err)
 	}
 	return safeIdx, checkpointBody, nil
 }
 
-func (s *storage) buildProof(ctx context.Context, idx *safeInt64, signedCheckpoint, leafHash []byte) (*rekor_pb.InclusionProof, error) {
+func (s *storage) buildProof(ctx context.Context, idx *SafeInt64, signedCheckpoint, leafHash []byte) (*rekor_pb.InclusionProof, error) {
 	checkpoint, err := unmarshalCheckpoint(signedCheckpoint)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshalling checkpoint: %w", err)
@@ -113,22 +113,22 @@ func (s *storage) buildProof(ctx context.Context, idx *safeInt64, signedCheckpoi
 	if err != nil {
 		return nil, fmt.Errorf("new proof builder: %w", err)
 	}
-	inclusionProof, err := proofBuilder.InclusionProof(ctx, idx.u)
+	inclusionProof, err := proofBuilder.InclusionProof(ctx, idx.U())
 	if err != nil {
 		return nil, fmt.Errorf("generating inclusion proof: %w", err)
 	}
-	safeCheckpointSize, err := newSafeInt64(checkpoint.Size)
+	safeCheckpointSize, err := NewSafeInt64(checkpoint.Size)
 	if err != nil {
 		return nil, fmt.Errorf("invalid tree size: %d", checkpoint.Size)
 	}
 	// TODO(cmurphy): add metrics to detect when this inclusion proof ever fails as well as the overhead time for running this check.
-	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, idx.u, safeCheckpointSize.u, leafHash, inclusionProof, checkpoint.Hash); err != nil {
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, idx.U(), safeCheckpointSize.U(), leafHash, inclusionProof, checkpoint.Hash); err != nil {
 		return nil, fmt.Errorf("failed to verify entry inclusion: %w", err)
 	}
 	return &rekor_pb.InclusionProof{
-		LogIndex: idx.i,
+		LogIndex: idx.I(),
 		RootHash: []byte(hex.EncodeToString(checkpoint.Hash)),
-		TreeSize: safeCheckpointSize.i,
+		TreeSize: safeCheckpointSize.I(),
 		Hashes:   inclusionProof,
 		Checkpoint: &rekor_pb.Checkpoint{
 			Envelope: string(signedCheckpoint),
