@@ -34,6 +34,7 @@ import (
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -56,15 +57,24 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 			},
 		},
 	}
-	mux := runtime.NewServeMux(
-		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
-		runtime.WithForwardResponseOption(httpResponseModifier),
-	)
 
 	// TODO: allow TLS if the startup provides a TLS cert, but for now the proxy connects to grpc without TLS
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
-	err := pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
+	// GRPC client connection so th http mux's healthz endpoint can reach the grpc healthcheck service.
+	// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/#adding-healthz-endpoint-to-runtimeservemux.
+	cc, err := grpc.NewClient(grpcServer.serverEndpoint, opts...)
+	if err != nil {
+		slog.Error("Failed to connect to grpc server:", "errors", err)
+		os.Exit(1)
+	}
+	mux := runtime.NewServeMux(
+		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
+		runtime.WithForwardResponseOption(httpResponseModifier),
+		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)),
+	)
+
+	err = pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
 	if err != nil {
 		slog.Error("Failed to register gateway:", "errors", err)
 		os.Exit(1)
