@@ -134,6 +134,7 @@ func (s *mockRekorServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*h
 }
 
 func (s *mockRekorServer) Check(ctx context.Context, in *health.HealthCheckRequest) (*health.HealthCheckResponse, error) {
+	// TODO: make this do more comprehensive healthchecking.
 	return &health.HealthCheckResponse{Status: health.HealthCheckResponse_SERVING}, nil
 }
 

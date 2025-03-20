@@ -107,6 +107,7 @@ func (s *Server) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpB
 // Check implements the Healthcheck protocol to report the health of the service.
 // See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/.
 func (s *Server) Check(ctx context.Context, in *health.HealthCheckRequest) (*health.HealthCheckResponse, error) {
+	// TODO: make this do more comprehensive healthchecking.
 	return &health.HealthCheckResponse{Status: health.HealthCheckResponse_SERVING}, nil
 }
 
