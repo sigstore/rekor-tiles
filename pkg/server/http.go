@@ -28,6 +28,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -61,6 +63,11 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		runtime.WithForwardResponseOption(httpResponseModifier),
 	)
 
+	metrics := getMetrics()
+	handler := promhttp.InstrumentMetricHandler(metrics.reg, mux)
+	handler = promhttp.InstrumentHandlerDuration(metrics.httpLatency, handler)
+	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
+
 	// TODO: allow TLS if the startup provides a TLS cert, but for now the proxy connects to grpc without TLS
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
@@ -76,7 +83,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	return &httpProxy{
 		Server: &http.Server{
 			Addr:    endpoint,
-			Handler: mux,
+			Handler: handler,
 
 			ReadTimeout:       60 * time.Second,
 			ReadHeaderTimeout: 60 * time.Second,

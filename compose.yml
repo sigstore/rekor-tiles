@@ -60,6 +60,7 @@ services:
     - "--signer-filepath=/pki/ed25519-priv-key.pem"
     ports:
     - "3000:3000"
+    - "2112:2112" # metrics port
     healthcheck:
       test:
       - CMD-SHELL

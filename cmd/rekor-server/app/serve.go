@@ -82,7 +82,8 @@ var serveCmd = &cobra.Command{
 			ctx,
 			server.NewHTTPConfig(
 				server.WithHTTPPort(viper.GetInt("http-port")),
-				server.WithHTTPHost(viper.GetString("http-address"))),
+				server.WithHTTPHost(viper.GetString("http-address")),
+				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port"))),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address"))),
@@ -95,6 +96,7 @@ func init() {
 	// server configs
 	serveCmd.Flags().Int("http-port", 3000, "HTTP port to bind to")
 	serveCmd.Flags().String("http-address", "127.0.0.1", "HTTP address to bind to")
+	serveCmd.Flags().Int("http-metrics-port", 2112, "HTTP port to bind metrics to")
 	serveCmd.Flags().Int("grpc-port", 3001, "GRPC port to bind to")
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
 	hostname, err := os.Hostname()
