@@ -19,11 +19,9 @@ import (
 	"log/slog"
 	"os"
 	"sync"
-
-	"github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 )
 
-func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s protobuf.RekorServer) {
+func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s grpcServerI) {
 	var wg sync.WaitGroup
 
 	if hc.port == 0 || gc.port == 0 {

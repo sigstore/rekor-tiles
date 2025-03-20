@@ -26,6 +26,9 @@ import (
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/genproto/googleapis/api/httpbody"
+	"google.golang.org/grpc/codes"
+	health "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -128,4 +131,23 @@ func (s *mockRekorServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*h
 		Data:        []byte("test-checkpoint"),
 		Extensions:  nil,
 	}, nil
+}
+
+func (s *mockRekorServer) Check(ctx context.Context, in *health.HealthCheckRequest) (*health.HealthCheckResponse, error) {
+	return &health.HealthCheckResponse{Status: health.HealthCheckResponse_SERVING}, nil
+}
+
+// Watch implements the Healthcheck protocol to report the health of the service.
+// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/
+func (s *mockRekorServer) Watch(in *health.HealthCheckRequest, stream health.Health_WatchServer) error {
+	// TODO: replace with code that sends an update reactively, only when the status changes.
+	// See https://github.com/grpc/proposal/blob/master/A17-client-side-health-checking.md#watch-based-health-checking-protocol.
+	// newStatus := health.HealthCheckResponse_SERVING // Replace with your actual health check logic
+	// err := stream.Send(&health.HealthCheckResponse{Status: newStatus})
+	// if err != nil {
+	// 	return err
+	// }
+
+	// Example of how to register both methods but only implement the Check method.
+	return status.Error(codes.Unimplemented, "unimplemented")
 }
