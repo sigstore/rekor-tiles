@@ -37,6 +37,8 @@ import (
 
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health"
+	healthgrpc "google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type grpcServer struct {
@@ -47,7 +49,15 @@ type grpcServer struct {
 func newGRPCService(config *GRPCConfig, server pb.RekorServer) *grpcServer {
 	// Create a gRPC Server object
 	s := grpc.NewServer()
+
 	pb.RegisterRekorServer(s, server)
+
+	// start the healthcheck service and register to our existing GRPC server.
+	healthcheck := health.NewServer()
+	healthgrpc.RegisterHealthServer(s, healthcheck)
+	// "" means all services.
+	// See https://grpc.io/docs/guides/health-checking/#the-server-side-health-service
+	healthcheck.SetServingStatus("", healthgrpc.HealthCheckResponse_SERVING)
 
 	return &grpcServer{s, fmt.Sprintf("%s:%v", config.host, config.port)}
 }
