@@ -20,13 +20,13 @@ import (
 	"math"
 )
 
-// safeInt64 holds equivalent int64 and uint64 integers.
-type safeInt64 struct {
+// SafeInt64 holds equivalent int64 and uint64 integers.
+type SafeInt64 struct {
 	u uint64
 	i int64
 }
 
-// newSafeInt64 returns a safeInt64 struct as long as the number is either an
+// NewSafeInt64 returns a safeInt64 struct as long as the number is either an
 // int64 or uint64 and the value can safely be converted in either direction
 // without overflowing, i.e. is not greater than MaxInt64 and not negative.
 //
@@ -36,8 +36,8 @@ type safeInt64 struct {
 //
 // This is needed for compatibility with TransparencyLogEntry
 // (https://github.com/sigstore/protobuf-specs/blob/e871d3e6fd06fa73a1524ef0efaf1452d3304cf6/protos/sigstore_rekor.proto#L86-L138).
-func newSafeInt64(number any) (*safeInt64, error) {
-	var result safeInt64
+func NewSafeInt64(number any) (*SafeInt64, error) {
+	var result SafeInt64
 	switch n := number.(type) {
 	case uint64:
 		if n > math.MaxInt64 {
@@ -55,4 +55,14 @@ func newSafeInt64(number any) (*safeInt64, error) {
 		return nil, fmt.Errorf("only uint64 and int64 are supported")
 	}
 	return &result, nil
+}
+
+// U returns the uint64 value of the integer.
+func (s *SafeInt64) U() uint64 {
+	return s.u
+}
+
+// I returns the int64 value of the integer.
+func (s *SafeInt64) I() int64 {
+	return s.i
 }
