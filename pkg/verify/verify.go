@@ -1,5 +1,5 @@
 //
-// Copyright 2022 The Sigstore Authors.
+// Copyright 2025 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -21,21 +21,28 @@ import (
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/pkg/note"
+	"github.com/sigstore/rekor-tiles/pkg/tessera"
 	"github.com/sigstore/sigstore/pkg/signature"
 	f_log "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
 )
 
-func VerifyInclusionProof(entry *pbs.TransparencyLogEntry, cp *f_log.Checkpoint) error {
+// VerifyInclusionProof verifies an entry's inclusion proof
+func VerifyInclusionProof(entry *pbs.TransparencyLogEntry, cp *f_log.Checkpoint) error { //nolint: revive
 	leafHash := sha256.Sum256(entry.CanonicalizedBody)
-	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(entry.LogIndex), cp.Size, leafHash[:], entry.InclusionProof.Hashes, cp.Hash); err != nil {
-		return err
+	index, err := tessera.NewSafeInt64(entry.LogIndex)
+	if err != nil {
+		return fmt.Errorf("invalid index: %w", err)
+	}
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, index.U(), cp.Size, leafHash[:], entry.InclusionProof.Hashes, cp.Hash); err != nil {
+		return fmt.Errorf("verifying inclusion: %w", err)
 	}
 	return nil
 }
 
-func VerifyCheckpoint(entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) (*f_log.Checkpoint, error) {
+// VerifyCheckpoint verifies the signature on the entry's inclusion proof checkpoint
+func VerifyCheckpoint(entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) (*f_log.Checkpoint, error) { //nolint: revive
 	v, err := note.NewNoteVerifier(origin, verifier)
 	if err != nil {
 		return nil, fmt.Errorf("error creating note verifier: %v", err)
@@ -47,13 +54,12 @@ func VerifyCheckpoint(entry *pbs.TransparencyLogEntry, origin string, verifier s
 	return cp, nil
 }
 
-func VerifyLogEntry(entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) error {
+// VerifyLogEntry verifies the log entry: This includes verifying the signature on the entry's
+// inclusion proof checkpoint and verifying the entry inclusion proof
+func VerifyLogEntry(entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) error { //nolint: revive
 	cp, err := VerifyCheckpoint(entry, origin, verifier)
 	if err != nil {
 		return err
 	}
-	if err := VerifyInclusionProof(entry, cp); err != nil {
-		return nil
-	}
-	return nil
+	return VerifyInclusionProof(entry, cp)
 }
