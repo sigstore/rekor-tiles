@@ -16,7 +16,6 @@
 package verify
 
 import (
-	"context"
 	"crypto/sha256"
 	"fmt"
 
@@ -36,8 +35,8 @@ func VerifyInclusionProof(entry *pbs.TransparencyLogEntry, cp *f_log.Checkpoint)
 	return nil
 }
 
-func VerifyCheckpoint(ctx context.Context, entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) (*f_log.Checkpoint, error) {
-	v, err := note.NewNoteVerifier(ctx, origin, verifier)
+func VerifyCheckpoint(entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) (*f_log.Checkpoint, error) {
+	v, err := note.NewNoteVerifier(origin, verifier)
 	if err != nil {
 		return nil, fmt.Errorf("error creating note verifier: %v", err)
 	}
@@ -48,8 +47,8 @@ func VerifyCheckpoint(ctx context.Context, entry *pbs.TransparencyLogEntry, orig
 	return cp, nil
 }
 
-func VerifyLogEntry(ctx context.Context, entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) error {
-	cp, err := VerifyCheckpoint(ctx, entry, origin, verifier)
+func VerifyLogEntry(entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) error {
+	cp, err := VerifyCheckpoint(entry, origin, verifier)
 	if err != nil {
 		return err
 	}
