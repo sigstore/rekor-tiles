@@ -20,12 +20,11 @@ import (
 	"fmt"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/pkg/note"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
-	"github.com/sigstore/sigstore/pkg/signature"
 	f_log "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
+	sumdb_note "golang.org/x/mod/sumdb/note"
 )
 
 // VerifyInclusionProof verifies an entry's inclusion proof
@@ -42,22 +41,18 @@ func VerifyInclusionProof(entry *pbs.TransparencyLogEntry, cp *f_log.Checkpoint)
 }
 
 // VerifyCheckpoint verifies the signature on the entry's inclusion proof checkpoint
-func VerifyCheckpoint(entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) (*f_log.Checkpoint, error) { //nolint: revive
-	v, err := note.NewNoteVerifier(origin, verifier)
-	if err != nil {
-		return nil, fmt.Errorf("error creating note verifier: %v", err)
-	}
-	cp, _, _, err := f_log.ParseCheckpoint([]byte(entry.InclusionProof.GetCheckpoint().GetEnvelope()), v.Name(), v)
+func VerifyCheckpoint(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier) (*f_log.Checkpoint, error) { //nolint: revive
+	cp, _, _, err := f_log.ParseCheckpoint([]byte(entry.InclusionProof.GetCheckpoint().GetEnvelope()), verifier.Name(), verifier)
 	if err != nil {
 		return nil, fmt.Errorf("unverified checkpoint signature: %v", err)
 	}
 	return cp, nil
 }
 
-// VerifyLogEntry verifies the log entry: This includes verifying the signature on the entry's
+// VerifyLogEntry verifies the log entry. This includes verifying the signature on the entry's
 // inclusion proof checkpoint and verifying the entry inclusion proof
-func VerifyLogEntry(entry *pbs.TransparencyLogEntry, origin string, verifier signature.Verifier) error { //nolint: revive
-	cp, err := VerifyCheckpoint(entry, origin, verifier)
+func VerifyLogEntry(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier) error { //nolint: revive
+	cp, err := VerifyCheckpoint(entry, verifier)
 	if err != nil {
 		return err
 	}
