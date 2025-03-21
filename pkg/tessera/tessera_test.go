@@ -68,7 +68,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 			s.addFn = test.addFn
 			got, gotErr := s.Add(ctx, entry)
 			if test.expectErr != nil {
-				assert.Errorf(t, gotErr, test.expectErr.Error())
+				assert.ErrorContains(t, gotErr, test.expectErr.Error())
 			} else {
 				assert.NoError(t, gotErr)
 			}
@@ -121,7 +121,7 @@ func TestReadTile(t *testing.T) {
 			got, gotErr := s.ReadTile(ctx, test.level, test.index, test.p)
 			assert.Equal(t, test.expectHash, got)
 			if test.expectErr != nil {
-				assert.Errorf(t, gotErr, test.expectErr.Error())
+				assert.ErrorContains(t, gotErr, test.expectErr.Error())
 			} else {
 				assert.NoError(t, gotErr)
 			}

@@ -72,7 +72,7 @@ func TestValidate(t *testing.T) {
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
 			} else {
-				assert.Errorf(t, gotErr, test.expectErr.Error())
+				assert.ErrorContains(t, gotErr, test.expectErr.Error())
 			}
 		})
 	}
