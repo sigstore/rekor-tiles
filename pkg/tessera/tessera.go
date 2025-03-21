@@ -77,8 +77,9 @@ func (s *storage) Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.Tran
 		return nil, fmt.Errorf("building inclusion proof: %w", err)
 	}
 	return &rekor_pb.TransparencyLogEntry{
-		LogIndex:       idx.I(),
-		InclusionProof: inclusionProof,
+		LogIndex:          idx.I(),
+		InclusionProof:    inclusionProof,
+		CanonicalizedBody: entry.Data(),
 	}, nil
 }
 
