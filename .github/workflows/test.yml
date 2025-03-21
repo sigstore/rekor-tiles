@@ -83,8 +83,10 @@ jobs:
       - name: Run Go tests
         run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
       - name: Workaround buggy Codecov OIDC auth
-        if: github.event_name == 'push'
         run: |
+          # only set CODECOV_TOKEN if OIDC token is available
+          [ -z $ACTIONS_ID_TOKEN_REQUEST_TOKEN ] && exit 0
+
           TOKEN_RESPONSE=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://codecov.io")
           CODECOV_TOKEN=$(echo $TOKEN_RESPONSE | jq -r .value)
           echo "CODECOV_TOKEN=$CODECOV_TOKEN" >> "$GITHUB_ENV"
