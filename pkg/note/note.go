@@ -21,6 +21,7 @@ package note
 import (
 	"bytes"
 	"context"
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/rsa"
@@ -120,24 +121,11 @@ func NewNoteSigner(ctx context.Context, origin string, signer signature.Signer) 
 
 	pubKey, err := signer.PublicKey()
 	if err != nil {
-		return &noteSigner{}, fmt.Errorf("getting public key: %w", err)
+		return nil, fmt.Errorf("getting public key: %w", err)
 	}
-	var keyID uint32
-	switch pk := pubKey.(type) {
-	case *ecdsa.PublicKey:
-		keyID, err = ecdsaKeyHash(pk)
-		if err != nil {
-			return &noteSigner{}, fmt.Errorf("getting ECDSA key hash: %w", err)
-		}
-	case ed25519.PublicKey:
-		keyID = ed25519KeyHash(origin, pk)
-	case *rsa.PublicKey:
-		keyID, err = rsaKeyHash(origin, pk)
-		if err != nil {
-			return &noteSigner{}, fmt.Errorf("getting RSA key hash: %w", err)
-		}
-	default:
-		return &noteSigner{}, fmt.Errorf("unsupported key type: %T", pubKey)
+	keyID, err := keyIDFromPublicKey(origin, pubKey)
+	if err != nil {
+		return nil, fmt.Errorf("getting key ID: %w", err)
 	}
 
 	sign := func(msg []byte) ([]byte, error) {
@@ -148,5 +136,69 @@ func NewNoteSigner(ctx context.Context, origin string, signer signature.Signer) 
 		name: origin,
 		hash: keyID,
 		sign: sign,
+	}, nil
+}
+
+func keyIDFromPublicKey(origin string, key crypto.PublicKey) (uint32, error) {
+	var keyID uint32
+	var err error
+	switch pk := key.(type) {
+	case *ecdsa.PublicKey:
+		keyID, err = ecdsaKeyHash(pk)
+		if err != nil {
+			return 0, fmt.Errorf("getting ECDSA key hash: %w", err)
+		}
+	case ed25519.PublicKey:
+		keyID = ed25519KeyHash(origin, pk)
+	case *rsa.PublicKey:
+		keyID, err = rsaKeyHash(origin, pk)
+		if err != nil {
+			return 0, fmt.Errorf("getting RSA key hash: %w", err)
+		}
+	default:
+		return 0, fmt.Errorf("unsupported key type: %T", key)
+	}
+	return keyID, nil
+}
+
+type noteVerifier struct {
+	name    string
+	keyHash uint32
+	verify  func(msg, sig []byte) bool
+}
+
+func (v *noteVerifier) Name() string {
+	return v.name
+}
+
+func (v *noteVerifier) KeyHash() uint32 {
+	return v.keyHash
+}
+
+func (v *noteVerifier) Verify(msg, sig []byte) bool {
+	return v.verify(msg, sig)
+}
+
+func NewNoteVerifier(origin string, verifier signature.Verifier) (note.Verifier, error) {
+	pubKey, err := verifier.PublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("getting public key: %w", err)
+	}
+	keyID, err := keyIDFromPublicKey(origin, pubKey)
+	if err != nil {
+		return nil, fmt.Errorf("getting keyID: %w", err)
+	}
+
+	verify := func(msg, sig []byte) bool {
+		msgReader := bytes.NewReader(msg)
+		sigReader := bytes.NewReader(sig)
+		result := verifier.VerifySignature(sigReader, msgReader)
+		return result == nil
+	}
+
+	return &noteVerifier{
+		name:    origin,
+		keyHash: keyID,
+		verify:  verify,
 	}, nil
 }
