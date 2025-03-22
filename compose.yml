@@ -23,6 +23,8 @@ services:
     command:
     - "-scheme=http"
     - "-port=7080"
+    ports:
+    - "7080:7080"
   rekor_init:
     build:
       context: .
@@ -68,7 +70,7 @@ services:
       timeout: 30s
       retries: 10
     volumes:
-    - ./testdata/signer:/pki
+    - ./tests/testdata/pki:/pki
     depends_on:
       rekor_init:
         condition: service_completed_successfully
