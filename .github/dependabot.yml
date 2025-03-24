@@ -18,11 +18,23 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      go-patch-updates:
+        update-types:
+          - "patch"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions-patch-updates:
+        update-types:
+          - "patch"
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      docker-patch-updates:
+        update-types:
+          - "patch"
