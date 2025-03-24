@@ -22,7 +22,7 @@ import (
 )
 
 // Serve starts the grpc server and its http proxy.
-func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s grpcServerI) {
+func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s rekorServer) {
 	var wg sync.WaitGroup
 
 	if hc.port == 0 || gc.port == 0 {

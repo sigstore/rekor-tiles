@@ -40,8 +40,8 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// grpcServerI is the collection of methods that our grpc server must implement.
-type grpcServerI interface {
+// rekorServer is the collection of methods that our grpc server must implement.
+type rekorServer interface {
 	pb.RekorServer
 	grpc_health_v1.HealthServer
 }
@@ -51,7 +51,7 @@ type grpcServer struct {
 	serverEndpoint string
 }
 
-func newGRPCService(config *GRPCConfig, server grpcServerI) *grpcServer {
+func newGRPCService(config *GRPCConfig, server rekorServer) *grpcServer {
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()))
 	pb.RegisterRekorServer(s, server)
 	grpc_health_v1.RegisterHealthServer(s, server)
