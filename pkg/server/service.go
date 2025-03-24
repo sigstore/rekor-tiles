@@ -39,6 +39,7 @@ import (
 
 type Server struct {
 	pb.UnimplementedRekorServer
+	grpc_health_v1.UnimplementedHealthServer
 	storage tessera.Storage
 }
 
@@ -117,19 +118,4 @@ func (s *Server) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpB
 func (s Server) Check(_ context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	// TODO: make this do more comprehensive healthchecking.
 	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
-}
-
-// Watch implements the Healthcheck protocol to report the health of the service.
-// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/
-func (s Server) Watch(_ *grpc_health_v1.HealthCheckRequest, _ grpc_health_v1.Health_WatchServer) error {
-	// TODO: replace with code that sends an update reactively, only when the status changes.
-	// See https://github.com/grpc/proposal/blob/master/A17-client-side-health-checking.md#watch-based-health-checking-protocol.
-	// newStatus := health.HealthCheckResponse_SERVING // Replace with your actual health check logic
-	// err := stream.Send(&health.HealthCheckResponse{Status: newStatus})
-	// if err != nil {
-	// 	return err
-	// }
-
-	// Example of how to register both methods but only implement the Check method.
-	return status.Error(codes.Unimplemented, "unimplemented")
 }
