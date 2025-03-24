@@ -28,7 +28,7 @@ import (
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	health "google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -106,14 +106,14 @@ func (s *Server) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpB
 
 // Check implements the Healthcheck protocol to report the health of the service.
 // See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/.
-func (s Server) Check(ctx context.Context, in *health.HealthCheckRequest) (*health.HealthCheckResponse, error) {
+func (s Server) Check(ctx context.Context, in *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	// TODO: make this do more comprehensive healthchecking.
-	return &health.HealthCheckResponse{Status: health.HealthCheckResponse_SERVING}, nil
+	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
 }
 
 // Watch implements the Healthcheck protocol to report the health of the service.
 // See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/
-func (s Server) Watch(in *health.HealthCheckRequest, stream health.Health_WatchServer) error {
+func (s Server) Watch(in *grpc_health_v1.HealthCheckRequest, stream grpc_health_v1.Health_WatchServer) error {
 	// TODO: replace with code that sends an update reactively, only when the status changes.
 	// See https://github.com/grpc/proposal/blob/master/A17-client-side-health-checking.md#watch-based-health-checking-protocol.
 	// newStatus := health.HealthCheckResponse_SERVING // Replace with your actual health check logic
