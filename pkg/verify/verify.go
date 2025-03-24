@@ -16,7 +16,6 @@
 package verify
 
 import (
-	"crypto/sha256"
 	"fmt"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
@@ -29,12 +28,12 @@ import (
 
 // VerifyInclusionProof verifies an entry's inclusion proof
 func VerifyInclusionProof(entry *pbs.TransparencyLogEntry, cp *f_log.Checkpoint) error { //nolint: revive
-	leafHash := sha256.Sum256(entry.CanonicalizedBody)
+	leafHash := rfc6962.DefaultHasher.HashLeaf(entry.CanonicalizedBody)
 	index, err := tessera.NewSafeInt64(entry.LogIndex)
 	if err != nil {
 		return fmt.Errorf("invalid index: %w", err)
 	}
-	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, index.U(), cp.Size, leafHash[:], entry.InclusionProof.Hashes, cp.Hash); err != nil {
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, index.U(), cp.Size, leafHash, entry.InclusionProof.Hashes, cp.Hash); err != nil {
 		return fmt.Errorf("verifying inclusion: %w", err)
 	}
 	return nil
