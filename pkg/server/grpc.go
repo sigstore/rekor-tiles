@@ -40,6 +40,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
+// grpcServerI is the collection of methods that our grpc server must implement.
 type grpcServerI interface {
 	pb.RekorServer
 	grpc_health_v1.HealthServer
@@ -50,6 +51,7 @@ type grpcServer struct {
 	serverEndpoint string
 }
 
+// newGRPCService launches the grpc service attached to a new grpc server.
 func newGRPCService(config *GRPCConfig, server grpcServerI) *grpcServer {
 	// Create a gRPC Server object
 	s := grpc.NewServer()

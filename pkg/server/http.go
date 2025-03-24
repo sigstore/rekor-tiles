@@ -45,6 +45,7 @@ type httpProxy struct {
 	serverEndpoint string
 }
 
+// newHTTProxy creates a mux for each of the service grpc methods, including the grpc heatlhcheck.
 func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServer) *httpProxy {
 	// configure a custom marshaler to fail on unknown fields
 	strictMarshaler := runtime.HTTPBodyMarshaler{
@@ -71,7 +72,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	mux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
 		runtime.WithForwardResponseOption(httpResponseModifier),
-		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)),
+		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)), // localhost:[port]/healthz
 	)
 
 	err = pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
