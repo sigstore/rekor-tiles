@@ -36,7 +36,6 @@ import (
 )
 
 type Server struct {
-	health.HealthServer
 	pb.UnimplementedRekorServer
 	storage tessera.Storage
 }
