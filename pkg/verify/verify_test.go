@@ -47,25 +47,15 @@ func TestVerifyInclusionProof(t *testing.T) {
 	assert.NoError(t, gotErr)
 }
 
-func TestVerifyCheckpoint(t *testing.T) {
-	hostname := "rekor.localhost"
-	treeSize := uint64(2)
-	sv, _, err := signature.NewDefaultECDSASignerVerifier()
-	if err != nil {
-		t.Fatal(err)
-	}
-	noteSigner, err := rekornote.NewNoteSigner(context.Background(), hostname, sv)
-	if err != nil {
-		t.Fatal(err)
-	}
-	noteVerifier, err := rekornote.NewNoteVerifier(hostname, sv)
+func getTestEntry(t *testing.T, signer signature.Signer, hostname string) *pbs.TransparencyLogEntry {
+	noteSigner, err := rekornote.NewNoteSigner(context.Background(), hostname, signer)
 	if err != nil {
 		t.Fatal(err)
 	}
 	rootHash := sha256.Sum256([]byte{1, 2, 3})
 	cpRaw := f_log.Checkpoint{
 		Origin: hostname,
-		Size:   treeSize,
+		Size:   uint64(2),
 		Hash:   rootHash[:],
 	}.Marshal()
 
@@ -73,13 +63,59 @@ func TestVerifyCheckpoint(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	entry := &pbs.TransparencyLogEntry{
+
+	return &pbs.TransparencyLogEntry{
 		InclusionProof: &pbs.InclusionProof{
 			Checkpoint: &pbs.Checkpoint{
 				Envelope: string(n),
 			},
 		},
 	}
-	_, gotErr := VerifyCheckpoint(entry, noteVerifier)
-	assert.NoError(t, gotErr)
+}
+
+func TestVerifyCheckpoint(t *testing.T) {
+	hostname := "rekor.localhost"
+	sv, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	otherSigner, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noteVerifier, err := rekornote.NewNoteVerifier(hostname, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name    string
+		entry   *pbs.TransparencyLogEntry
+		wantErr bool
+	}{
+		{
+			name:    "valid checkpoint",
+			entry:   getTestEntry(t, sv, hostname),
+			wantErr: false,
+		},
+		{
+			name:    "hostname mismatch",
+			entry:   getTestEntry(t, sv, "other.host"),
+			wantErr: true,
+		},
+		{
+			name:    "signature mismatch",
+			entry:   getTestEntry(t, otherSigner, hostname),
+			wantErr: true,
+		},
+	} {
+		t.Run(string(test.name), func(t *testing.T) {
+			_, gotErr := VerifyCheckpoint(test.entry, noteVerifier)
+			if (gotErr != nil) != test.wantErr {
+				t.Fatalf("VerifyCheckpoint = %t, wantErr %t", gotErr, test.wantErr)
+			}
+		})
+	}
 }
