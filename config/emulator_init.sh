@@ -14,7 +14,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-set -eu
+PS4='+\D{%Y-%m-%d %H:%M:%S} $LINENO: '
+
+set -eux
 
 gcloud config configurations list | grep emulator | grep True || gcloud config configurations create emulator
 gcloud config set auth/disable_credentials true
