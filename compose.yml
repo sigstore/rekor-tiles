@@ -64,7 +64,7 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - "curl http://localhost:3000 | grep 'Not Found'"
+      - curl http://localhost:3000/healthz | grep '{"status":"SERVING"}'
       timeout: 30s
       retries: 10
     volumes:
