@@ -34,7 +34,7 @@ func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s rekorServer) {
 		os.Exit(1)
 	}
 
-	grpcServer := newGRPCService(gc, s)
+	grpcServer := newGRPCServer(gc, s)
 	grpcServer.start(&wg)
 
 	httpProxy := newHTTPProxy(ctx, hc, grpcServer)
