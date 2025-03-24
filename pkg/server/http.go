@@ -62,7 +62,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	// TODO: allow TLS if the startup provides a TLS cert, but for now the proxy connects to grpc without TLS
 	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 
-	// GRPC client connection so th http mux's healthz endpoint can reach the grpc healthcheck service.
+	// GRPC client connection so the http mux's healthz endpoint can reach the grpc healthcheck service.
 	// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/#adding-healthz-endpoint-to-runtimeservemux.
 	cc, err := grpc.NewClient(grpcServer.serverEndpoint, opts...)
 	if err != nil {
