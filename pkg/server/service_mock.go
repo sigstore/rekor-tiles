@@ -133,10 +133,10 @@ func (s *mockRekorServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*h
 	}, nil
 }
 
-func (s mockRekorServer) Check(ctx context.Context, in *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
+func (s mockRekorServer) Check(_ context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
 }
 
-func (s mockRekorServer) Watch(in *grpc_health_v1.HealthCheckRequest, stream grpc_health_v1.Health_WatchServer) error {
+func (s mockRekorServer) Watch(_ *grpc_health_v1.HealthCheckRequest, _ grpc_health_v1.Health_WatchServer) error {
 	return status.Error(codes.Unimplemented, "unimplemented")
 }
