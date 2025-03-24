@@ -52,6 +52,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 		expectLogIndex int64
 		expectTreeSize int64
 		expectHash     []byte
+		expectBody     []byte
 	}{
 		{
 			name: "success",
@@ -61,6 +62,14 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 			expectLogIndex: int64(0),
 			expectTreeSize: int64(1),
 			expectHash:     []byte(tileHash),
+			expectBody:     []byte("stuff"),
+		},
+		{
+			name: "integration failed",
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (uint64, error) { return 0, fmt.Errorf("server error") }
+			},
+			expectErr: fmt.Errorf("add entry: await: server error"),
 		},
 	}
 	for _, test := range tests {
@@ -68,13 +77,14 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 			s.addFn = test.addFn
 			got, gotErr := s.Add(ctx, entry)
 			if test.expectErr != nil {
-				assert.Errorf(t, gotErr, test.expectErr.Error())
-			} else {
-				assert.NoError(t, gotErr)
+				assert.ErrorContains(t, gotErr, test.expectErr.Error())
+				return
 			}
+			assert.NoError(t, gotErr)
 			assert.Equal(t, test.expectLogIndex, got.LogIndex)
 			assert.Equal(t, test.expectTreeSize, got.InclusionProof.TreeSize)
 			assert.Equal(t, test.expectHash, got.InclusionProof.RootHash)
+			assert.Equal(t, test.expectBody, got.CanonicalizedBody)
 		})
 	}
 }
@@ -121,7 +131,7 @@ func TestReadTile(t *testing.T) {
 			got, gotErr := s.ReadTile(ctx, test.level, test.index, test.p)
 			assert.Equal(t, test.expectHash, got)
 			if test.expectErr != nil {
-				assert.Errorf(t, gotErr, test.expectErr.Error())
+				assert.ErrorContains(t, gotErr, test.expectErr.Error())
 			} else {
 				assert.NoError(t, gotErr)
 			}

@@ -40,5 +40,8 @@ func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s grpcServerI) {
 	httpProxy := newHTTPProxy(ctx, hc, grpcServer)
 	httpProxy.start(&wg)
 
+	httpMetrics := newHTTPMetrics(ctx, hc)
+	httpMetrics.start(&wg)
+
 	wg.Wait()
 }

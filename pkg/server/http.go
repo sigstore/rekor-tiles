@@ -28,6 +28,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
@@ -81,13 +83,18 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		os.Exit(1)
 	}
 
+	metrics := getMetrics()
+	handler := promhttp.InstrumentMetricHandler(metrics.reg, mux)
+	handler = promhttp.InstrumentHandlerDuration(metrics.httpLatency, handler)
+	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
+
 	// TODO: configure https connection preferences (time-out, max size, etc)
 
 	endpoint := fmt.Sprintf("%s:%v", config.host, config.port)
 	return &httpProxy{
 		Server: &http.Server{
 			Addr:    endpoint,
-			Handler: mux,
+			Handler: handler,
 
 			ReadTimeout:       60 * time.Second,
 			ReadHeaderTimeout: 60 * time.Second,

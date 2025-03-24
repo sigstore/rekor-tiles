@@ -18,6 +18,8 @@ import (
 	"context"
 	"log/slog"
 
+	"github.com/prometheus/client_golang/prometheus"
+
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
@@ -41,12 +43,15 @@ type Server struct {
 }
 
 func NewServer(storage tessera.Storage) *Server {
-	return &Server{storage: storage}
+	return &Server{
+		storage: storage,
+	}
 }
 
 func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
 	var serialized []byte
 	var err error
+	var metricsCounter prometheus.Counter
 	switch req.GetSpec().(type) {
 	case *pb.CreateEntryRequest_HashedRekordRequest:
 		hr := req.GetHashedRekordRequest()
@@ -59,6 +64,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 			slog.Warn("failed marshaling hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
 		}
+		metricsCounter = getMetrics().newHashedRekordEntries
 	case *pb.CreateEntryRequest_DsseRequest:
 		ds := req.GetDsseRequest()
 		if err := dsse.Validate(ds); err != nil {
@@ -70,6 +76,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 			slog.Warn("failed marshaling dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")
 		}
+		metricsCounter = getMetrics().newDsseEntries
 	default:
 		return nil, status.Errorf(codes.InvalidArgument, "invalid type, must be either hashedrekord or dsse")
 	}
@@ -85,6 +92,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		return nil, status.Errorf(codes.Unknown, "failed to integrate entry")
 	}
 	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusHeader, "201"))
+	metricsCounter.Inc()
 	return tle, nil
 }
 

@@ -51,12 +51,12 @@ type grpcServer struct {
 	serverEndpoint string
 }
 
-// newGRPCService launches the grpc service attached to a new grpc server.
 func newGRPCService(config *GRPCConfig, server grpcServerI) *grpcServer {
-	// Create a gRPC Server object
-	s := grpc.NewServer()
+	s := grpc.NewServer(grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()))
 	pb.RegisterRekorServer(s, server)
 	grpc_health_v1.RegisterHealthServer(s, server)
+
+	getMetrics().serverMetrics.InitializeMetrics(s)
 
 	return &grpcServer{s, fmt.Sprintf("%s:%v", config.host, config.port)}
 }

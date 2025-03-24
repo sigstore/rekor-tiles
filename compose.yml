@@ -19,7 +19,7 @@ services:
   gcs:
     image: fsouza/fake-gcs-server@sha256:d47b4cf8b87006cab8fbbecfa5f06a2a3c5722e464abddc0d107729663d40ec4
     volumes:
-    - bucket:/data/tiles:rw"
+    - bucket:/data/tiles:rw
     command:
     - "-scheme=http"
     - "-port=7080"
@@ -61,6 +61,7 @@ services:
     ports:
     - "3000:3000" # http
     - "3001:3001" # grpc
+    - "2112:2112" # metrics port
     healthcheck:
       test:
       - CMD-SHELL
