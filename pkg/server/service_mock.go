@@ -64,7 +64,7 @@ func (ms *MockServer) Stop(t *testing.T) {
 
 type mockRekorServer struct {
 	pb.UnimplementedRekorServer
-	grpc_health_v1.HealthServer
+	grpc_health_v1.UnimplementedHealthServer
 }
 
 var testEntry = pbs.TransparencyLogEntry{
