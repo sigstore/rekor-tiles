@@ -15,10 +15,15 @@
 package hashedrekord
 
 import (
+	"bytes"
+	"crypto"
 	"fmt"
 
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 func Validate(hr *pb.HashedRekordRequest) error {
@@ -31,8 +36,39 @@ func Validate(hr *pb.HashedRekordRequest) error {
 	if hr.Data == nil {
 		return fmt.Errorf("missing data")
 	}
-	if len(hr.Data.Digest) == 0 {
+	if hr.Data.Digest == nil {
 		return fmt.Errorf("missing data digest")
 	}
-	return verifier.Validate(hr.Verifier)
+	if err := verifier.Validate(hr.Verifier); err != nil {
+		return err
+	}
+	sigObj, err := x509.NewSignatureWithOpts(bytes.NewReader(hr.Signature), options.WithED25519ph())
+	if err != nil {
+		return fmt.Errorf("parsing signature: %w", err)
+	}
+	var keyObj *x509.PublicKey
+	if pubKey := hr.Verifier.GetPublicKey(); pubKey != nil {
+		keyObj, err = x509.NewPublicKey(bytes.NewReader(pubKey.RawBytes))
+	} else if cert := hr.Verifier.GetX509Certificate(); cert != nil {
+		keyObj, err = x509.NewPublicKey(bytes.NewReader(cert.RawBytes))
+	} else {
+		return fmt.Errorf("must contain either a public key or X.509 certificate")
+	}
+	if err != nil {
+		return fmt.Errorf("parsing public key: %w", err)
+	}
+	var alg crypto.Hash
+	switch hr.Data.Algorithm {
+	case v1.HashAlgorithm_SHA2_384:
+		alg = crypto.SHA384
+	case v1.HashAlgorithm_SHA2_512:
+		alg = crypto.SHA512
+	default:
+		alg = crypto.SHA256
+	}
+	if err := sigObj.Verify(nil, keyObj, options.WithDigest(hr.Data.Digest), options.WithCryptoSignerOpts(alg)); err != nil {
+		return fmt.Errorf("verifying signature: %w", err)
+	}
+
+	return nil
 }
