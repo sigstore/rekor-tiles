@@ -50,7 +50,7 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, signe
 	if err != nil {
 		return nil, fmt.Errorf("getting note signer: %w", err)
 	}
-	appender, reader, err := tessera.NewAppender(ctx, driver,
+	appender, _, reader, err := tessera.NewAppender(ctx, driver,
 		tessera.NewAppendOptions().WithCheckpointSigner(noteSigner),
 	)
 	if err != nil {
