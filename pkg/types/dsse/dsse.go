@@ -15,23 +15,53 @@
 package dsse
 
 import (
+	"crypto/sha256"
 	"fmt"
 
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
 )
 
-func Validate(ds *pb.DSSERequest) error {
-	if ds.Envelope == "" {
-		return fmt.Errorf("missing envelope")
+func ToLogEntryV0_0_2(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
+	if ds.Envelope == nil {
+		return nil, fmt.Errorf("missing envelope")
 	}
-	if len(ds.Verifier) == 0 {
-		return fmt.Errorf("missing verifiers")
+	if len(ds.Signatures) == 0 {
+		return nil, fmt.Errorf("missing signatures")
 	}
-	for _, v := range ds.Verifier {
-		if err := verifier.Validate(v); err != nil {
-			return err
+	if len(ds.Signatures) != len(ds.Envelope.Signatures) {
+		return nil, fmt.Errorf("provided signatures do not match envelope signatures")
+		// TODO(#10): check that the signatures and verifiers provided are a 1:1 match to the envelope signatures
+	}
+	for _, v := range ds.Signatures {
+		if len(v.Signature) == 0 {
+			return nil, fmt.Errorf("missing signatures")
+		}
+		if v.Verifier == nil {
+			return nil, fmt.Errorf("missing verifier")
+		}
+		if err := verifier.Validate(v.Verifier); err != nil {
+			return nil, err
 		}
 	}
-	return nil
+
+	if ds.Envelope.Payload == nil {
+		return nil, fmt.Errorf("missing envelope payload")
+	}
+	payloadHash := sha256.Sum256([]byte(ds.Envelope.Payload))
+
+	// TODO (#10): check that signatures can be validated against the provided keys
+
+	if len(ds.Envelope.Signatures) == 0 {
+		return nil, fmt.Errorf("missing envelope signatures")
+	}
+
+	return &pb.DSSELogEntryV0_0_2{
+		PayloadHash: &v1.HashOutput{
+			Algorithm: v1.HashAlgorithm_SHA2_256,
+			Digest:    payloadHash[:],
+		},
+		Signatures: ds.Signatures,
+	}, nil
 }

@@ -26,17 +26,19 @@ import (
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name         string
-		hashedrekord *pb.HashedRekordRequest
+		hashedrekord *pb.HashedRekordRequestV0_0_2
 		expectErr    error
 	}{
 		{
 			name: "valid hashedrekord",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: []byte("abcd"),
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte("3456"),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: []byte("abcd"),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte("3456"),
+							},
 						},
 					},
 				},
@@ -47,11 +49,13 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing signature",
-			hashedrekord: &pb.HashedRekordRequest{
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte("3456"),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte("3456"),
+							},
 						},
 					},
 				},
@@ -63,8 +67,10 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing verifier",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: []byte("abcd"),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: []byte("abcd"),
+				},
 				Data: &v1.HashOutput{
 					Digest: []byte("ef12"),
 				},
@@ -73,12 +79,14 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing data",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: []byte("abcd"),
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte("3456"),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: []byte("abcd"),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte("3456"),
+							},
 						},
 					},
 				},
@@ -87,12 +95,14 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing data digest",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: []byte("abcd"),
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte("3456"),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: []byte("abcd"),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte("3456"),
+							},
 						},
 					},
 				},
@@ -103,7 +113,7 @@ func TestValidate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotErr := Validate(test.hashedrekord)
+			_, gotErr := ToLogEntryV0_0_2(test.hashedrekord)
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
 			} else {
