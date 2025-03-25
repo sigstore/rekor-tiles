@@ -68,9 +68,9 @@ protos: $(PROTO_SRC)
 	$(MAKE) -C protoc-builder protos
 
 tools:
-	GOBIN=$(GOBIN); go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.6
-	GOBIN=$(GOBIN); go install golang.org/x/tools/cmd/goimports@v0.30.0
-	GOBIN=$(GOBIN); go install github.com/google/addlicense@v1.1.1
+	GOBIN=$(GOBIN) go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.0.1
+	GOBIN=$(GOBIN) go install golang.org/x/tools/cmd/goimports@v0.30.0
+	GOBIN=$(GOBIN) go install github.com/google/addlicense@v1.1.1
 
 clean: ## Remove built binaries and artifacts
 	rm -rf dist
