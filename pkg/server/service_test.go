@@ -16,6 +16,8 @@ package server
 
 import (
 	"context"
+	"encoding/base64"
+	"encoding/hex"
 	"fmt"
 	"testing"
 
@@ -45,16 +47,19 @@ func TestCreateEntry(t *testing.T) {
 			req: &pb.CreateEntryRequest{
 				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
 					HashedRekordRequest: &pb.HashedRekordRequest{
-						Signature: []byte("abcd"),
+						Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
 						Verifier: &pb.Verifier{
 							Verifier: &pb.Verifier_PublicKey{
 								PublicKey: &pb.PublicKey{
-									RawBytes: []byte("3456"),
+									RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
+2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ==
+-----END PUBLIC KEY-----`),
 								},
 							},
 						},
 						Data: &v1.HashOutput{
-							Digest: []byte("ef12"),
+							Digest: hexDecodeOrDie(t, "5b3513f580c8397212ff2c8f459c199efc0c90e4354a5f3533adf0a3fff3a530"),
 						},
 					},
 				},
@@ -66,12 +71,15 @@ func TestCreateEntry(t *testing.T) {
 			req: &pb.CreateEntryRequest{
 				Spec: &pb.CreateEntryRequest_DsseRequest{
 					DsseRequest: &pb.DSSERequest{
-						Envelope: "dsse",
+						Envelope: "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"cGF5bG9hZA==\",\"signatures\":[{\"keyid\":\"\",\"sig\":\"MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=\"}]}",
 						Verifier: []*pb.Verifier{
 							{
 								Verifier: &pb.Verifier_PublicKey{
 									PublicKey: &pb.PublicKey{
-										RawBytes: []byte("3456"),
+										RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE850nB+WrwXzivt7yFbhFKw/8M2pa
+qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
+-----END PUBLIC KEY-----`),
 									},
 								},
 							},
@@ -106,16 +114,19 @@ func TestCreateEntry(t *testing.T) {
 			req: &pb.CreateEntryRequest{
 				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
 					HashedRekordRequest: &pb.HashedRekordRequest{
-						Signature: []byte("abcd"),
+						Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
 						Verifier: &pb.Verifier{
 							Verifier: &pb.Verifier_PublicKey{
 								PublicKey: &pb.PublicKey{
-									RawBytes: []byte("3456"),
+									RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
+2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ==
+-----END PUBLIC KEY-----`),
 								},
 							},
 						},
 						Data: &v1.HashOutput{
-							Digest: []byte("ef12"),
+							Digest: hexDecodeOrDie(t, "5b3513f580c8397212ff2c8f459c199efc0c90e4354a5f3533adf0a3fff3a530"),
 						},
 					},
 				},
@@ -149,4 +160,20 @@ func (s *mockStorage) Add(_ context.Context, _ *ttessera.Entry) (*rekor_pb.Trans
 
 func (s *mockStorage) ReadTile(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
 	return nil, nil
+}
+
+func hexDecodeOrDie(t *testing.T, hash string) []byte {
+	decoded, err := hex.DecodeString(hash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return decoded
+}
+
+func b64DecodeOrDie(t *testing.T, msg string) []byte {
+	decoded, err := base64.StdEncoding.DecodeString(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return decoded
 }

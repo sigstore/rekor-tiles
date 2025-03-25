@@ -3,11 +3,13 @@ module github.com/sigstore/rekor-tiles
 go 1.24.0
 
 require (
+	github.com/asaskevich/govalidator v0.0.0-20230301143203-a9d515a09cc2
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus v1.0.1
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3
 	github.com/prometheus/client_golang v1.21.1
 	github.com/sigstore/protobuf-specs v0.4.0
+	github.com/sigstore/rekor v1.3.9
 	github.com/sigstore/sigstore v1.9.2-0.20250311183026-c049f8ddc600
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.2-0.20250311183026-c049f8ddc600
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.2-0.20250311183026-c049f8ddc600
@@ -148,8 +150,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
-	go.uber.org/atomic v1.9.0 // indirect
-	go.uber.org/multierr v1.9.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.36.0 // indirect
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/oauth2 v0.28.0 // indirect
