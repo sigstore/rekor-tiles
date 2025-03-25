@@ -15,8 +15,16 @@
 package dsse
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
+
+	"github.com/go-test/deep"
+	dsset "github.com/secure-systems-lab/go-securesystemslib/dsse"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
@@ -44,17 +52,26 @@ atI4zS+80vbts4NEFA==
 -----END CERTIFICATE-----`
 )
 
-func TestValidate(t *testing.T) {
+func TestToLogEntry(t *testing.T) {
 	tests := []struct {
 		name      string
-		dsse      *pb.DSSERequest
+		dsse      *pb.DSSERequestV0_0_2
 		expectErr error
 	}{
 		{
 			name: "valid dsse",
-			dsse: &pb.DSSERequest{
-				Envelope: "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"cGF5bG9hZA==\",\"signatures\":[{\"keyid\":\"\",\"sig\":\"MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=\"}]}",
-				Verifier: []*pb.Verifier{
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("payload"),
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk="),
+							Keyid: "",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -67,8 +84,8 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing envelope",
-			dsse: &pb.DSSERequest{
-				Verifier: []*pb.Verifier{
+			dsse: &pb.DSSERequestV0_0_2{
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -82,16 +99,48 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing verifiers",
-			dsse: &pb.DSSERequest{
-				Envelope: "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"cGF5bG9hZA==\",\"signatures\":[{\"keyid\":\"\",\"sig\":\"MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=\"}]}",
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("payload"),
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk="),
+							Keyid: "",
+						},
+					},
+				},
 			},
 			expectErr: fmt.Errorf("missing verifiers"),
 		},
 		{
 			name: "missing signatures",
-			dsse: &pb.DSSERequest{
-				Envelope: "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"cGF5bG9hZA==\"}",
-				Verifier: []*pb.Verifier{
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("payload"),
+					PayloadType: "application/vnd.in-toto+json",
+				},
+				Verifiers: []*pb.Verifier{
+					{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+					},
+				},
+			},
+			expectErr: fmt.Errorf("envelope missing signatures"),
+		},
+		{
+			name: "empty signatures",
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("payload"),
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures:  []*dsse.Signature{},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -105,9 +154,18 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "invalid signature",
-			dsse: &pb.DSSERequest{
-				Envelope: "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"cGF5bG9hZA==\",\"signatures\":[{\"keyid\":\"\",\"sig\":\"Zm9vYmFyCg==\"}]}",
-				Verifier: []*pb.Verifier{
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("payload"),
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   b64DecodeOrDie(t, "Zm9vYmFyCg=="),
+							Keyid: "",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -121,9 +179,18 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "valid dsse with X.509 cert",
-			dsse: &pb.DSSERequest{
-				Envelope: "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"cGF5bG9hZA==\",\"signatures\":[{\"keyid\":\"\",\"sig\":\"MEUCIQDoYuLoinEz/gM6B+hEn/0d47lmRDitQ3LfL9vH0sF/gQIgPqVgoBTRsMSPYMXYuJYYCIaTpnuppqQaTSTRn0ubwLI=\"}]}",
-				Verifier: []*pb.Verifier{
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("payload"),
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   b64DecodeOrDie(t, "MEUCIQDoYuLoinEz/gM6B+hEn/0d47lmRDitQ3LfL9vH0sF/gQIgPqVgoBTRsMSPYMXYuJYYCIaTpnuppqQaTSTRn0ubwLI="),
+							Keyid: "",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_X509Certificate{
 							X509Certificate: &v1.X509Certificate{
@@ -137,7 +204,7 @@ func TestValidate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotErr := Validate(test.dsse)
+			_, gotErr := ToLogEntry(test.dsse)
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
 			} else {
@@ -145,4 +212,61 @@ func TestValidate(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestConverters(t *testing.T) {
+	tests := []struct {
+		name  string
+		dsseB []byte
+	}{
+		{
+			name:  "single signature with key ids",
+			dsseB: []byte("{\"payload\":\"cGF5bG9hZAo=\",\"payloadType\":\"application/vnd.in-toto+json\",\"signatures\":[{\"sig\":\"c2lnbmF0dXJlCg==\", \"keyid\": \"id1\"}]}"),
+		},
+		{
+			name:  "single signature with no key ids",
+			dsseB: []byte("{\"payload\":\"cGF5bG9hZAo=\",\"payloadType\":\"application/vnd.in-toto+json\",\"signatures\":[{\"sig\":\"c2lnbmF0dXJlCg==\"}]}"),
+		},
+		{
+			name:  "multi signature with key ids",
+			dsseB: []byte("{\"payload\":\"cGF5bG9hZAo=\",\"payloadType\":\"application/vnd.in-toto+json\",\"signatures\":[{\"sig\":\"c2lnbmF0dXJlCg==\", \"keyid\": \"id1\"}, {\"sig\":\"c2lnbmF0dXJlMgo=\", \"keyid\": \"id2\"}]}"),
+		},
+	}
+
+	for _, test := range tests {
+		env := &dsset.Envelope{}
+		if err := json.Unmarshal(test.dsseB, env); err != nil {
+			t.Fatal(err)
+		}
+		protoEnv := &dsse.Envelope{}
+		if err := protojson.Unmarshal(test.dsseB, protoEnv); err != nil {
+			t.Fatal(err)
+		}
+
+		t.Run("testToProto "+test.name, func(t *testing.T) {
+			convertedEnv, err := ToProto(env)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := deep.Equal(protoEnv, convertedEnv); diff != nil {
+				t.Errorf("ToProto() mismatch (-want +got):\n%s", diff)
+			}
+		})
+
+		t.Run("testFromProto "+test.name, func(t *testing.T) {
+			convertedEnv := FromProto(protoEnv)
+			if diff := deep.Equal(env, convertedEnv); diff != nil {
+				t.Errorf("FromProto() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+
+}
+
+func b64DecodeOrDie(t *testing.T, msg string) []byte {
+	decoded, err := base64.StdEncoding.DecodeString(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return decoded
 }

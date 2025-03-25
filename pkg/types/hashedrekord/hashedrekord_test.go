@@ -48,20 +48,22 @@ fRnK+CuN46tvzGu+9A==
 -----END CERTIFICATE-----`
 )
 
-func TestValidate(t *testing.T) {
+func TestToLogEntry(t *testing.T) {
 	tests := []struct {
 		name         string
-		hashedrekord *pb.HashedRekordRequest
+		hashedrekord *pb.HashedRekordRequestV0_0_2
 		expectErr    error
 	}{
 		{
 			name: "valid hashedrekord",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: b64DecodeOrDie(t, b64EncodedSignature),
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte(publicKey),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
 						},
 					},
 				},
@@ -72,11 +74,13 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing signature",
-			hashedrekord: &pb.HashedRekordRequest{
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte(publicKey),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
 						},
 					},
 				},
@@ -88,8 +92,10 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing verifier",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: b64DecodeOrDie(t, b64EncodedSignature),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+				},
 				Data: &v1.HashOutput{
 					Digest: hexDecodeOrDie(t, hexEncodedDigest),
 				},
@@ -98,12 +104,14 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing data",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: b64DecodeOrDie(t, b64EncodedSignature),
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte(publicKey),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
 						},
 					},
 				},
@@ -112,12 +120,14 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "missing data digest",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: b64DecodeOrDie(t, b64EncodedSignature),
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte(publicKey),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
 						},
 					},
 				},
@@ -127,12 +137,14 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "invalid signature",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: []byte("foobar"),
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte(publicKey),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: []byte("foobar"),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
 						},
 					},
 				},
@@ -144,12 +156,14 @@ func TestValidate(t *testing.T) {
 		},
 		{
 			name: "valid hashedrekord with X.509 cert",
-			hashedrekord: &pb.HashedRekordRequest{
-				Signature: b64DecodeOrDie(t, b64EncodedSignature),
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_X509Certificate{
-						X509Certificate: &v1.X509Certificate{
-							RawBytes: []byte(x509Cert),
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_X509Certificate{
+							X509Certificate: &v1.X509Certificate{
+								RawBytes: []byte(x509Cert),
+							},
 						},
 					},
 				},
@@ -161,7 +175,7 @@ func TestValidate(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotErr := Validate(test.hashedrekord)
+			_, gotErr := ToLogEntry(test.hashedrekord)
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
 			} else {

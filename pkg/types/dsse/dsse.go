@@ -18,11 +18,15 @@ import (
 	"bytes"
 	"context"
 	"crypto"
-	"encoding/json"
+	"crypto/sha256"
+	"encoding/base64"
 	"errors"
 	"fmt"
 
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
@@ -30,55 +34,60 @@ import (
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
-func Validate(ds *pb.DSSERequest) error {
-	if ds.Envelope == "" {
-		return fmt.Errorf("missing envelope")
+func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
+	if ds.Envelope == nil {
+		return nil, fmt.Errorf("missing envelope")
 	}
-	if len(ds.Verifier) == 0 {
-		return fmt.Errorf("missing verifiers")
+	if len(ds.Verifiers) == 0 {
+		return nil, fmt.Errorf("missing verifiers")
 	}
-	for _, v := range ds.Verifier {
+	for _, v := range ds.Verifiers {
 		if err := verifier.Validate(v); err != nil {
-			return err
+			return nil, err
 		}
 	}
-	envelope := &dsse.Envelope{}
-	if err := json.Unmarshal([]byte(ds.Envelope), envelope); err != nil {
-		return err
+	if len(ds.Envelope.Signatures) == 0 {
+		return nil, fmt.Errorf("envelope missing signatures")
 	}
-	if len(envelope.Signatures) == 0 {
-		return fmt.Errorf("envelope missing signatures")
-	}
-	allPubKeyBytes := make([][]byte, 0)
-	for _, verifier := range ds.Verifier {
-		pubKey := verifier.GetPublicKey()
-		cert := verifier.GetX509Certificate()
+	allPubKeyBytes := make(map[*pb.Verifier][]byte, 0)
+	for _, v := range ds.Verifiers {
+		pubKey := v.GetPublicKey()
+		cert := v.GetX509Certificate()
 		if pubKey != nil {
-			allPubKeyBytes = append(allPubKeyBytes, pubKey.RawBytes)
+			allPubKeyBytes[v] = pubKey.RawBytes
 		} else {
-			allPubKeyBytes = append(allPubKeyBytes, cert.RawBytes)
+			allPubKeyBytes[v] = cert.RawBytes
 		}
 	}
-	_, err := verifyEnvelope(allPubKeyBytes, envelope)
+	signerVerifiers, err := verifyEnvelope(allPubKeyBytes, ds.Envelope)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+	payloadHash := sha256.Sum256(ds.Envelope.Payload)
+
+	return &pb.DSSELogEntryV0_0_2{
+		PayloadHash: &v1.HashOutput{
+			Algorithm: v1.HashAlgorithm_SHA2_256,
+			Digest:    payloadHash[:],
+		},
+		Signatures: signerVerifiers,
+	}, nil
 }
 
 // verifyEnvelope takes in an array of possible key bytes and attempts to parse them as x509 public keys.
 // it then uses these to verify the envelope and makes sure that every signature on the envelope is verified.
-// it returns a map of verifiers indexed by the signature the verifier corresponds to.
+// it returns a list of SignatureAndVerifier mapping each signature in the envelope to a provided verifier
 // Copied from https://github.com/sigstore/rekor/blob/73dba7c07d0747f00119417fc0ff994a393f97b2/pkg/types/dsse/v0.0.1/entry.go#L364-L403
-func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x509.PublicKey, error) {
+func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelope) ([]*pb.SignatureAndVerifier, error) {
+	env := FromProto(pbenv)
+	savs := make([]*pb.SignatureAndVerifier, 0, len(allPubKeyBytes))
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
-	verifierBySig := make(map[string]*x509.PublicKey)
 	allSigs := make(map[string]struct{})
 	for _, sig := range env.Signatures {
 		allSigs[sig.Sig] = struct{}{}
 	}
 
-	for _, pubKeyBytes := range allPubKeyBytes {
+	for v, pubKeyBytes := range allPubKeyBytes {
 		if len(allSigs) == 0 {
 			break // if all signatures have been verified, do not attempt anymore
 		}
@@ -104,7 +113,15 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 
 		for _, accept := range accepted {
 			delete(allSigs, accept.Sig.Sig)
-			verifierBySig[accept.Sig.Sig] = key
+			sigBytes, err := base64.StdEncoding.DecodeString(accept.Sig.Sig)
+			if err != nil {
+				// this should be unreachable
+				return nil, fmt.Errorf("could not decode base64 signature: %w", err)
+			}
+			savs = append(savs, &pb.SignatureAndVerifier{
+				Signature: sigBytes,
+				Verifier:  v,
+			})
 		}
 	}
 
@@ -112,5 +129,45 @@ func verifyEnvelope(allPubKeyBytes [][]byte, env *dsse.Envelope) (map[string]*x5
 		return nil, errors.New("all signatures must have a key that verifies it")
 	}
 
-	return verifierBySig, nil
+	return savs, nil
+}
+
+// FromProto converts a dsse proto message to a dsse struct
+func FromProto(env *pbdsse.Envelope) *dsse.Envelope {
+	var newEnv dsse.Envelope
+	newEnv.PayloadType = env.PayloadType
+	newEnv.Payload = base64.StdEncoding.EncodeToString(env.Payload)
+	newEnv.Signatures = make([]dsse.Signature, 0, len(env.Signatures))
+	for _, s := range env.Signatures {
+		ns := dsse.Signature{
+			KeyID: s.Keyid,
+			Sig:   base64.StdEncoding.EncodeToString(s.Sig),
+		}
+		newEnv.Signatures = append(newEnv.Signatures, ns)
+	}
+	return &newEnv
+}
+
+// ToProto converts a dsse struct to a dsse proto message
+func ToProto(env *dsse.Envelope) (*pbdsse.Envelope, error) {
+	var newEnv pbdsse.Envelope
+	newEnv.PayloadType = env.PayloadType
+	payloadBytes, err := base64.StdEncoding.DecodeString(env.Payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode dsse payload: %w", err)
+	}
+	newEnv.Payload = payloadBytes
+	newEnv.Signatures = make([]*pbdsse.Signature, 0, len(env.Signatures))
+	for _, s := range env.Signatures {
+		sigBytes, err := base64.StdEncoding.DecodeString(s.Sig)
+		if err != nil {
+			return nil, fmt.Errorf("failed to decode dsse signature: %w", err)
+		}
+		ns := &pbdsse.Signature{
+			Keyid: s.KeyID,
+			Sig:   sigBytes,
+		}
+		newEnv.Signatures = append(newEnv.Signatures, ns)
+	}
+	return &newEnv, nil
 }

@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
@@ -45,16 +47,18 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "valid hashedrekord",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
-					HashedRekordRequest: &pb.HashedRekordRequest{
-						Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
+					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
+						Signature: &pb.SignatureAndVerifier{
+							Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
+							Verifier: &pb.Verifier{
+								Verifier: &pb.Verifier_PublicKey{
+									PublicKey: &pb.PublicKey{
+										RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ==
 -----END PUBLIC KEY-----`),
+									},
 								},
 							},
 						},
@@ -69,10 +73,19 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 		{
 			name: "valid dsse",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_DsseRequest{
-					DsseRequest: &pb.DSSERequest{
-						Envelope: "{\"payloadType\":\"application/vnd.in-toto+json\",\"payload\":\"cGF5bG9hZA==\",\"signatures\":[{\"keyid\":\"\",\"sig\":\"MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=\"}]}",
-						Verifier: []*pb.Verifier{
+				Spec: &pb.CreateEntryRequest_DsseRequestV0_0_2{
+					DsseRequestV0_0_2: &pb.DSSERequestV0_0_2{
+						Envelope: &dsse.Envelope{
+							Payload:     b64DecodeOrDie(t, "cGF5bG9hZA=="),
+							PayloadType: "application/vnd.in-toto+json",
+							Signatures: []*dsse.Signature{
+								{
+									Sig:   b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk="),
+									Keyid: "",
+								},
+							},
+						},
+						Verifiers: []*pb.Verifier{
 							{
 								Verifier: &pb.Verifier_PublicKey{
 									PublicKey: &pb.PublicKey{
@@ -92,8 +105,8 @@ qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 		{
 			name: "invalid hashedrekord",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
-					HashedRekordRequest: &pb.HashedRekordRequest{},
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
+					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{},
 				},
 			},
 			addFn:       func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
@@ -102,8 +115,8 @@ qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 		{
 			name: "invalid dsse",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_DsseRequest{
-					DsseRequest: &pb.DSSERequest{},
+				Spec: &pb.CreateEntryRequest_DsseRequestV0_0_2{
+					DsseRequestV0_0_2: &pb.DSSERequestV0_0_2{},
 				},
 			},
 			addFn:       func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
@@ -112,16 +125,18 @@ qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 		{
 			name: "failed integration",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
-					HashedRekordRequest: &pb.HashedRekordRequest{
-						Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
+					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
+						Signature: &pb.SignatureAndVerifier{
+							Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
+							Verifier: &pb.Verifier{
+								Verifier: &pb.Verifier_PublicKey{
+									PublicKey: &pb.PublicKey{
+										RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ==
 -----END PUBLIC KEY-----`),
+									},
 								},
 							},
 						},

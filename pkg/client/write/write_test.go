@@ -29,6 +29,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/pkg/client"
@@ -121,18 +123,20 @@ func TestAdd(t *testing.T) {
 	}{
 		{
 			name: "valid hashedrekord",
-			entry: &pb.HashedRekordRequest{
-				Signature: []byte("sign"),
+			entry: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.SignatureAndVerifier{
+					Signature: []byte("sign"),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte("key"),
+							},
+						},
+					},
+				},
 				Data: &v1.HashOutput{
 					Algorithm: v1.HashAlgorithm(v1.HashAlgorithm_SHA2_256),
 					Digest:    []byte("digest"),
-				},
-				Verifier: &pb.Verifier{
-					Verifier: &pb.Verifier_PublicKey{
-						PublicKey: &pb.PublicKey{
-							RawBytes: []byte("key"),
-						},
-					},
 				},
 			},
 			respBody: marshalJSONOrDie(t, pbs.TransparencyLogEntry{
@@ -155,9 +159,18 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "valid dsse",
-			entry: &pb.DSSERequest{
-				Envelope: "dsse",
-				Verifier: []*pb.Verifier{
+			entry: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("some payload"),
+					PayloadType: "",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   []byte("some signature"),
+							Keyid: "abcd",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -192,9 +205,18 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "server error",
-			entry: &pb.DSSERequest{
-				Envelope: "dsse",
-				Verifier: []*pb.Verifier{
+			entry: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("some payload"),
+					PayloadType: "",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   []byte("some signature"),
+							Keyid: "abcd",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -210,9 +232,18 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "unexpected response body from server",
-			entry: &pb.DSSERequest{
-				Envelope: "dsse",
-				Verifier: []*pb.Verifier{
+			entry: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("some payload"),
+					PayloadType: "",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   []byte("some signature"),
+							Keyid: "abcd",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -228,9 +259,18 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "invalid checkpoint",
-			entry: &pb.DSSERequest{
-				Envelope: "dsse",
-				Verifier: []*pb.Verifier{
+			entry: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("some payload"),
+					PayloadType: "",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   []byte("some signature"),
+							Keyid: "abcd",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -260,9 +300,18 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "invalid inclusion proof",
-			entry: &pb.DSSERequest{
-				Envelope: "dsse",
-				Verifier: []*pb.Verifier{
+			entry: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("some payload"),
+					PayloadType: "",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   []byte("some signature"),
+							Keyid: "abcd",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{

@@ -16,16 +16,26 @@ syntax = "proto3";
 package dev.sigstore.rekor.v2;
 
 import "google/api/field_behavior.proto";
+import "sigstore_common.proto";
+import "envelope.proto";
 
 import "verifier.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
 // A request to add a dsse entry to the log
-message DSSERequest {
-    // A DSSE envelope (as defined by https://github.com/secure-systems-lab/dsse/blob/master/envelope.proto)
-    // in stringified JSON
-    string envelope = 1 [(google.api.field_behavior) = REQUIRED];
-    // collection of verification material used to verify
-    repeated Verifier verifier = 2;
+message DSSERequestV0_0_2 {
+    // A DSSE envelope
+    io.intoto.Envelope envelope = 1 [(google.api.field_behavior) = REQUIRED];
+    // Signatures and their associated verification material used to verify the payload in the envelope
+    // These should be a direct 1:1 mapping with the signatures provided in the envelope
+    repeated Verifier verifiers = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+
+message DSSELogEntryV0_0_2 {
+    // The hash of the dsse payload
+    dev.sigstore.common.v1.HashOutput payloadHash = 1 [(google.api.field_behavior) = REQUIRED];
+    // Signatures and their associated verification material used to verify the payload
+    repeated SignatureAndVerifier signatures = 2 [(google.api.field_behavior) = REQUIRED];
 }
