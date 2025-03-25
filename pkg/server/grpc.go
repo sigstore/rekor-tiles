@@ -40,12 +40,6 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-// rekorServer is the collection of methods that our grpc server must implement.
-type rekorServer interface {
-	pb.RekorServer
-	grpc_health_v1.HealthServer
-}
-
 type grpcServer struct {
 	*grpc.Server
 	serverEndpoint string
