@@ -36,6 +36,7 @@ import (
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -46,6 +47,7 @@ type httpProxy struct {
 	serverEndpoint string
 }
 
+// newHTTProxy creates a mux for each of the service grpc methods, including the grpc heatlhcheck.
 func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServer) *httpProxy {
 	// configure a custom marshaler to fail on unknown fields
 	strictMarshaler := runtime.HTTPBodyMarshaler{
@@ -58,24 +60,33 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 			},
 		},
 	}
+
+	// TODO: allow TLS if the startup provides a TLS cert, but for now the proxy connects to grpc without TLS
+	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+
+	// GRPC client connection so the http mux's healthz endpoint can reach the grpc healthcheck service.
+	// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/#adding-healthz-endpoint-to-runtimeservemux.
+	cc, err := grpc.NewClient(grpcServer.serverEndpoint, opts...)
+	if err != nil {
+		slog.Error("Failed to connect to grpc server:", "errors", err)
+		os.Exit(1)
+	}
 	mux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
 		runtime.WithForwardResponseOption(httpResponseModifier),
+		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)), // localhost:[port]/healthz
 	)
+
+	err = pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
+	if err != nil {
+		slog.Error("Failed to register gateway:", "errors", err)
+		os.Exit(1)
+	}
 
 	metrics := getMetrics()
 	handler := promhttp.InstrumentMetricHandler(metrics.reg, mux)
 	handler = promhttp.InstrumentHandlerDuration(metrics.httpLatency, handler)
 	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
-
-	// TODO: allow TLS if the startup provides a TLS cert, but for now the proxy connects to grpc without TLS
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
-
-	err := pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
-	if err != nil {
-		slog.Error("Failed to register gateway:", "errors", err)
-		os.Exit(1)
-	}
 
 	// TODO: configure https connection preferences (time-out, max size, etc)
 

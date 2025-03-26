@@ -19,11 +19,10 @@ import (
 	"log/slog"
 	"os"
 	"sync"
-
-	"github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 )
 
-func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s protobuf.RekorServer) {
+// Serve starts the grpc server and its http proxy.
+func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s rekorServer) {
 	var wg sync.WaitGroup
 
 	if hc.port == 0 || gc.port == 0 {
@@ -35,7 +34,7 @@ func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s protobuf.Rekor
 		os.Exit(1)
 	}
 
-	grpcServer := newGRPCService(gc, s)
+	grpcServer := newGRPCServer(gc, s)
 	grpcServer.start(&wg)
 
 	httpProxy := newHTTPProxy(ctx, hc, grpcServer)

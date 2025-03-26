@@ -42,6 +42,9 @@ func TestServe_httpSmoke(t *testing.T) {
 		checkHTTPGet(t, httpBaseURL+"/api/v2/tile/1/2.p/3", "test-tile:1,2.p,3")
 		checkHTTPGet(t, httpBaseURL+"/api/v2/tile/entries/1", "test-entries:1")
 		checkHTTPGet(t, httpBaseURL+"/api/v2/tile/entries/1.p/2", "test-entries:1.p,2")
+
+		// healthcheck
+		checkHTTPGet(t, httpBaseURL+"/healthz", `{"status":"SERVING"}`+"\n") // newline character is expected
 	})
 	t.Run("check failures", func(t *testing.T) {
 		checkExtraJSONFieldsErrors(t, httpBaseURL)

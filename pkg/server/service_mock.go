@@ -26,6 +26,7 @@ import (
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/genproto/googleapis/api/httpbody"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -63,6 +64,7 @@ func (ms *MockServer) Stop(t *testing.T) {
 
 type mockRekorServer struct {
 	pb.UnimplementedRekorServer
+	grpc_health_v1.UnimplementedHealthServer
 }
 
 var testEntry = pbs.TransparencyLogEntry{
@@ -128,4 +130,8 @@ func (s *mockRekorServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*h
 		Data:        []byte("test-checkpoint"),
 		Extensions:  nil,
 	}, nil
+}
+
+func (s mockRekorServer) Check(_ context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
+	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
 }

@@ -30,14 +30,22 @@ import (
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
+// rekorServer is the collection of methods that our grpc server must implement.
+type rekorServer interface {
+	pb.RekorServer
+	grpc_health_v1.HealthServer
+}
+
 type Server struct {
 	pb.UnimplementedRekorServer
+	grpc_health_v1.UnimplementedHealthServer
 	storage tessera.Storage
 }
 
@@ -109,4 +117,11 @@ func (s *Server) GetPartialEntryBundle(context.Context, *pb.PartialEntryBundleRe
 }
 func (s *Server) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCheckpoint not implemented")
+}
+
+// Check implements the Healthcheck protocol to report the health of the service.
+// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/.
+func (s Server) Check(_ context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
+	// TODO: make this do more comprehensive healthchecking.
+	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
 }

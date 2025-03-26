@@ -37,6 +37,7 @@ import (
 
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
 type grpcServer struct {
@@ -44,9 +45,11 @@ type grpcServer struct {
 	serverEndpoint string
 }
 
-func newGRPCService(config *GRPCConfig, server pb.RekorServer) *grpcServer {
+// newGRPCServer starts a new grpc server and registers the services.
+func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	s := grpc.NewServer(grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()))
 	pb.RegisterRekorServer(s, server)
+	grpc_health_v1.RegisterHealthServer(s, server)
 
 	getMetrics().serverMetrics.InitializeMetrics(s)
 
