@@ -16,6 +16,7 @@ package server
 
 import (
 	"testing"
+	"time"
 )
 
 func TestNewGRPCConfig(t *testing.T) {
@@ -26,6 +27,9 @@ func TestNewGRPCConfig(t *testing.T) {
 	}
 	if config.port != 8081 {
 		t.Errorf("Expected port to be 8081, got %d", config.port)
+	}
+	if config.timeout != 30*time.Second {
+		t.Errorf("Expected timeout to be 30 seconds, got %v", config.timeout)
 	}
 }
 
@@ -43,15 +47,26 @@ func TestWithGRPCHost(t *testing.T) {
 	}
 }
 
+func TestWithGRPCTimeout(t *testing.T) {
+	config := NewGRPCConfig(WithGRPCTimeout(10 * time.Second))
+	if config.timeout != 10*time.Second {
+		t.Errorf("Expected timeout to be 10 seconds, got %v", config.timeout)
+	}
+}
+
 func TestMultipleGRPCOptions(t *testing.T) {
 	config := NewGRPCConfig(
 		WithGRPCPort(9090),
 		WithGRPCHost("test.example.com"),
+		WithGRPCTimeout(5*time.Second),
 	)
 	if config.port != 9090 {
 		t.Errorf("Expected port to be 9090, got %d", config.port)
 	}
 	if config.host != "test.example.com" {
 		t.Errorf("Expected host to be test.example.com, got %s", config.host)
+	}
+	if config.timeout != 5*time.Second {
+		t.Errorf("Expected timeout to be 5 seconds, got %v", config.timeout)
 	}
 }

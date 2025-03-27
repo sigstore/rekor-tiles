@@ -14,18 +14,25 @@
 
 package server
 
-import "strconv"
+import (
+	"strconv"
+	"time"
+)
 
+// GRPCConfig contains options for the GRPC server from the CLI.
 type GRPCConfig struct {
-	port int
-	host string
+	port    int
+	host    string
+	timeout time.Duration
 }
 type GRPCOption func(config *GRPCConfig)
 
+// NewGRPCConfig creates a new GRPCConfig with some default options.
 func NewGRPCConfig(options ...func(config *GRPCConfig)) *GRPCConfig {
 	config := &GRPCConfig{
-		port: 8081,
-		host: "localhost",
+		port:    8081,
+		host:    "localhost",
+		timeout: 30 * time.Second,
 	}
 	for _, opt := range options {
 		opt(config)
@@ -43,6 +50,13 @@ func WithGRPCPort(port int) GRPCOption {
 func WithGRPCHost(host string) GRPCOption {
 	return func(config *GRPCConfig) {
 		config.host = host
+	}
+}
+
+// WithGRPCTimeout specifies the value to be used in grpc.ConnectionTimeout().
+func WithGRPCTimeout(timeout time.Duration) GRPCOption {
+	return func(config *GRPCConfig) {
+		config.timeout = timeout
 	}
 }
 

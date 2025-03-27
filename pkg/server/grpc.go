@@ -47,7 +47,10 @@ type grpcServer struct {
 
 // newGRPCServer starts a new grpc server and registers the services.
 func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()))
+	s := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()),
+		grpc.ConnectionTimeout(config.timeout),
+	)
 	pb.RegisterRekorServer(s, server)
 	grpc_health_v1.RegisterHealthServer(s, server)
 

@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -86,7 +87,8 @@ var serveCmd = &cobra.Command{
 				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port"))),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
-				server.WithGRPCHost(viper.GetString("grpc-address"))),
+				server.WithGRPCHost(viper.GetString("grpc-address")),
+				server.WithGRPCTimeout(viper.GetDuration("grpc-timeout"))),
 			server.NewServer(tesseraStorage),
 		)
 	},
@@ -99,6 +101,9 @@ func init() {
 	serveCmd.Flags().Int("http-metrics-port", 2112, "HTTP port to bind metrics to")
 	serveCmd.Flags().Int("grpc-port", 3001, "GRPC port to bind to")
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
+	serveCmd.Flags().Duration("grpc-timeout", 30*time.Second, "GRPC timeout")
+
+	// hostname
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "localhost"
