@@ -72,7 +72,12 @@ var serveCmd = &cobra.Command{
 			slog.Error(fmt.Sprintf("failed to initialize signer: %v", err.Error()))
 			os.Exit(1)
 		}
-		tesseraStorage, err := tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, signer)
+		appendOptions, err := tessera.NewAppendOptions(ctx, viper.GetString("hostname"), signer, viper.GetUint("batch-max-size"), viper.GetDuration("batch-max-age"), viper.GetDuration("checkpoint-interval"), viper.GetUint("pushback-max-outstanding"))
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to initialize append options: %v", err))
+			os.Exit(1)
+		}
+		tesseraStorage, err := tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, appendOptions)
 		if err != nil {
 			slog.Error(fmt.Sprintf("failed to initialize tessera storage: %v", err.Error()))
 			os.Exit(1)
@@ -116,6 +121,13 @@ func init() {
 	serveCmd.Flags().String("signer-kmshash", "sha256", "hash algorithm used by the KMS")
 	serveCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset. Valid options are [aws-kms://keyname, gcp-kms://keyname]")
 	serveCmd.Flags().String("signer-tink-keyset-path", "", "path to encrypted Tink keyset")
+
+	// tessera lifecycle configs
+	serveCmd.Flags().Uint("batch-max-size", tessera.DefaultBatchMaxSize, "the maximum number of entries that will accumulated before being sent to the sequencer")
+	serveCmd.Flags().Duration("batch-max-age", tessera.DefaultBatchMaxAge, "the maximum amount of time a batch of entries will wait before being sent to the sequencer")
+	serveCmd.Flags().Duration("checkpoint-interval", tessera.DefaultCheckpointInterval, "the frequency at which a checkpoint will be published")
+	serveCmd.Flags().Uint("pushback-max-outstanding", tessera.DefaultPushbackMaxOutstanding, "the maximum number of 'in-flight' add requests")
+
 	if err := viper.BindPFlags(serveCmd.Flags()); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
