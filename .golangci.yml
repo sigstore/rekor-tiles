@@ -12,25 +12,44 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-linters:
-  enable:
-  - errcheck
-  - gofmt
-  - goimports
-  - gosec
-  - gocritic
-  - misspell
-  - revive
-  - unused
-issues:
-  exclude-rules:
-  - path: _test\.go
-    linters:
-    - errcheck
-    - gosec
-  max-issues-per-linter: 0
-  max-same-issues: 0
+
+version: "2"
 run:
   issues-exit-code: 1
-  timeout: 5m
-
+linters:
+  enable:
+    - errcheck
+    - gocritic
+    - gosec
+    - misspell
+    - revive
+    - unused
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - errcheck
+          - gosec
+        path: _test\.go
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+formatters:
+  enable:
+    - gofmt
+    - goimports
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
