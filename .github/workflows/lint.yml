@@ -32,10 +32,10 @@ jobs:
           go-version-file: './go.mod'
           check-latest: true
 
-      - name: "Extract golangci-lint version from go.mod"
+      - name: "Extract golangci-lint version from Dockerfile.golangci-lint"
         id: "golangci-lint-version"
         run: |
-          echo "version=$(go list -m -u -json all | jq -r ' select(.Path=="github.com/golangci/golangci-lint/v2") | .Version')" >> "$GITHUB_OUTPUT"
+          awk -F '[@:]' '/FROM golangci\/golangci-lint/{print "version="$2; exit}' Dockerfile.golangci-lint) >> "$GITHUB_OUTPUT"
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@1481404843c368bc19ca9406f87d6e0fc97bdcfd # v7.0.0
