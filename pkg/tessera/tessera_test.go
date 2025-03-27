@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	tessera "github.com/transparency-dev/trillian-tessera"
 )
@@ -137,4 +138,17 @@ func TestReadTile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestNewAppendOptions(t *testing.T) {
+	sv, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ao, err := NewAppendOptions(context.Background(), "test", sv, 42, 42*time.Millisecond, 42*time.Second, 42)
+	assert.NoError(t, err)
+	assert.Equal(t, uint(42), ao.BatchMaxSize())
+	assert.Equal(t, 42*time.Millisecond, ao.BatchMaxAge())
+	assert.Equal(t, 42*time.Second, ao.CheckpointInterval())
+	assert.Equal(t, uint(42), ao.PushbackMaxOutstanding())
 }

@@ -31,6 +31,13 @@ import (
 	"github.com/transparency-dev/trillian-tessera/client"
 )
 
+const (
+	DefaultBatchMaxSize           = tessera.DefaultBatchMaxSize
+	DefaultBatchMaxAge            = tessera.DefaultBatchMaxAge
+	DefaultCheckpointInterval     = tessera.DefaultCheckpointInterval
+	DefaultPushbackMaxOutstanding = tessera.DefaultPushbackMaxOutstanding
+)
+
 // Storage provides the functions to add entries to a Tessera log.
 type Storage interface {
 	Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error)
@@ -44,15 +51,22 @@ type storage struct {
 	readTileFn client.TileFetcherFunc
 }
 
-// NewStorage creates a Tessera storage object for the provided driver and signer.
-func NewStorage(ctx context.Context, origin string, driver tessera.Driver, signer signature.Signer) (Storage, error) {
+func NewAppendOptions(ctx context.Context, origin string, signer signature.Signer, batchMaxSize uint, baxMaxAge time.Duration, checkpointInterval time.Duration, pushback uint) (*tessera.AppendOptions, error) {
+	opts := tessera.NewAppendOptions()
 	noteSigner, err := note.NewNoteSigner(ctx, origin, signer)
 	if err != nil {
 		return nil, fmt.Errorf("getting note signer: %w", err)
 	}
-	appender, _, reader, err := tessera.NewAppender(ctx, driver,
-		tessera.NewAppendOptions().WithCheckpointSigner(noteSigner),
-	)
+	opts = opts.WithCheckpointSigner(noteSigner)
+	opts = opts.WithBatching(batchMaxSize, baxMaxAge)
+	opts = opts.WithCheckpointInterval(checkpointInterval)
+	opts = opts.WithPushback(pushback)
+	return opts, nil
+}
+
+// NewStorage creates a Tessera storage object for the provided driver and signer.
+func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appendOptions *tessera.AppendOptions) (Storage, error) {
+	appender, _, reader, err := tessera.NewAppender(ctx, driver, appendOptions)
 	if err != nil {
 		return nil, fmt.Errorf("getting tessera appender: %w", err)
 	}
