@@ -53,7 +53,8 @@ func WithGRPCHost(host string) GRPCOption {
 	}
 }
 
-// WithGRPCTimeout specifies the value to be used in grpc.ConnectionTimeout().
+// WithGRPCTimeout specifies the value to be used in grpc.ConnectionTimeout()
+// and keepalive.ServerParameters.MaxConnectionIdle.
 func WithGRPCTimeout(timeout time.Duration) GRPCOption {
 	return func(config *GRPCConfig) {
 		config.timeout = timeout

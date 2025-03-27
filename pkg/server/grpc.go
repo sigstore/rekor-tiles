@@ -38,6 +38,7 @@ import (
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/keepalive"
 )
 
 type grpcServer struct {
@@ -50,6 +51,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	s := grpc.NewServer(
 		grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()),
 		grpc.ConnectionTimeout(config.timeout),
+		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
 	)
 	pb.RegisterRekorServer(s, server)
 	grpc_health_v1.RegisterHealthServer(s, server)
