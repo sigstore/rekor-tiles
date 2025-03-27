@@ -23,10 +23,11 @@ import (
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
-func Validate(hr *pb.HashedRekordRequest) error {
+func Validate(hr *pb.HashedRekordRequest, algorithmRegistry *signature.AlgorithmRegistryConfig) error {
 	if len(hr.Signature) == 0 {
 		return fmt.Errorf("missing signature")
 	}
@@ -66,9 +67,30 @@ func Validate(hr *pb.HashedRekordRequest) error {
 	default:
 		alg = crypto.SHA256
 	}
+	valid, err := checkEntryAlgorithms(keyObj, alg, algorithmRegistry)
+	if err != nil {
+		return fmt.Errorf("checking entry algorithm: %w", err)
+	}
+	if !valid {
+		return fmt.Errorf("invalid entry algorithm")
+	}
 	if err := sigObj.Verify(nil, keyObj, options.WithDigest(hr.Data.Digest), options.WithCryptoSignerOpts(alg)); err != nil {
 		return fmt.Errorf("verifying signature: %w", err)
 	}
 
 	return nil
+}
+
+func checkEntryAlgorithms(keyObj *x509.PublicKey, alg crypto.Hash, algorithmRegistry *signature.AlgorithmRegistryConfig) (bool, error) {
+	publicKey := keyObj.CryptoPubKey()
+	// Check if all the verifiers public keys (together with the
+	// artifactHashValue) are allowed according to the policy
+	isPermitted, err := algorithmRegistry.IsAlgorithmPermitted(publicKey, alg)
+	if err != nil {
+		return false, fmt.Errorf("checking if algorithm is permitted: %w", err)
+	}
+	if !isPermitted {
+		return false, nil
+	}
+	return true, nil
 }

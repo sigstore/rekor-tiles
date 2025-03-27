@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
+	"strings"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -28,6 +30,7 @@ import (
 	"github.com/sigstore/rekor-tiles/pkg/server"
 	"github.com/sigstore/rekor-tiles/pkg/signer"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 var serveCmd = &cobra.Command{
@@ -83,6 +86,12 @@ var serveCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		rekorServer, err := server.NewServer(tesseraStorage, viper.GetStringSlice("client-signing-algorithms"))
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to start rekor server: %v", err.Error()))
+			os.Exit(1)
+		}
+
 		server.Serve(
 			ctx,
 			server.NewHTTPConfig(
@@ -92,7 +101,7 @@ var serveCmd = &cobra.Command{
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address"))),
-			server.NewServer(tesseraStorage),
+			rekorServer,
 		)
 	},
 }
@@ -128,6 +137,15 @@ func init() {
 	serveCmd.Flags().Duration("checkpoint-interval", tessera.DefaultCheckpointInterval, "the frequency at which a checkpoint will be published")
 	serveCmd.Flags().Uint("pushback-max-outstanding", tessera.DefaultPushbackMaxOutstanding, "the maximum number of 'in-flight' add requests")
 
+	// allowed entry signing algorithms
+	keyAlgorithmTypes, err := defaultKeyAlgorithms()
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+	keyAlgorithmHelp := fmt.Sprintf("signing algorithm to use for signing/hashing (allowed %s)", strings.Join(keyAlgorithmTypes, ", "))
+	serveCmd.PersistentFlags().StringSlice("client-signing-algorithms", keyAlgorithmTypes, keyAlgorithmHelp)
+
 	if err := viper.BindPFlags(serveCmd.Flags()); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
@@ -139,4 +157,18 @@ var hashAlgMap = map[string]crypto.Hash{
 	"sha256": crypto.SHA256,
 	"sha384": crypto.SHA384,
 	"sha512": crypto.SHA512,
+}
+
+func defaultKeyAlgorithms() ([]string, error) {
+	allowedClientSigningAlgorithms := server.AllowedClientSigningAlgorithms
+	keyAlgorithmTypes := []string{}
+	for _, keyAlgorithm := range allowedClientSigningAlgorithms {
+		keyFlag, err := signature.FormatSignatureAlgorithmFlag(keyAlgorithm)
+		if err != nil {
+			return nil, err
+		}
+		keyAlgorithmTypes = append(keyAlgorithmTypes, keyFlag)
+	}
+	sort.Strings(keyAlgorithmTypes)
+	return keyAlgorithmTypes, nil
 }

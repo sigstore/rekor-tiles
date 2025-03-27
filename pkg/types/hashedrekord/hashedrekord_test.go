@@ -22,6 +22,7 @@ import (
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,9 +51,10 @@ fRnK+CuN46tvzGu+9A==
 
 func TestValidate(t *testing.T) {
 	tests := []struct {
-		name         string
-		hashedrekord *pb.HashedRekordRequest
-		expectErr    error
+		name              string
+		hashedrekord      *pb.HashedRekordRequest
+		allowedAlgorithms []v1.PublicKeyDetails
+		expectErr         error
 	}{
 		{
 			name: "valid hashedrekord",
@@ -158,10 +160,36 @@ func TestValidate(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "mismatched key algorithm",
+			hashedrekord: &pb.HashedRekordRequest{
+				Signature: b64DecodeOrDie(t, b64EncodedSignature),
+				Verifier: &pb.Verifier{
+					Verifier: &pb.Verifier_PublicKey{
+						PublicKey: &pb.PublicKey{
+							RawBytes: []byte(publicKey),
+						},
+					},
+				},
+				Data: &v1.HashOutput{
+					Digest: hexDecodeOrDie(t, hexEncodedDigest),
+				},
+			},
+			allowedAlgorithms: []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256, v1.PublicKeyDetails_PKIX_ED25519_PH},
+			expectErr:         fmt.Errorf("invalid entry algorithm"),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			gotErr := Validate(test.hashedrekord)
+			allowedAlgs := test.allowedAlgorithms
+			if allowedAlgs == nil {
+				allowedAlgs = []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256}
+			}
+			algReg, err := signature.NewAlgorithmRegistryConfig(allowedAlgs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			gotErr := Validate(test.hashedrekord, algReg)
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
 			} else {

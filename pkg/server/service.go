@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -26,6 +27,7 @@ import (
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
 	"github.com/sigstore/rekor-tiles/pkg/types/dsse"
 	"github.com/sigstore/rekor-tiles/pkg/types/hashedrekord"
+	"github.com/sigstore/sigstore/pkg/signature"
 	ttessera "github.com/transparency-dev/trillian-tessera"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc"
@@ -46,13 +48,19 @@ type rekorServer interface {
 type Server struct {
 	pb.UnimplementedRekorServer
 	grpc_health_v1.UnimplementedHealthServer
-	storage tessera.Storage
+	storage           tessera.Storage
+	algorithmRegistry *signature.AlgorithmRegistryConfig
 }
 
-func NewServer(storage tessera.Storage) *Server {
-	return &Server{
-		storage: storage,
+func NewServer(storage tessera.Storage, allowedKeyAlgorithms []string) (*Server, error) {
+	algorithmRegistry, err := algorithmRegistry(allowedKeyAlgorithms)
+	if err != nil {
+		return nil, fmt.Errorf("getting algorithm registry: %w", err)
 	}
+	return &Server{
+		storage:           storage,
+		algorithmRegistry: algorithmRegistry,
+	}, nil
 }
 
 func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
@@ -62,7 +70,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	switch req.GetSpec().(type) {
 	case *pb.CreateEntryRequest_HashedRekordRequest:
 		hr := req.GetHashedRekordRequest()
-		if err := hashedrekord.Validate(hr); err != nil {
+		if err := hashedrekord.Validate(hr, s.algorithmRegistry); err != nil {
 			slog.Warn("failed validating hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
 		}
