@@ -47,7 +47,12 @@ GOBIN = $(abspath ./tools/bin)
 lint:
 	go tool addlicense -l apache -c "The Sigstore Authors" -ignore "third_party/**" -v *
 	go tool goimports -w $(SRC)
-	docker run -t --rm -v $(PWD):/app -w /app $(shell awk -F '[ @]' '/FROM golangci\/golangci-lint/{print $$2; exit}' Dockerfile.golangci-lint) golangci-lint run -v ./...
+	docker run -t --rm -v $(PWD):/app -w /app \
+		--user $(shell id -u):$(shell id -g) \
+		-v $(shell go env GOCACHE):/.cache/go-build -e GOCACHE=/.cache/go-build \
+		-v $(shell go env GOMODCACHE):/.cache/mod -e GOMODCACHE=/.cache/mod \
+		-v ~/.cache/golangci-lint:/.cache/golangci-lint -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
+		$(shell awk -F '[ @]' '/FROM golangci\/golangci-lint/{print $$2; exit}' Dockerfile.golangci-lint) golangci-lint run -v ./...
 
 gosec: ## Run gosec security scanner
 	$(GOBIN)/gosec ./...
