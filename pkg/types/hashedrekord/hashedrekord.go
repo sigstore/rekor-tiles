@@ -16,19 +16,20 @@ package hashedrekord
 
 import (
 	"bytes"
-	"crypto"
 	"fmt"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 // ToLogEntry validates a request and converts it to a log entry type for inclusion in the log
 // TODO(#178) separate out ToLogEntry into proto validation, cyrpto validation and log entry conversion
-func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_2, error) {
+func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.HashedRekordLogEntryV0_0_2, error) {
 	if hr.Signature == nil || len(hr.Signature.Content) == 0 {
 		return nil, fmt.Errorf("missing signature")
 	}
@@ -57,10 +58,20 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_
 		return nil, fmt.Errorf("parsing public key: %w", err)
 	}
 
-	// TODO: Look up hash with sigstore/sigstore's GetAlgorithmDetails(hr.Signature.Verifier.KeyDetails).GetHashType()
-	// Update hardcoded SHA256 during signature verification and as output
+	algDetails, err := signature.GetAlgorithmDetails(hr.Signature.Verifier.KeyDetails)
+	if err != nil {
+		return nil, fmt.Errorf("getting key algorithm details: %w", err)
+	}
+	alg := algDetails.GetHashType()
+	valid, err := algorithmregistry.CheckEntryAlgorithms(keyObj, alg, algorithmRegistry)
+	if err != nil {
+		return nil, fmt.Errorf("checking entry algorithm: %w", err)
+	}
+	if !valid {
+		return nil, fmt.Errorf("invalid entry algorithm %s", alg.String())
+	}
 
-	if err := sigObj.Verify(nil, keyObj, options.WithDigest(hr.Digest), options.WithCryptoSignerOpts(crypto.SHA256)); err != nil {
+	if err := sigObj.Verify(nil, keyObj, options.WithDigest(hr.Digest), options.WithCryptoSignerOpts(alg)); err != nil {
 		return nil, fmt.Errorf("verifying signature: %w", err)
 	}
 

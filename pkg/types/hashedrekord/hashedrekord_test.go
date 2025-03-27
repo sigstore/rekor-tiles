@@ -22,6 +22,7 @@ import (
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -50,9 +51,10 @@ fRnK+CuN46tvzGu+9A==
 
 func TestToLogEntry(t *testing.T) {
 	tests := []struct {
-		name         string
-		hashedrekord *pb.HashedRekordRequestV0_0_2
-		expectErr    error
+		name              string
+		hashedrekord      *pb.HashedRekordRequestV0_0_2
+		allowedAlgorithms []v1.PublicKeyDetails
+		expectErr         error
 	}{
 		{
 			name: "valid hashedrekord",
@@ -150,10 +152,37 @@ func TestToLogEntry(t *testing.T) {
 				Digest: hexDecodeOrDie(t, hexEncodedDigest),
 			},
 		},
+		{
+			name: "mismatched key algorithm",
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+					},
+				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
+			},
+			allowedAlgorithms: []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256, v1.PublicKeyDetails_PKIX_ED25519_PH},
+			expectErr:         fmt.Errorf("invalid entry algorithm SHA-256"),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, gotErr := ToLogEntry(test.hashedrekord)
+			allowedAlgs := test.allowedAlgorithms
+			if allowedAlgs == nil {
+				allowedAlgs = []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256}
+			}
+			algReg, err := signature.NewAlgorithmRegistryConfig(allowedAlgs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, gotErr := ToLogEntry(test.hashedrekord, algReg)
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
 			} else {

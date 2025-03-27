@@ -27,6 +27,7 @@ import (
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
@@ -36,7 +37,7 @@ import (
 
 // ToLogEntry validates a request and converts it to a log entry type for inclusion in the log
 // TODO(#178) separate out ToLogEntry into proto validation, cyrpto validation and log entry conversion
-func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
+func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.DSSELogEntryV0_0_2, error) {
 	if ds.Envelope == nil {
 		return nil, fmt.Errorf("missing envelope")
 	}
@@ -61,7 +62,8 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
 			allPubKeyBytes[v] = cert.RawBytes
 		}
 	}
-	signerVerifiers, err := verifyEnvelope(allPubKeyBytes, ds.Envelope)
+	// TODO: infer hash algorithm from public key info (#176)
+	signerVerifiers, err := verifyEnvelope(allPubKeyBytes, ds.Envelope, crypto.SHA256, algorithmRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +81,7 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
 // verifyEnvelope takes in an array of possible key bytes and attempts to parse them as x509 public keys.
 // it then uses these to verify the envelope and makes sure that every signature on the envelope is verified.
 // it returns a list of SignatureAndVerifier mapping each signature in the envelope to a provided verifier
-func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelope) ([]*pb.Signature, error) {
+func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelope, alg crypto.Hash, algorithmRegistry *signature.AlgorithmRegistryConfig) ([]*pb.Signature, error) {
 	env := FromProto(pbenv)
 	savs := make([]*pb.Signature, 0, len(allPubKeyBytes))
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
@@ -95,6 +97,14 @@ func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelo
 		key, err := x509.NewPublicKey(bytes.NewReader(pubKeyBytes))
 		if err != nil {
 			return nil, fmt.Errorf("could not parse public key as x509: %w", err)
+		}
+
+		valid, err := algorithmregistry.CheckEntryAlgorithms(key, alg, algorithmRegistry)
+		if err != nil {
+			return nil, fmt.Errorf("checking entry algorithm: %w", err)
+		}
+		if !valid {
+			return nil, fmt.Errorf("invalid entry algorithm %s", alg.String())
 		}
 
 		vfr, err := signature.LoadVerifier(key.CryptoPubKey(), crypto.SHA256)

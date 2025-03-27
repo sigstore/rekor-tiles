@@ -23,13 +23,12 @@ import (
 
 	"github.com/go-test/deep"
 	dsset "github.com/secure-systems-lab/go-securesystemslib/dsse"
-	"google.golang.org/protobuf/encoding/protojson"
-
-	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
-
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
@@ -59,10 +58,11 @@ func TestToLogEntry(t *testing.T) {
 	var keySignature = b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=")
 	var certSignature = b64DecodeOrDie(t, "MEUCIQDoYuLoinEz/gM6B+hEn/0d47lmRDitQ3LfL9vH0sF/gQIgPqVgoBTRsMSPYMXYuJYYCIaTpnuppqQaTSTRn0ubwLI=")
 	tests := []struct {
-		name          string
-		dsse          *pb.DSSERequestV0_0_2
-		expectErr     error
-		expectedEntry *pb.DSSELogEntryV0_0_2
+		name              string
+		dsse              *pb.DSSERequestV0_0_2
+		allowedAlgorithms []v1.PublicKeyDetails
+		expectErr         error
+		expectedEntry     *pb.DSSELogEntryV0_0_2
 	}{
 		{
 			name: "valid dsse",
@@ -243,10 +243,44 @@ func TestToLogEntry(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "mismatched key algorithm",
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     payload,
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   keySignature,
+							Keyid: "",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
+					{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+					},
+				},
+			},
+			allowedAlgorithms: []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256, v1.PublicKeyDetails_PKIX_ED25519_PH},
+			expectErr:         fmt.Errorf("invalid entry algorithm"),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			entry, gotErr := ToLogEntry(test.dsse)
+			allowedAlgs := test.allowedAlgorithms
+			if allowedAlgs == nil {
+				allowedAlgs = []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256}
+			}
+			algReg, err := signature.NewAlgorithmRegistryConfig(allowedAlgs)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entry, gotErr := ToLogEntry(test.dsse, algReg)
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
 				if diff := deep.Equal(test.expectedEntry, entry); diff != nil {

@@ -27,6 +27,7 @@ import (
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
 	"github.com/sigstore/rekor-tiles/pkg/types/dsse"
 	"github.com/sigstore/rekor-tiles/pkg/types/hashedrekord"
+	"github.com/sigstore/sigstore/pkg/signature"
 	ttessera "github.com/transparency-dev/trillian-tessera"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc"
@@ -47,18 +48,20 @@ type rekorServer interface {
 type Server struct {
 	pb.UnimplementedRekorServer
 	grpc_health_v1.UnimplementedHealthServer
-	storage  tessera.Storage
-	readOnly bool
+	storage           tessera.Storage
+	readOnly          bool
+	algorithmRegistry *signature.AlgorithmRegistryConfig
 }
 
-func NewServer(storage tessera.Storage, readOnly bool) *Server {
+func NewServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig) *Server {
 	if readOnly {
 		return &Server{
 			readOnly: readOnly,
 		}
 	}
 	return &Server{
-		storage: storage,
+		storage:           storage,
+		algorithmRegistry: algorithmRegistry,
 	}
 }
 
@@ -75,7 +78,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	switch req.GetSpec().(type) {
 	case *pb.CreateEntryRequest_HashedRekordRequestV0_0_2:
 		hr := req.GetHashedRekordRequestV0_0_2()
-		entry, err := hashedrekord.ToLogEntry(hr)
+		entry, err := hashedrekord.ToLogEntry(hr, s.algorithmRegistry)
 		if err != nil {
 			slog.Warn("failed validating hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
@@ -88,7 +91,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		metricsCounter = getMetrics().newHashedRekordEntries
 	case *pb.CreateEntryRequest_DsseRequestV0_0_2:
 		ds := req.GetDsseRequestV0_0_2()
-		entry, err := dsse.ToLogEntry(ds)
+		entry, err := dsse.ToLogEntry(ds, s.algorithmRegistry)
 		if err != nil {
 			slog.Warn("failed validating dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")

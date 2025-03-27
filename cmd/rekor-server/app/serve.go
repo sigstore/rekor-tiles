@@ -21,15 +21,19 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/pkg/server"
 	"github.com/sigstore/rekor-tiles/pkg/signerverifier"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
+	"github.com/sigstore/sigstore/pkg/signature"
 )
 
 var serveCmd = &cobra.Command{
@@ -96,7 +100,13 @@ var serveCmd = &cobra.Command{
 				os.Exit(1)
 			}
 		}
-		rekorServer := server.NewServer(tesseraStorage, readOnly)
+		algorithmRegistry, err := algorithmregistry.AlgorithmRegistry(viper.GetStringSlice("client-signing-algorithms"))
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to get algorithm registry: %v", err.Error()))
+			os.Exit(1)
+		}
+
+		rekorServer := server.NewServer(tesseraStorage, readOnly, algorithmRegistry)
 
 		server.Serve(
 			ctx,
@@ -162,6 +172,15 @@ func init() {
 	serveCmd.Flags().Uint("antispam-max-batch-size", tessera.DefaultAntispamMaxBatchSize, "maximum batch size for deduplication operations; recommend around 1500 for Spanner instances with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
 	serveCmd.Flags().Uint("antispam-pushback-threshold", tessera.DefaultAntispamPushbackThreshold, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back")
 
+	// allowed entry signing algorithms
+	keyAlgorithmTypes, err := defaultKeyAlgorithms()
+	if err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
+	keyAlgorithmHelp := fmt.Sprintf("signing algorithm to use for signing/hashing (allowed %s)", strings.Join(keyAlgorithmTypes, ", "))
+	serveCmd.Flags().StringSlice("client-signing-algorithms", keyAlgorithmTypes, keyAlgorithmHelp)
+
 	if err := viper.BindPFlags(serveCmd.Flags()); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
@@ -173,4 +192,18 @@ var hashAlgMap = map[string]crypto.Hash{
 	"sha256": crypto.SHA256,
 	"sha384": crypto.SHA384,
 	"sha512": crypto.SHA512,
+}
+
+func defaultKeyAlgorithms() ([]string, error) {
+	allowedClientSigningAlgorithms := algorithmregistry.AllowedClientSigningAlgorithms
+	keyAlgorithmTypes := []string{}
+	for _, keyAlgorithm := range allowedClientSigningAlgorithms {
+		keyFlag, err := signature.FormatSignatureAlgorithmFlag(keyAlgorithm)
+		if err != nil {
+			return nil, err
+		}
+		keyAlgorithmTypes = append(keyAlgorithmTypes, keyFlag)
+	}
+	sort.Strings(keyAlgorithmTypes)
+	return keyAlgorithmTypes, nil
 }
