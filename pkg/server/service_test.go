@@ -19,6 +19,8 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
@@ -43,13 +45,15 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "valid hashedrekord",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
-					HashedRekordRequest: &pb.HashedRekordRequest{
-						Signature: []byte("abcd"),
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte("3456"),
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
+					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
+						Signature: &pb.SignatureAndVerifier{
+							Signature: []byte("some signature"),
+							Verifier: &pb.Verifier{
+								Verifier: &pb.Verifier_PublicKey{
+									PublicKey: &pb.PublicKey{
+										RawBytes: []byte("3456"),
+									},
 								},
 							},
 						},
@@ -64,14 +68,26 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "valid dsse",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_DsseRequest{
-					DsseRequest: &pb.DSSERequest{
-						Envelope: "dsse",
-						Verifier: []*pb.Verifier{
+				Spec: &pb.CreateEntryRequest_DsseRequestV0_0_2{
+					DsseRequestV0_0_2: &pb.DSSERequestV0_0_2{
+						Envelope: &dsse.Envelope{
+							Payload:     []byte("some payload"),
+							PayloadType: "",
+							Signatures: []*dsse.Signature{
+								{
+									Sig:   []byte("some signature"),
+									Keyid: "abcd",
+								},
+							},
+						},
+						Signatures: []*pb.SignatureAndVerifier{
 							{
-								Verifier: &pb.Verifier_PublicKey{
-									PublicKey: &pb.PublicKey{
-										RawBytes: []byte("3456"),
+								Signature: []byte("some signature"),
+								Verifier: &pb.Verifier{
+									Verifier: &pb.Verifier_PublicKey{
+										PublicKey: &pb.PublicKey{
+											RawBytes: []byte("3456"),
+										},
 									},
 								},
 							},
@@ -84,8 +100,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "invalid hashedrekord",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
-					HashedRekordRequest: &pb.HashedRekordRequest{},
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
+					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{},
 				},
 			},
 			addFn:       func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
@@ -94,8 +110,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "invalid dsse",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_DsseRequest{
-					DsseRequest: &pb.DSSERequest{},
+				Spec: &pb.CreateEntryRequest_DsseRequestV0_0_2{
+					DsseRequestV0_0_2: &pb.DSSERequestV0_0_2{},
 				},
 			},
 			addFn:       func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
@@ -104,13 +120,15 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "failed integration",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
-					HashedRekordRequest: &pb.HashedRekordRequest{
-						Signature: []byte("abcd"),
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte("3456"),
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
+					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
+						Signature: &pb.SignatureAndVerifier{
+							Signature: []byte("some signature"),
+							Verifier: &pb.Verifier{
+								Verifier: &pb.Verifier_PublicKey{
+									PublicKey: &pb.PublicKey{
+										RawBytes: []byte("3456"),
+									},
 								},
 							},
 						},

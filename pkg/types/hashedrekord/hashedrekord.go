@@ -21,18 +21,27 @@ import (
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
 )
 
-func Validate(hr *pb.HashedRekordRequest) error {
-	if len(hr.Signature) == 0 {
-		return fmt.Errorf("missing signature")
+func ToLogEntryV0_0_2(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_2, error) {
+	if hr.Signature == nil || len(hr.Signature.Signature) == 0 {
+		return nil, fmt.Errorf("missing signature")
 	}
-	if hr.Verifier == nil {
-		return fmt.Errorf("missing verifier")
+	if hr.Signature.Verifier == nil {
+		return nil, fmt.Errorf("missing verifier")
 	}
 	if hr.Data == nil {
-		return fmt.Errorf("missing data")
+		return nil, fmt.Errorf("missing data")
 	}
 	if len(hr.Data.Digest) == 0 {
-		return fmt.Errorf("missing data digest")
+		return nil, fmt.Errorf("missing data digest")
 	}
-	return verifier.Validate(hr.Verifier)
+	if err := verifier.Validate(hr.Signature.Verifier); err != nil {
+		return nil, err
+	}
+
+	// TODO(#10): check if signatures can be validated
+
+	return &pb.HashedRekordLogEntryV0_0_2{
+		Signature: hr.Signature,
+		Data:      hr.Data,
+	}, nil
 }

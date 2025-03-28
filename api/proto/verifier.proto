@@ -37,3 +37,9 @@ message Verifier {
         dev.sigstore.common.v1.X509Certificate x509_certificate = 2 [(google.api.field_behavior) = REQUIRED];
     }
 }
+
+// A signature and an associated verifier
+message SignatureAndVerifier {
+    bytes signature = 1 [(google.api.field_behavior) = REQUIRED];
+    Verifier verifier = 2 [(google.api.field_behavior) = REQUIRED];
+}
