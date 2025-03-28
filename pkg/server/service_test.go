@@ -30,17 +30,21 @@ import (
 
 func TestNewServer(t *testing.T) {
 	storage := &mockStorage{}
-	server := NewServer(storage)
-	expectServer := &Server{storage: &mockStorage{}}
-	assert.Equal(t, expectServer, server)
+	server, err := NewServer(storage, []string{"ecdsa-sha2-256-nistp256"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	assert.NotNil(t, server.storage)
+	assert.NotNil(t, server.algorithmRegistry)
 }
 
 func TestCreateEntry(t *testing.T) {
 	tests := []struct {
-		name        string
-		req         *pb.CreateEntryRequest
-		addFn       func() (*rekor_pb.TransparencyLogEntry, error)
-		expectError error
+		name                    string
+		req                     *pb.CreateEntryRequest
+		addFn                   func() (*rekor_pb.TransparencyLogEntry, error)
+		clientSigningAlgorithms []string
+		expectError             error
 	}{
 		{
 			name: "valid hashedrekord",
@@ -64,7 +68,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 					},
 				},
 			},
-			addFn: func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
 		},
 		{
 			name: "valid dsse",
@@ -87,7 +92,8 @@ qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 					},
 				},
 			},
-			addFn: func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
 		},
 		{
 			name: "invalid hashedrekord",
@@ -96,8 +102,9 @@ qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 					HashedRekordRequest: &pb.HashedRekordRequest{},
 				},
 			},
-			addFn:       func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
-			expectError: fmt.Errorf("invalid hashedrekord request"),
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
+			expectError:             fmt.Errorf("invalid hashedrekord request"),
 		},
 		{
 			name: "invalid dsse",
@@ -106,8 +113,9 @@ qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 					DsseRequest: &pb.DSSERequest{},
 				},
 			},
-			addFn:       func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
-			expectError: fmt.Errorf("invalid dsse request"),
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
+			expectError:             fmt.Errorf("invalid dsse request"),
 		},
 		{
 			name: "failed integration",
@@ -131,14 +139,44 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 					},
 				},
 			},
-			addFn:       func() (*rekor_pb.TransparencyLogEntry, error) { return nil, fmt.Errorf("timed out") },
-			expectError: fmt.Errorf("failed to integrate entry"),
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return nil, fmt.Errorf("timed out") },
+			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
+			expectError:             fmt.Errorf("failed to integrate entry"),
+		},
+		{
+			name: "hashedrekord signed with disallowed algorithm",
+			req: &pb.CreateEntryRequest{
+				Spec: &pb.CreateEntryRequest_HashedRekordRequest{
+					HashedRekordRequest: &pb.HashedRekordRequest{
+						Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
+						Verifier: &pb.Verifier{
+							Verifier: &pb.Verifier_PublicKey{
+								PublicKey: &pb.PublicKey{
+									RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
+2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ==
+-----END PUBLIC KEY-----`),
+								},
+							},
+						},
+						Data: &v1.HashOutput{
+							Digest: hexDecodeOrDie(t, "5b3513f580c8397212ff2c8f459c199efc0c90e4354a5f3533adf0a3fff3a530"),
+						},
+					},
+				},
+			},
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			clientSigningAlgorithms: []string{"rsa-sign-pkcs1-4096-sha256"},
+			expectError:             fmt.Errorf("invalid hashedrekord request"),
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			storage := &mockStorage{addFn: test.addFn}
-			server := NewServer(storage)
+			server, err := NewServer(storage, test.clientSigningAlgorithms)
+			if err != nil {
+				t.Fatal(err)
+			}
 			gotTle, gotErr := server.CreateEntry(context.Background(), test.req)
 			if test.expectError == nil {
 				assert.NoError(t, gotErr)
