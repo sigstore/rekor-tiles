@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -94,6 +95,9 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	}
 	entry := ttessera.NewEntry(canonicalized)
 	tle, err := s.storage.Add(ctx, entry)
+	if errors.As(err, &tessera.DuplicateError{}) {
+		return nil, status.Error(codes.AlreadyExists, err.Error())
+	}
 	if err != nil {
 		slog.Warn("failed to integrate entry", "error", err.Error())
 		return nil, status.Errorf(codes.Unknown, "failed to integrate entry")
