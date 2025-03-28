@@ -29,14 +29,25 @@ import (
 	"github.com/transparency-dev/merkle/rfc6962"
 	tessera "github.com/transparency-dev/trillian-tessera"
 	"github.com/transparency-dev/trillian-tessera/client"
+	antispam "github.com/transparency-dev/trillian-tessera/storage/gcp/antispam"
 )
 
 const (
-	DefaultBatchMaxSize           = tessera.DefaultBatchMaxSize
-	DefaultBatchMaxAge            = tessera.DefaultBatchMaxAge
-	DefaultCheckpointInterval     = tessera.DefaultCheckpointInterval
-	DefaultPushbackMaxOutstanding = tessera.DefaultPushbackMaxOutstanding
+	DefaultBatchMaxSize              = tessera.DefaultBatchMaxSize
+	DefaultBatchMaxAge               = tessera.DefaultBatchMaxAge
+	DefaultCheckpointInterval        = tessera.DefaultCheckpointInterval
+	DefaultPushbackMaxOutstanding    = tessera.DefaultPushbackMaxOutstanding
+	DefaultAntispamMaxBatchSize      = antispam.DefaultMaxBatchSize
+	DefaultAntispamPushbackThreshold = antispam.DefaultPushbackThreshold
 )
+
+type DuplicateError struct {
+	index uint64
+}
+
+func (e DuplicateError) Error() string {
+	return fmt.Sprintf("an equivalent entry already exists in the transparency log with index %d", e.index)
+}
 
 // Storage provides the functions to add entries to a Tessera log.
 type Storage interface {
@@ -51,16 +62,45 @@ type storage struct {
 	readTileFn client.TileFetcherFunc
 }
 
-func NewAppendOptions(ctx context.Context, origin string, signer signature.Signer, batchMaxSize uint, baxMaxAge time.Duration, checkpointInterval time.Duration, pushback uint) (*tessera.AppendOptions, error) {
+// NewAppendOptions initializes the Tessera append options with a checkpoint signer, which is the only non-optional append option.
+func NewAppendOptions(ctx context.Context, origin string, signer signature.Signer) (*tessera.AppendOptions, error) {
 	opts := tessera.NewAppendOptions()
 	noteSigner, err := note.NewNoteSigner(ctx, origin, signer)
 	if err != nil {
 		return nil, fmt.Errorf("getting note signer: %w", err)
 	}
 	opts = opts.WithCheckpointSigner(noteSigner)
+	return opts, nil
+}
+
+// WithLifecycleOptions accepts an initialized AppendOptions and adds batching, checkpoint, and pushback options to it.
+// It returns the mutated options object for readability.
+func WithLifecycleOptions(opts *tessera.AppendOptions, batchMaxSize uint, baxMaxAge time.Duration, checkpointInterval time.Duration, pushback uint) *tessera.AppendOptions {
 	opts = opts.WithBatching(batchMaxSize, baxMaxAge)
 	opts = opts.WithCheckpointInterval(checkpointInterval)
 	opts = opts.WithPushback(pushback)
+	return opts
+}
+
+// WithAntispamOptions accepts an initialized AppendOptions and adds antispam options to it.
+// Set persistent=true to set up configuration for the persistent antispam Spanner database.
+// It returns the mutated options object for readability.
+func WithAntispamOptions(ctx context.Context, opts *tessera.AppendOptions, persistent bool, maxBatchSize, pushbackThreshold uint, spannerDB string) (*tessera.AppendOptions, error) {
+	inMemoryLRUSize := uint(256) // There's no documentation providing guidance on this cache size. Use a hard-coded value for now and consider exposing it as a configuration option later.
+	if !persistent {
+		opts = opts.WithAntispam(inMemoryLRUSize, nil)
+		return opts, nil
+	}
+	asOpts := antispam.AntispamOpts{
+		MaxBatchSize:      maxBatchSize,
+		PushbackThreshold: pushbackThreshold,
+	}
+	dbName := fmt.Sprintf("%s-antispam", spannerDB)
+	as, err := antispam.NewAntispam(ctx, dbName, asOpts)
+	if err != nil {
+		return nil, fmt.Errorf("getting antispam storage: %w", err)
+	}
+	opts = opts.WithAntispam(inMemoryLRUSize, as)
 	return opts, nil
 }
 
@@ -82,9 +122,12 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appen
 // Add adds a Tessera entry to the log, waits for it to be sequenced into the log,
 // and returns the log index and inclusion proof as a TransparencyLogEntry object.
 func (s *storage) Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error) {
-	idx, checkpointBody, err := s.addEntry(ctx, entry)
+	idx, dup, checkpointBody, err := s.addEntry(ctx, entry)
 	if err != nil {
 		return nil, fmt.Errorf("add entry: %w", err)
+	}
+	if dup {
+		return nil, DuplicateError{index: idx.U()}
 	}
 	inclusionProof, err := s.buildProof(ctx, idx, checkpointBody, entry.LeafHash())
 	if err != nil {
@@ -107,16 +150,16 @@ func (s *storage) ReadTile(ctx context.Context, level, index uint64, p uint8) ([
 	return tile, nil
 }
 
-func (s *storage) addEntry(ctx context.Context, entry *tessera.Entry) (*SafeInt64, []byte, error) {
+func (s *storage) addEntry(ctx context.Context, entry *tessera.Entry) (*SafeInt64, bool, []byte, error) {
 	idx, checkpointBody, err := s.awaiter.Await(ctx, s.addFn(ctx, entry))
 	if err != nil {
-		return nil, nil, fmt.Errorf("await: %w", err)
+		return nil, false, nil, fmt.Errorf("await: %w", err)
 	}
-	safeIdx, err := NewSafeInt64(idx)
+	safeIdx, err := NewSafeInt64(idx.Index)
 	if err != nil {
-		return nil, nil, fmt.Errorf("invalid index: %w", err)
+		return nil, false, nil, fmt.Errorf("invalid index: %w", err)
 	}
-	return safeIdx, checkpointBody, nil
+	return safeIdx, idx.IsDup, checkpointBody, nil
 }
 
 func (s *storage) buildProof(ctx context.Context, idx *SafeInt64, signedCheckpoint, leafHash []byte) (*rekor_pb.InclusionProof, error) {
