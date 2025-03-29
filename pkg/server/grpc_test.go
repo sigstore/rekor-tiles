@@ -16,11 +16,15 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"os"
 	"testing"
 
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -30,7 +34,7 @@ func TestServe_grpcSmoke(t *testing.T) {
 	// To debug set slog to output to stdout
 	// slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	server := MockServer{}
-	server.Start(t)
+	server.Start(t, false)
 
 	// check if we can hit grpc endpoints
 	conn, err := grpc.NewClient(
@@ -55,6 +59,65 @@ func TestServe_grpcSmoke(t *testing.T) {
 	checkGRPC(t, body, err, "test-entries:1")
 	body, err = client.GetPartialEntryBundle(context.Background(), &pb.PartialEntryBundleRequest{N: "1.p", W: 2})
 	checkGRPC(t, body, err, "test-entries:1.p,2")
+}
+
+func TestServe_grpcTLS(t *testing.T) {
+	server := MockServer{}
+	server.Start(t, true)
+	defer server.Stop(t)
+
+	certPool := x509.NewCertPool()
+	pemServerCert, err := os.ReadFile(server.gc.certFile)
+	if err != nil {
+		t.Fatalf("Failed to read server certificate: %v", err)
+	}
+	if !certPool.AppendCertsFromPEM(pemServerCert) {
+		t.Fatal("Failed to add server certificate to pool")
+	}
+
+	creds := credentials.NewTLS(&tls.Config{
+		RootCAs:    certPool,
+		ServerName: "localhost",
+	})
+
+	conn, err := grpc.NewClient(
+		server.gc.GRPCTarget(),
+		grpc.WithTransportCredentials(creds))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	client := pb.NewRekorClient(conn)
+
+	t.Run("create entry", func(t *testing.T) {
+		checkGRPCCreateEntry(t, client)
+	})
+
+	t.Run("get checkpoint", func(t *testing.T) {
+		body, err := client.GetCheckpoint(context.Background(), &emptypb.Empty{})
+		checkGRPC(t, body, err, "test-checkpoint")
+	})
+
+	t.Run("get tile", func(t *testing.T) {
+		body, err := client.GetTile(context.Background(), &pb.TileRequest{L: 1, N: 2})
+		checkGRPC(t, body, err, "test-tile:1,2")
+	})
+
+	t.Run("get partial tile", func(t *testing.T) {
+		body, err := client.GetPartialTile(context.Background(), &pb.PartialTileRequest{L: 1, N: "2.p", W: 3})
+		checkGRPC(t, body, err, "test-tile:1,2.p,3")
+	})
+
+	t.Run("get entry bundle", func(t *testing.T) {
+		body, err := client.GetEntryBundle(context.Background(), &pb.EntryBundleRequest{N: 1})
+		checkGRPC(t, body, err, "test-entries:1")
+	})
+
+	t.Run("get partial entry bundle", func(t *testing.T) {
+		body, err := client.GetPartialEntryBundle(context.Background(), &pb.PartialEntryBundleRequest{N: "1.p", W: 2})
+		checkGRPC(t, body, err, "test-entries:1.p,2")
+	})
 }
 
 func checkGRPCCreateEntry(t *testing.T, client pb.RekorClient) {

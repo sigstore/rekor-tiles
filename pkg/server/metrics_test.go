@@ -26,7 +26,7 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 	// To debug set slog to output to stdout
 	// slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	server := MockServer{}
-	server.Start(t)
+	server.Start(t, false)
 	defer server.Stop(t)
 
 	// Check if we can hit the metrics endpoint
