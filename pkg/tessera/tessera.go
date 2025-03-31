@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/hex"
 	"fmt"
+	"log/slog"
 	"time"
 
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
@@ -111,6 +112,7 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appen
 	if err != nil {
 		return nil, nil, fmt.Errorf("getting tessera appender: %w", err)
 	}
+	slog.Info("starting Tessera sequencer")
 	awaiter := tessera.NewIntegrationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
 	return &storage{
 		origin:     origin,

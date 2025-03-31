@@ -45,7 +45,9 @@ func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s rekorServer, t
 
 	wg.Wait()
 
+	slog.Info("shutting down Tessera sequencer")
 	if err := tesseraShutdownFn(ctx); err != nil {
 		slog.Error("error shutting down Tessera", "error", err)
 	}
+	slog.Info("stopped Tessera sequencer")
 }
