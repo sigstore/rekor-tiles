@@ -29,12 +29,18 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 	server.Start(t)
 	defer server.Stop(t)
 
+	// Call an endpoint to create HTTP latency and request metrics
+	cpEndpoint := fmt.Sprintf("http://%s:%v/checkpoint", server.hc.host, server.hc.port)
+	if _, err := http.Get(cpEndpoint); err != nil {
+		t.Fatalf("fetching checkpoint from %s: %v", cpEndpoint, err)
+	}
+
 	// Check if we can hit the metrics endpoint
 	metricsURL := fmt.Sprintf("http://%s", server.hc.HTTPMetricsTarget())
 
 	resp, err := http.Get(metricsURL)
 	if err != nil {
-		t.Fatalf(metricsURL, err)
+		t.Fatalf("fetching metrics from %s, %v", metricsURL, err)
 	}
 	defer resp.Body.Close()
 
