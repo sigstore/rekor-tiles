@@ -31,6 +31,7 @@ func TestServe_grpcSmoke(t *testing.T) {
 	// slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	server := MockServer{}
 	server.Start(t)
+	defer server.Stop(t)
 
 	// check if we can hit grpc endpoints
 	conn, err := grpc.NewClient(
@@ -41,8 +42,6 @@ func TestServe_grpcSmoke(t *testing.T) {
 	}
 	client := pb.NewRekorClient(conn)
 	defer conn.Close()
-
-	defer server.Stop(t)
 
 	checkGRPCCreateEntry(t, client)
 	body, err := client.GetCheckpoint(context.Background(), &emptypb.Empty{})

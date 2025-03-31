@@ -105,10 +105,11 @@ func WithAntispamOptions(ctx context.Context, opts *tessera.AppendOptions, persi
 }
 
 // NewStorage creates a Tessera storage object for the provided driver and signer.
-func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appendOptions *tessera.AppendOptions) (Storage, error) {
-	appender, _, reader, err := tessera.NewAppender(ctx, driver, appendOptions)
+// Returns the storage object and a function that must be called when shutting down the server.
+func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appendOptions *tessera.AppendOptions) (Storage, func(context.Context) error, error) {
+	appender, shutdown, reader, err := tessera.NewAppender(ctx, driver, appendOptions)
 	if err != nil {
-		return nil, fmt.Errorf("getting tessera appender: %w", err)
+		return nil, nil, fmt.Errorf("getting tessera appender: %w", err)
 	}
 	awaiter := tessera.NewIntegrationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
 	return &storage{
@@ -116,7 +117,7 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appen
 		awaiter:    awaiter,
 		addFn:      appender.Add,
 		readTileFn: reader.ReadTile,
-	}, nil
+	}, shutdown, nil
 }
 
 // Add adds a Tessera entry to the log, waits for it to be sequenced into the log,
