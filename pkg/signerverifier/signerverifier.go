@@ -16,7 +16,7 @@ limitations under the License.
 
 // Copied from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/signer.go
 
-package signer
+package signerverifier
 
 import (
 	"context"
@@ -35,9 +35,9 @@ import (
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
-// New returns a Signer for the given KMS provider, Tink, or a private key file on disk.
-func New(ctx context.Context, opts ...Option) (signature.Signer, error) {
-	sc := &signerConfig{}
+// New returns a SignerVerifier for the given KMS provider, Tink, or a private key file on disk.
+func New(ctx context.Context, opts ...Option) (signature.SignerVerifier, error) {
+	sc := &signerVerifierConfig{}
 	for _, o := range opts {
 		o(sc)
 	}
@@ -48,15 +48,15 @@ func New(ctx context.Context, opts ...Option) (signature.Signer, error) {
 		}):
 		return kms.Get(ctx, sc.kms, sc.kmsHash)
 	case sc.tinkKEKURI != "":
-		return NewTinkSigner(ctx, sc.tinkKEKURI, sc.tinkKeysetPath)
+		return NewTinkSignerVerifier(ctx, sc.tinkKEKURI, sc.tinkKeysetPath)
 	case sc.filePath != "":
-		return NewFileSigner(sc.filePath, sc.password)
+		return NewFileSignerVerifier(sc.filePath, sc.password)
 	default:
-		return nil, fmt.Errorf("insufficient signing parameters provided, must configure one of file, KMS, or Tink signers")
+		return nil, fmt.Errorf("insufficient signing parameters provided, must configure one of file, KMS, or Tink signer-verifiers")
 	}
 }
 
-type signerConfig struct {
+type signerVerifierConfig struct {
 	filePath       string
 	password       string
 	kms            string
@@ -65,27 +65,27 @@ type signerConfig struct {
 	tinkKeysetPath string
 }
 
-type Option func(*signerConfig)
+type Option func(*signerVerifierConfig)
 
-// WithFile configures a file-based signer with an optional password.
+// WithFile configures a file-based signer-verifier with an optional password.
 func WithFile(filePath, password string) Option {
-	return func(sc *signerConfig) {
+	return func(sc *signerVerifierConfig) {
 		sc.filePath = filePath
 		sc.password = password
 	}
 }
 
-// WithKMS configures a KMS signer.
+// WithKMS configures a KMS signer-verifier.
 func WithKMS(kms string, hash crypto.Hash) Option {
-	return func(sc *signerConfig) {
+	return func(sc *signerVerifierConfig) {
 		sc.kms = kms
 		sc.kmsHash = hash
 	}
 }
 
-// WithTink configures a Tink signer.
+// WithTink configures a Tink signer-verifier.
 func WithTink(kekURI, keysetPath string) Option {
-	return func(sc *signerConfig) {
+	return func(sc *signerVerifierConfig) {
 		sc.tinkKEKURI = kekURI
 		sc.tinkKeysetPath = keysetPath
 	}

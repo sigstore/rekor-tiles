@@ -14,7 +14,7 @@
 
 // Copied from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/tink.go
 
-package signer
+package signerverifier
 
 import (
 	"context"
@@ -36,9 +36,9 @@ import (
 
 const TinkScheme = "tink"
 
-// NewTinkSignerWithHandle returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
+// NewTinkSignerVerifier returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
 // Provide a path to the encrypted keyset and cloud KMS key URI for decryption
-func NewTinkSigner(ctx context.Context, kekURI, keysetPath string) (signature.Signer, error) {
+func NewTinkSignerVerifier(ctx context.Context, kekURI, keysetPath string) (signature.SignerVerifier, error) {
 	if kekURI == "" || keysetPath == "" {
 		return nil, fmt.Errorf("key encryption key URI or keyset path unset")
 	}
@@ -46,12 +46,12 @@ func NewTinkSigner(ctx context.Context, kekURI, keysetPath string) (signature.Si
 	if err != nil {
 		return nil, err
 	}
-	return NewTinkSignerWithHandle(kek, keysetPath)
+	return NewTinkSignerVerifierWithHandle(kek, keysetPath)
 }
 
-// NewTinkSignerWithHandle returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
+// NewTinkSignerVerifierWithHandle returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
 // Provide a path to the encrypted keyset and a key handle for decrypting the keyset
-func NewTinkSignerWithHandle(kek tink.AEAD, keysetPath string) (signature.Signer, error) {
+func NewTinkSignerVerifierWithHandle(kek tink.AEAD, keysetPath string) (signature.SignerVerifier, error) {
 	f, err := os.Open(filepath.Clean(keysetPath))
 	if err != nil {
 		return nil, err

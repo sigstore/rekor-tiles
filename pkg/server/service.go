@@ -47,16 +47,28 @@ type rekorServer interface {
 type Server struct {
 	pb.UnimplementedRekorServer
 	grpc_health_v1.UnimplementedHealthServer
-	storage tessera.Storage
+	storage  tessera.Storage
+	readOnly bool
 }
 
-func NewServer(storage tessera.Storage) *Server {
+func NewServer(storage tessera.Storage, readOnly bool) *Server {
+	if readOnly {
+		return &Server{
+			readOnly: readOnly,
+		}
+	}
 	return &Server{
 		storage: storage,
 	}
 }
 
 func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
+	if s.readOnly {
+		slog.Warn("rekor is in read-only mode, cannot create new entry")
+		_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "405"))
+		_ = grpc.SetHeader(ctx, metadata.Pairs(httpErrorMessageHeader, "This log has been frozen, please switch to the latest log."))
+		return nil, status.Errorf(codes.Unimplemented, "log frozen")
+	}
 	var serialized []byte
 	var err error
 	var metricsCounter prometheus.Counter
@@ -102,7 +114,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		slog.Warn("failed to integrate entry", "error", err.Error())
 		return nil, status.Errorf(codes.Unknown, "failed to integrate entry")
 	}
-	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusHeader, "201"))
+	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "201"))
 	metricsCounter.Inc()
 	return tle, nil
 }

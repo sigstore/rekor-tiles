@@ -115,3 +115,16 @@ jobs:
         run: docker compose -f compose.yml up -d --build --wait --wait-timeout 60
       - name: Run e2e tests
         run: go test -v -tags=e2e ./tests/
+
+  sharding:
+    name: Run freeze log tests
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Run freeze tests
+        run:
+          ./tests/freeze-test.sh

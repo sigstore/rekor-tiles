@@ -23,7 +23,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sigstore/rekor-tiles/pkg/signer"
+	"github.com/sigstore/rekor-tiles/pkg/signerverifier"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -108,7 +108,7 @@ func TestKeyHash(t *testing.T) {
 			if err := os.WriteFile(keyFile, []byte(test.key), 0644); err != nil {
 				t.Fatal(err)
 			}
-			signer, err := signer.New(ctx, signer.WithFile(keyFile, ""))
+			signer, err := signerverifier.New(ctx, signerverifier.WithFile(keyFile, ""))
 			if err != nil {
 				t.Fatal(err)
 			}

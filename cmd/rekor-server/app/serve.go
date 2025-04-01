@@ -16,6 +16,7 @@
 package app
 
 import (
+	"context"
 	"crypto"
 	"fmt"
 	"log/slog"
@@ -26,7 +27,7 @@ import (
 	"sigs.k8s.io/release-utils/version"
 
 	"github.com/sigstore/rekor-tiles/pkg/server"
-	"github.com/sigstore/rekor-tiles/pkg/signer"
+	"github.com/sigstore/rekor-tiles/pkg/signerverifier"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
 )
 
@@ -49,10 +50,10 @@ var serveCmd = &cobra.Command{
 			slog.Error(fmt.Sprintf("failed to initialize GCP driver: %v", err.Error()))
 			os.Exit(1)
 		}
-		var signerOpts []signer.Option
+		var signerOpts []signerverifier.Option
 		switch {
 		case viper.GetString("signer-filepath") != "":
-			signerOpts = []signer.Option{signer.WithFile(viper.GetString("signer-filepath"), viper.GetString("signer-password"))}
+			signerOpts = []signerverifier.Option{signerverifier.WithFile(viper.GetString("signer-filepath"), viper.GetString("signer-password"))}
 		case viper.GetString("signer-kmskey") != "":
 			kmshash := viper.GetString("signer-kmshash")
 			hashAlg, ok := hashAlgMap[kmshash]
@@ -60,14 +61,14 @@ var serveCmd = &cobra.Command{
 				slog.Error(fmt.Sprintf("invalid hash algorithm for --signer-kmshash: %s", kmshash))
 				os.Exit(1)
 			}
-			signerOpts = []signer.Option{signer.WithKMS(viper.GetString("signer-kmskey"), hashAlg)}
+			signerOpts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg)}
 		case viper.GetString("signer-tink-kek-uri") != "":
-			signerOpts = []signer.Option{signer.WithTink(viper.GetString("signer-tink-kek-uri"), viper.GetString("signer-tink-keyset-path"))}
+			signerOpts = []signerverifier.Option{signerverifier.WithTink(viper.GetString("signer-tink-kek-uri"), viper.GetString("signer-tink-keyset-path"))}
 		default:
 			slog.Error("must provide a signer using a file, KMS, or Tink")
 			os.Exit(1)
 		}
-		signer, err := signer.New(ctx, signerOpts...)
+		signer, err := signerverifier.New(ctx, signerOpts...)
 		if err != nil {
 			slog.Error(fmt.Sprintf("failed to initialize signer: %v", err.Error()))
 			os.Exit(1)
@@ -77,17 +78,24 @@ var serveCmd = &cobra.Command{
 			slog.Error(fmt.Sprintf("failed to initialize append options: %v", err))
 			os.Exit(1)
 		}
-		appendOptions = tessera.WithLifecycleOptions(appendOptions, viper.GetUint("batch-max-size"), viper.GetDuration("batch-max-age"), viper.GetDuration("checkpoint-interval"), viper.GetUint("pushback-max-outstanding"))
-		appendOptions, err = tessera.WithAntispamOptions(ctx, appendOptions, viper.GetBool("persistent-antispam"), viper.GetUint("antispam-max-batch-size"), viper.GetUint("antispam-pushback-threshold"), viper.GetString("gcp-spanner"))
-		if err != nil {
-			slog.Error(fmt.Sprintf("failed to configure antispam append options: %v", err))
-			os.Exit(1)
+		readOnly := viper.GetBool("read-only")
+		var tesseraStorage tessera.Storage
+		shutdownFn := func(_ context.Context) error { return nil }
+		// if in read-only mode, don't start the appender, because we don't want new checkpoints being published.
+		if !readOnly {
+			appendOptions = tessera.WithLifecycleOptions(appendOptions, viper.GetUint("batch-max-size"), viper.GetDuration("batch-max-age"), viper.GetDuration("checkpoint-interval"), viper.GetUint("pushback-max-outstanding"))
+			appendOptions, err = tessera.WithAntispamOptions(ctx, appendOptions, viper.GetBool("persistent-antispam"), viper.GetUint("antispam-max-batch-size"), viper.GetUint("antispam-pushback-threshold"), viper.GetString("gcp-spanner"))
+			if err != nil {
+				slog.Error(fmt.Sprintf("failed to configure antispam append options: %v", err))
+				os.Exit(1)
+			}
+			tesseraStorage, shutdownFn, err = tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, appendOptions)
+			if err != nil {
+				slog.Error(fmt.Sprintf("failed to initialize tessera storage: %v", err.Error()))
+				os.Exit(1)
+			}
 		}
-		tesseraStorage, shutdownFn, err := tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, appendOptions)
-		if err != nil {
-			slog.Error(fmt.Sprintf("failed to initialize tessera storage: %v", err.Error()))
-			os.Exit(1)
-		}
+		rekorServer := server.NewServer(tesseraStorage, readOnly)
 
 		server.Serve(
 			ctx,
@@ -102,7 +110,7 @@ var serveCmd = &cobra.Command{
 				server.WithGRPCHost(viper.GetString("grpc-address")),
 				server.WithTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
 			),
-			server.NewServer(tesseraStorage),
+			rekorServer,
 			shutdownFn,
 		)
 	},
@@ -110,6 +118,7 @@ var serveCmd = &cobra.Command{
 
 func init() {
 	// server configs
+	serveCmd.Flags().Bool("read-only", false, "whether the log should accept new entries")
 	serveCmd.Flags().Int("http-port", 3000, "HTTP port to bind to")
 	serveCmd.Flags().String("http-address", "127.0.0.1", "HTTP address to bind to")
 	serveCmd.Flags().Int("http-metrics-port", 2112, "HTTP port to bind metrics to")
