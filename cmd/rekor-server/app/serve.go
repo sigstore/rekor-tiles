@@ -88,7 +88,7 @@ var serveCmd = &cobra.Command{
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address")),
-				server.WithTimeout(viper.GetDuration("timeout"))),
+				server.WithGRPCTimeout(viper.GetDuration("timeout"))),
 			server.NewServer(tesseraStorage),
 		)
 	},
