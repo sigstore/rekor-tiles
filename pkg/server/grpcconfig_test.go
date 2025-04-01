@@ -48,7 +48,7 @@ func TestWithGRPCHost(t *testing.T) {
 }
 
 func TestWithGRPCTimeout(t *testing.T) {
-	config := NewGRPCConfig(WithGRPCTimeout(10 * time.Second))
+	config := NewGRPCConfig(WithTimeout(10 * time.Second))
 	if config.timeout != 10*time.Second {
 		t.Errorf("Expected timeout to be 10 seconds, got %v", config.timeout)
 	}
@@ -58,7 +58,7 @@ func TestMultipleGRPCOptions(t *testing.T) {
 	config := NewGRPCConfig(
 		WithGRPCPort(9090),
 		WithGRPCHost("test.example.com"),
-		WithGRPCTimeout(5*time.Second),
+		WithTimeout(5*time.Second),
 	)
 	if config.port != 9090 {
 		t.Errorf("Expected port to be 9090, got %d", config.port)

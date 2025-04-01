@@ -88,7 +88,7 @@ var serveCmd = &cobra.Command{
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address")),
-				server.WithGRPCTimeout(viper.GetDuration("grpc-timeout"))),
+				server.WithTimeout(viper.GetDuration("timeout"))),
 			server.NewServer(tesseraStorage),
 		)
 	},
@@ -101,7 +101,7 @@ func init() {
 	serveCmd.Flags().Int("http-metrics-port", 2112, "HTTP port to bind metrics to")
 	serveCmd.Flags().Int("grpc-port", 3001, "GRPC port to bind to")
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
-	serveCmd.Flags().Duration("grpc-timeout", 30*time.Second, "GRPC timeout")
+	serveCmd.Flags().Duration("timeout", 30*time.Second, "timeout")
 
 	// hostname
 	hostname, err := os.Hostname()
