@@ -41,11 +41,12 @@ func (ms *MockServer) Start(_ *testing.T) {
 	ms.gc = NewGRPCConfig()
 	ms.hc = NewHTTPConfig()
 	s := &mockRekorServer{}
+	shutdownFn := func(context.Context) error { return nil }
 
 	// Start the server
 	ms.wg = &sync.WaitGroup{}
 	go func() {
-		Serve(context.Background(), ms.hc, ms.gc, s)
+		Serve(context.Background(), ms.hc, ms.gc, s, shutdownFn)
 		ms.wg.Done()
 	}()
 	ms.wg.Add(1)

@@ -83,7 +83,7 @@ var serveCmd = &cobra.Command{
 			slog.Error(fmt.Sprintf("failed to configure antispam append options: %v", err))
 			os.Exit(1)
 		}
-		tesseraStorage, err := tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, appendOptions)
+		tesseraStorage, shutdownFn, err := tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, appendOptions)
 		if err != nil {
 			slog.Error(fmt.Sprintf("failed to initialize tessera storage: %v", err.Error()))
 			os.Exit(1)
@@ -99,6 +99,7 @@ var serveCmd = &cobra.Command{
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address"))),
 			server.NewServer(tesseraStorage),
+			shutdownFn,
 		)
 	},
 }
