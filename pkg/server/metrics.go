@@ -24,7 +24,6 @@ import (
 	"os/signal"
 	"sync"
 	"syscall"
-	"time"
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
@@ -41,6 +40,7 @@ type metrics struct {
 	newDsseEntries         prometheus.Counter
 	httpLatency            *prometheus.HistogramVec
 	httpRequestsCount      *prometheus.CounterVec
+	requestSize            *prometheus.HistogramVec
 }
 
 // Metrics provides the singleton metrics instance
@@ -77,6 +77,11 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		Help: "Count all HTTP requests",
 	}, []string{"code", "method"})
 
+	m.requestSize = f.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "rekor_http_api_request_size",
+		Help: "API Request size on HTTP calls",
+	}, []string{"code", "method"})
+
 	// TODO(appu): add metrics from rekor v1 (anything but Counter appears to need to be a pointer)
 	// https://github.com/sigstore/rekor-tiles/issues/123
 
@@ -104,7 +109,9 @@ type httpMetrics struct {
 
 func newHTTPMetrics(_ context.Context, config *HTTPConfig) *httpMetrics {
 	mux := http.NewServeMux()
-	mux.Handle("/", promhttp.HandlerFor(getMetrics().reg, promhttp.HandlerOpts{}))
+	mux.Handle("/", promhttp.HandlerFor(getMetrics().reg, promhttp.HandlerOpts{
+		Timeout: config.timeout,
+	}))
 
 	// TODO: configure https connection preferences (time-out, max size, etc)
 
@@ -114,9 +121,9 @@ func newHTTPMetrics(_ context.Context, config *HTTPConfig) *httpMetrics {
 			Addr:    endpoint,
 			Handler: mux,
 
-			ReadTimeout:       60 * time.Second,
-			ReadHeaderTimeout: 60 * time.Second,
-			WriteTimeout:      60 * time.Second,
+			ReadTimeout:       config.timeout,
+			ReadHeaderTimeout: config.timeout,
+			WriteTimeout:      config.timeout,
 			IdleTimeout:       config.timeout,
 		},
 		serverEndpoint: endpoint,
