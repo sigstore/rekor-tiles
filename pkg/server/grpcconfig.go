@@ -21,9 +21,11 @@ import (
 
 // GRPCConfig contains options for the GRPC server from the CLI.
 type GRPCConfig struct {
-	port    int
-	host    string
-	timeout time.Duration
+	port     int
+	host     string
+	timeout  time.Duration
+	certFile string
+	keyFile  string
 }
 type GRPCOption func(config *GRPCConfig)
 
@@ -63,4 +65,15 @@ func WithGRPCTimeout(timeout time.Duration) GRPCOption {
 
 func (gc GRPCConfig) GRPCTarget() string {
 	return gc.host + ":" + strconv.Itoa(gc.port)
+}
+
+func (gc GRPCConfig) HasTLS() bool {
+	return gc.certFile != "" && gc.keyFile != ""
+}
+
+func WithTLSCredentials(certFile, keyFile string) GRPCOption {
+	return func(config *GRPCConfig) {
+		config.certFile = certFile
+		config.keyFile = keyFile
+	}
 }

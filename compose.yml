@@ -23,6 +23,9 @@ services:
     command:
     - "-scheme=http"
     - "-port=7080"
+    - "-public-host=localhost:7080"
+    ports:
+    - "7080:7080"
   rekor_init:
     build:
       context: .
@@ -58,6 +61,7 @@ services:
     - "--gcp-bucket=tiles"
     - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
     - "--signer-filepath=/pki/ed25519-priv-key.pem"
+    - "--checkpoint-interval=2s"
     ports:
     - "3000:3000" # http port
     - "3001:3001" # grpc port
@@ -72,7 +76,7 @@ services:
       # start_period: 5s
       # start_interval: 1s
     volumes:
-    - ./testdata/signer:/pki
+    - ./tests/testdata/pki:/pki
     depends_on:
       rekor_init:
         condition: service_completed_successfully

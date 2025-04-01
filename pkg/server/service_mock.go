@@ -16,7 +16,16 @@ package server
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"fmt"
+	"math/big"
+	"net"
+	"os"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"testing"
@@ -32,20 +41,60 @@ import (
 
 // A testing mock that wraps server.Server to Start and defer Stop a server
 type MockServer struct {
-	gc *GRPCConfig
-	hc *HTTPConfig
-	wg *sync.WaitGroup
+	gc           *GRPCConfig
+	hc           *HTTPConfig
+	wg           *sync.WaitGroup
+	cleanupFiles []string
 }
 
 func (ms *MockServer) Start(_ *testing.T) {
-	ms.gc = NewGRPCConfig()
-	ms.hc = NewHTTPConfig()
+	ms.gc = NewGRPCConfig(
+		WithGRPCHost("localhost"),
+		WithGRPCPort(8081),
+	)
+	ms.hc = NewHTTPConfig(
+		WithHTTPHost("localhost"),
+		WithHTTPPort(8080),
+	)
+
 	s := &mockRekorServer{}
+	shutdownFn := func(context.Context) error { return nil }
 
 	// Start the server
 	ms.wg = &sync.WaitGroup{}
 	go func() {
-		Serve(context.Background(), ms.hc, ms.gc, s)
+		Serve(context.Background(), ms.hc, ms.gc, s, shutdownFn)
+		ms.wg.Done()
+	}()
+	ms.wg.Add(1)
+
+	// TODO: see if health endpoint is up, but for now just wait a second
+	time.Sleep(1 * time.Second)
+}
+
+func (ms *MockServer) StartTLS(t *testing.T) {
+	certFile, keyFile := generateSelfSignedCert(t)
+	ms.cleanupFiles = append(ms.cleanupFiles, certFile, keyFile)
+
+	ms.gc = NewGRPCConfig(
+		WithGRPCHost("localhost"),
+		WithGRPCPort(8081),
+		WithTLSCredentials(certFile, keyFile),
+	)
+
+	ms.hc = NewHTTPConfig(
+		WithHTTPHost("localhost"),
+		WithHTTPPort(8080),
+		WithHTTPTLSCredentials(certFile, keyFile),
+	)
+
+	s := &mockRekorServer{}
+	shutdownFn := func(context.Context) error { return nil }
+
+	// Start the server
+	ms.wg = &sync.WaitGroup{}
+	go func() {
+		Serve(context.Background(), ms.hc, ms.gc, s, shutdownFn)
 		ms.wg.Done()
 	}()
 	ms.wg.Add(1)
@@ -57,9 +106,15 @@ func (ms *MockServer) Start(_ *testing.T) {
 func (ms *MockServer) Stop(t *testing.T) {
 	// Simulate SIGTERM to trigger graceful shutdown
 	if err := syscall.Kill(syscall.Getpid(), syscall.SIGTERM); err != nil {
-		t.Fatalf("Could not kill server")
+		t.Fatalf("could not kill server")
 	}
 	ms.wg.Wait()
+
+	for _, file := range ms.cleanupFiles {
+		if err := os.Remove(file); err != nil {
+			t.Logf("Failed to remove temp file %s: %v", file, err)
+		}
+	}
 }
 
 type mockRekorServer struct {
@@ -134,4 +189,66 @@ func (s *mockRekorServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*h
 
 func (s mockRekorServer) Check(_ context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
+}
+
+func generateSelfSignedCert(t testing.TB) (certFile, keyFile string) {
+	t.Helper()
+
+	tempDir := t.TempDir()
+
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatalf("failed to generate private key: %v", err)
+	}
+
+	template := x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject: pkix.Name{
+			Organization: []string{"Test Org"},
+		},
+		NotBefore: time.Now(),
+		NotAfter:  time.Now().Add(24 * time.Hour),
+		KeyUsage:  x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
+		ExtKeyUsage: []x509.ExtKeyUsage{
+			x509.ExtKeyUsageServerAuth,
+		},
+		BasicConstraintsValid: true,
+		DNSNames:              []string{"localhost"},
+		IPAddresses:           []net.IP{net.ParseIP("127.0.0.1")},
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	if err != nil {
+		t.Fatalf("failed to create certificate: %v", err)
+	}
+
+	certFile = filepath.Join(tempDir, "cert.pem")
+	certOut, err := os.Create(certFile)
+	if err != nil {
+		t.Fatalf("failed to open cert.pem for writing: %v", err)
+	}
+	if err := pem.Encode(certOut, &pem.Block{Type: "CERTIFICATE", Bytes: derBytes}); err != nil {
+		t.Fatalf("failed to write data to cert.pem: %v", err)
+	}
+	if err := certOut.Close(); err != nil {
+		t.Fatalf("error closing cert.pem: %v", err)
+	}
+
+	keyFile = filepath.Join(tempDir, "key.pem")
+	keyOut, err := os.OpenFile(keyFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		t.Fatalf("failed to open key.pem for writing: %v", err)
+	}
+	privBytes, err := x509.MarshalPKCS8PrivateKey(priv)
+	if err != nil {
+		t.Fatalf("unable to marshal private key: %v", err)
+	}
+	if err := pem.Encode(keyOut, &pem.Block{Type: "PRIVATE KEY", Bytes: privBytes}); err != nil {
+		t.Fatalf("failed to write data to key.pem: %v", err)
+	}
+	if err := keyOut.Close(); err != nil {
+		t.Fatalf("error closing key.pem: %v", err)
+	}
+
+	return certFile, keyFile
 }

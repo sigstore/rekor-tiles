@@ -70,3 +70,35 @@ func TestMultipleGRPCOptions(t *testing.T) {
 		t.Errorf("Expected timeout to be 5 seconds, got %v", config.timeout)
 	}
 }
+
+func TestWithTLSCredentials(t *testing.T) {
+	config := NewGRPCConfig(WithTLSCredentials("cert.pem", "key.pem"))
+	if config.certFile != "cert.pem" {
+		t.Errorf("Expected certFile to be cert.pem, got %s", config.certFile)
+	}
+	if config.keyFile != "key.pem" {
+		t.Errorf("Expected keyFile to be key.pem, got %s", config.keyFile)
+	}
+}
+
+func TestGrpcHasTLS(t *testing.T) {
+	config := NewGRPCConfig()
+	if config.HasTLS() {
+		t.Error("Expected HasTLS to return false when no TLS credentials are set")
+	}
+
+	config = NewGRPCConfig(func(c *GRPCConfig) { c.certFile = "cert.pem" })
+	if config.HasTLS() {
+		t.Error("Expected HasTLS to return false when only certFile is set")
+	}
+
+	config = NewGRPCConfig(func(c *GRPCConfig) { c.keyFile = "key.pem" })
+	if config.HasTLS() {
+		t.Error("Expected HasTLS to return false when only keyFile is set")
+	}
+
+	config = NewGRPCConfig(WithTLSCredentials("cert.pem", "key.pem"))
+	if !config.HasTLS() {
+		t.Error("Expected HasTLS to return true when both certFile and keyFile are set")
+	}
+}

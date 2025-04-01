@@ -2,3 +2,4 @@ rekorImagerefs
 /rekor-server
 .idea
 tools/bin/
+.vscode/

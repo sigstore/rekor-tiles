@@ -25,6 +25,8 @@ type HTTPConfig struct {
 	port         int
 	metricsPort  int
 	maxSizeBytes int
+	certFile     string
+	keyFile      string
 }
 type HTTPOption func(config *HTTPConfig)
 
@@ -72,3 +74,14 @@ func (hc HTTPConfig) HTTPTarget() string {
 }
 
 func (hc HTTPConfig) HTTPMetricsTarget() string { return hc.host + ":" + strconv.Itoa(hc.metricsPort) }
+
+func (hc HTTPConfig) HasTLS() bool {
+	return hc.certFile != "" && hc.keyFile != ""
+}
+
+func WithHTTPTLSCredentials(certFile, keyFile string) HTTPOption {
+	return func(config *HTTPConfig) {
+		config.certFile = certFile
+		config.keyFile = keyFile
+	}
+}

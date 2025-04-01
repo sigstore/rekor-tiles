@@ -31,12 +31,10 @@ jobs:
         with:
           go-version-file: './go.mod'
           check-latest: true
-      - name: Install addlicense
-        run: go install github.com/google/addlicense@dc31ac9ffcca99c9457226366135701794b128c0 # v1.1.1
       - name: Check license headers
         run: |
           set -e
-          addlicense -check -l apache -c 'The Sigstore Authors' -ignore "third_party/**" -v *
+          go tool addlicense -check -l apache -c 'The Sigstore Authors' -ignore "third_party/**" -v *
 
   dependency-license-review:
     name: License and Vulnerability Scan

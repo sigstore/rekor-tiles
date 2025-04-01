@@ -96,3 +96,37 @@ func TestMultipleOptions(t *testing.T) {
 		t.Errorf("Expected http metrics target to be test.example.com:9091, got %s", config.HTTPTarget())
 	}
 }
+func TestWithHTTPTLSCredentials(t *testing.T) {
+	config := NewHTTPConfig(WithHTTPTLSCredentials("cert.pem", "key.pem"))
+	if config.certFile != "cert.pem" {
+		t.Errorf("Expected certFile to be cert.pem, got %s", config.certFile)
+	}
+	if config.keyFile != "key.pem" {
+		t.Errorf("Expected keyFile to be key.pem, got %s", config.keyFile)
+	}
+	if !config.HasTLS() {
+		t.Error("Expected HasTLS to return true when TLS credentials are set")
+	}
+}
+
+func TestHasTLS(t *testing.T) {
+	config := NewHTTPConfig()
+	if config.HasTLS() {
+		t.Error("Expected HasTLS to return false when no TLS credentials are set")
+	}
+
+	config = NewHTTPConfig(func(c *HTTPConfig) { c.certFile = "cert.pem" })
+	if config.HasTLS() {
+		t.Error("Expected HasTLS to return false when only certFile is set")
+	}
+
+	config = NewHTTPConfig(func(c *HTTPConfig) { c.keyFile = "key.pem" })
+	if config.HasTLS() {
+		t.Error("Expected HasTLS to return false when only keyFile is set")
+	}
+
+	config = NewHTTPConfig(WithHTTPTLSCredentials("cert.pem", "key.pem"))
+	if !config.HasTLS() {
+		t.Error("Expected HasTLS to return true when both certFile and keyFile are set")
+	}
+}

@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	tessera "github.com/transparency-dev/trillian-tessera"
 )
@@ -57,7 +58,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 		{
 			name: "success",
 			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
-				return func() (uint64, error) { return 0, nil }
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0}, nil }
 			},
 			expectLogIndex: int64(0),
 			expectTreeSize: int64(1),
@@ -67,9 +68,16 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 		{
 			name: "integration failed",
 			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
-				return func() (uint64, error) { return 0, fmt.Errorf("server error") }
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0}, fmt.Errorf("server error") }
 			},
 			expectErr: fmt.Errorf("add entry: await: server error"),
+		},
+		{
+			name: "duplicate entry",
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: true}, nil }
+			},
+			expectErr: fmt.Errorf("an equivalent entry already exists in the transparency log with index 0"),
 		},
 	}
 	for _, test := range tests {
@@ -137,4 +145,20 @@ func TestReadTile(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestAppendOptions(t *testing.T) {
+	sv, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ao, err := NewAppendOptions(context.Background(), "test", sv)
+	assert.NoError(t, err)
+	ao = WithLifecycleOptions(ao, 42, 42*time.Millisecond, 42*time.Second, 42)
+	assert.Equal(t, uint(42), ao.BatchMaxSize())
+	assert.Equal(t, 42*time.Millisecond, ao.BatchMaxAge())
+	assert.Equal(t, 42*time.Second, ao.CheckpointInterval())
+	assert.Equal(t, uint(42), ao.PushbackMaxOutstanding())
+	_, err = WithAntispamOptions(context.Background(), ao, false, 100, 1000, "spannerdb")
+	assert.NoError(t, err)
 }

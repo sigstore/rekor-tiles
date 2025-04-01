@@ -73,7 +73,18 @@ var serveCmd = &cobra.Command{
 			slog.Error(fmt.Sprintf("failed to initialize signer: %v", err.Error()))
 			os.Exit(1)
 		}
-		tesseraStorage, err := tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, signer)
+		appendOptions, err := tessera.NewAppendOptions(ctx, viper.GetString("hostname"), signer)
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to initialize append options: %v", err))
+			os.Exit(1)
+		}
+		appendOptions = tessera.WithLifecycleOptions(appendOptions, viper.GetUint("batch-max-size"), viper.GetDuration("batch-max-age"), viper.GetDuration("checkpoint-interval"), viper.GetUint("pushback-max-outstanding"))
+		appendOptions, err = tessera.WithAntispamOptions(ctx, appendOptions, viper.GetBool("persistent-antispam"), viper.GetUint("antispam-max-batch-size"), viper.GetUint("antispam-pushback-threshold"), viper.GetString("gcp-spanner"))
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to configure antispam append options: %v", err))
+			os.Exit(1)
+		}
+		tesseraStorage, shutdownFn, err := tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, appendOptions)
 		if err != nil {
 			slog.Error(fmt.Sprintf("failed to initialize tessera storage: %v", err.Error()))
 			os.Exit(1)
@@ -85,12 +96,16 @@ var serveCmd = &cobra.Command{
 				server.WithHTTPPort(viper.GetInt("http-port")),
 				server.WithHTTPHost(viper.GetString("http-address")),
 				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
-				server.WithHTTPTimeout(viper.GetDuration("timeout"))),
+				server.WithHTTPTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+			),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address")),
-				server.WithGRPCTimeout(viper.GetDuration("timeout"))),
+				server.WithGRPCTimeout(viper.GetDuration("timeout")),
+				server.WithTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+			),
 			server.NewServer(tesseraStorage),
+			shutdownFn,
 		)
 	},
 }
@@ -122,6 +137,18 @@ func init() {
 	serveCmd.Flags().String("signer-kmshash", "sha256", "hash algorithm used by the KMS")
 	serveCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset. Valid options are [aws-kms://keyname, gcp-kms://keyname]")
 	serveCmd.Flags().String("signer-tink-keyset-path", "", "path to encrypted Tink keyset")
+
+	// tessera lifecycle configs
+	serveCmd.Flags().Uint("batch-max-size", tessera.DefaultBatchMaxSize, "the maximum number of entries that will accumulated before being sent to the sequencer")
+	serveCmd.Flags().Duration("batch-max-age", tessera.DefaultBatchMaxAge, "the maximum amount of time a batch of entries will wait before being sent to the sequencer")
+	serveCmd.Flags().Duration("checkpoint-interval", tessera.DefaultCheckpointInterval, "the frequency at which a checkpoint will be published")
+	serveCmd.Flags().Uint("pushback-max-outstanding", tessera.DefaultPushbackMaxOutstanding, "the maximum number of 'in-flight' add requests")
+
+	// antispam configs
+	serveCmd.Flags().Bool("persistent-antispam", false, "whether to enable persistent antispam measures; only available for GCP storage backend and not supported by the Spanner storage emulator")
+	serveCmd.Flags().Uint("antispam-max-batch-size", tessera.DefaultAntispamMaxBatchSize, "maximum batch size for deduplication operations; recommend around 1500 for Spanner instances with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
+	serveCmd.Flags().Uint("antispam-pushback-threshold", tessera.DefaultAntispamPushbackThreshold, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back")
+
 	if err := viper.BindPFlags(serveCmd.Flags()); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
