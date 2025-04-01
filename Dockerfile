@@ -40,7 +40,8 @@ CMD ["rekor-server", "serve"]
 
 # debug compile options & debugger
 FROM deploy as debug
-RUN go install github.com/go-delve/delve/cmd/dlv@v1.24.0
+# dlv v1.24.1
+RUN go install github.com/go-delve/delve/cmd/dlv@fc6a439f2206c796bb20f56f37f8e10eb26cb158
 
 # overwrite server and include debugger
 COPY --from=builder /opt/app-root/src/rekor-server_debug /usr/local/bin/rekor-server
