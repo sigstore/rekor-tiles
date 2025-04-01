@@ -20,19 +20,21 @@ import (
 )
 
 type HTTPConfig struct {
-	host        string
-	timeout     time.Duration
-	port        int
-	metricsPort int
+	host         string
+	timeout      time.Duration
+	port         int
+	metricsPort  int
+	maxSizeBytes int
 }
 type HTTPOption func(config *HTTPConfig)
 
 func NewHTTPConfig(options ...func(config *HTTPConfig)) *HTTPConfig {
 	config := &HTTPConfig{
-		host:        "localhost",
-		timeout:     60 * time.Second,
-		port:        8080,
-		metricsPort: 2112,
+		host:         "localhost",
+		timeout:      60 * time.Second,
+		port:         8080,
+		metricsPort:  2112,
+		maxSizeBytes: 10 * 1024 * 1024, // 4MB
 	}
 	for _, opt := range options {
 		opt(config)

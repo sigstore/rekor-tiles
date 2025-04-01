@@ -87,6 +87,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	handler = promhttp.InstrumentHandlerDuration(metrics.httpLatency, handler)
 	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
 	handler = promhttp.InstrumentHandlerRequestSize(metrics.requestSize, handler)
+	handler = http.MaxBytesHandler(handler, int64(config.maxSizeBytes))
 
 	// TODO: configure https connection preferences (time-out, max size, etc)
 
@@ -96,6 +97,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 			Addr:    endpoint,
 			Handler: handler,
 
+			// By default http.Server.MaxHeaderBytes is 1MB, so no need to set it.
 			ReadTimeout:       config.timeout,
 			ReadHeaderTimeout: config.timeout,
 			WriteTimeout:      config.timeout,
