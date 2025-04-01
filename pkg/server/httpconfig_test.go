@@ -25,8 +25,8 @@ func TestNewHTTPConfig(t *testing.T) {
 	if config.host != "localhost" {
 		t.Errorf("Expected host to be localhost, got %s", config.host)
 	}
-	if config.idleTimeout != 60*time.Second {
-		t.Errorf("Expected idleTimeout to be 60s, got %v", config.idleTimeout)
+	if config.timeout != 60*time.Second {
+		t.Errorf("Expected idleTimeout to be 60s, got %v", config.timeout)
 	}
 	if config.port != 8080 {
 		t.Errorf("Expected port to be 8080, got %d", config.port)
@@ -57,9 +57,9 @@ func TestWithHTTPHost(t *testing.T) {
 }
 
 func TestWithHTTPIdleTimeout(t *testing.T) {
-	config := NewHTTPConfig(WithHTTPIdleTimeout(30 * time.Second))
-	if config.idleTimeout != 30*time.Second {
-		t.Errorf("Expected idleTimeout to be 30s, got %v", config.idleTimeout)
+	config := NewHTTPConfig(WithHTTPTimeout(30 * time.Second))
+	if config.timeout != 30*time.Second {
+		t.Errorf("Expected idleTimeout to be 30s, got %v", config.timeout)
 	}
 }
 
@@ -74,7 +74,7 @@ func TestMultipleOptions(t *testing.T) {
 	config := NewHTTPConfig(
 		WithHTTPPort(9090),
 		WithHTTPHost("test.example.com"),
-		WithHTTPIdleTimeout(10*time.Second),
+		WithHTTPTimeout(10*time.Second),
 		WithHTTPMetricsPort(9091),
 	)
 	if config.port != 9090 {
@@ -86,8 +86,8 @@ func TestMultipleOptions(t *testing.T) {
 	if config.host != "test.example.com" {
 		t.Errorf("Expected host to be test.example.com, got %s", config.host)
 	}
-	if config.idleTimeout != 10*time.Second {
-		t.Errorf("Expected idleTimeout to be 10s, got %v", config.idleTimeout)
+	if config.timeout != 10*time.Second {
+		t.Errorf("Expected idleTimeout to be 10s, got %v", config.timeout)
 	}
 	if config.HTTPTarget() != "test.example.com:9090" {
 		t.Errorf("Expected http target to be test.example.com:9090, got %s", config.HTTPTarget())

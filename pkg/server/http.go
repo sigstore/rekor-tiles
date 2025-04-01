@@ -99,7 +99,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 			ReadTimeout:       60 * time.Second,
 			ReadHeaderTimeout: 60 * time.Second,
 			WriteTimeout:      60 * time.Second,
-			IdleTimeout:       config.idleTimeout,
+			IdleTimeout:       config.timeout,
 		},
 		serverEndpoint: endpoint,
 	}

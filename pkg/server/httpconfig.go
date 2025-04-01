@@ -21,7 +21,7 @@ import (
 
 type HTTPConfig struct {
 	host        string
-	idleTimeout time.Duration
+	timeout     time.Duration
 	port        int
 	metricsPort int
 }
@@ -30,7 +30,7 @@ type HTTPOption func(config *HTTPConfig)
 func NewHTTPConfig(options ...func(config *HTTPConfig)) *HTTPConfig {
 	config := &HTTPConfig{
 		host:        "localhost",
-		idleTimeout: 60 * time.Second,
+		timeout:     60 * time.Second,
 		port:        8080,
 		metricsPort: 2112,
 	}
@@ -53,9 +53,9 @@ func WithHTTPHost(host string) HTTPOption {
 	}
 }
 
-func WithHTTPIdleTimeout(idleTimeout time.Duration) HTTPOption {
+func WithHTTPTimeout(timeout time.Duration) HTTPOption {
 	return func(config *HTTPConfig) {
-		config.idleTimeout = idleTimeout
+		config.timeout = timeout
 	}
 }
 
