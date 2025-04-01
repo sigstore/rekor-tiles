@@ -94,10 +94,14 @@ var serveCmd = &cobra.Command{
 			server.NewHTTPConfig(
 				server.WithHTTPPort(viper.GetInt("http-port")),
 				server.WithHTTPHost(viper.GetString("http-address")),
-				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port"))),
+				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
+				server.WithHTTPTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+			),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
-				server.WithGRPCHost(viper.GetString("grpc-address"))),
+				server.WithGRPCHost(viper.GetString("grpc-address")),
+				server.WithTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+			),
 			server.NewServer(tesseraStorage),
 			shutdownFn,
 		)
