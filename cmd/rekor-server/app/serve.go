@@ -102,7 +102,7 @@ func init() {
 	serveCmd.Flags().Int("http-metrics-port", 2112, "HTTP port to bind metrics to")
 	serveCmd.Flags().Int("grpc-port", 3001, "GRPC port to bind to")
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
-	serveCmd.Flags().Duration("timeout", 30*time.Second, "timeout")
+	serveCmd.Flags().Duration("timeout", 60*time.Second, "timeout")
 
 	// hostname
 	hostname, err := os.Hostname()

@@ -32,7 +32,7 @@ func NewGRPCConfig(options ...func(config *GRPCConfig)) *GRPCConfig {
 	config := &GRPCConfig{
 		port:    8081,
 		host:    "localhost",
-		timeout: 30 * time.Second,
+		timeout: 60 * time.Second,
 	}
 	for _, opt := range options {
 		opt(config)

@@ -28,8 +28,8 @@ func TestNewGRPCConfig(t *testing.T) {
 	if config.port != 8081 {
 		t.Errorf("Expected port to be 8081, got %d", config.port)
 	}
-	if config.timeout != 30*time.Second {
-		t.Errorf("Expected timeout to be 30 seconds, got %v", config.timeout)
+	if config.timeout != 60*time.Second {
+		t.Errorf("Expected timeout to be 60 seconds, got %v", config.timeout)
 	}
 }
 
