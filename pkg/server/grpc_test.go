@@ -16,11 +16,15 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"os"
 	"testing"
 
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -30,6 +34,7 @@ func TestServe_grpcSmoke(t *testing.T) {
 	// To debug set slog to output to stdout
 	// slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	server := MockServer{}
+
 	server.Start(t)
 	defer server.Stop(t)
 
@@ -42,25 +47,46 @@ func TestServe_grpcSmoke(t *testing.T) {
 	}
 	client := pb.NewRekorClient(conn)
 	defer conn.Close()
+	defer server.Stop(t)
+	testEndpoints(t, client)
+}
 
-	checkGRPCCreateEntry(t, client)
-	body, err := client.GetCheckpoint(context.Background(), &emptypb.Empty{})
-	checkGRPC(t, body, err, "test-checkpoint")
-	body, err = client.GetTile(context.Background(), &pb.TileRequest{L: 1, N: 2})
-	checkGRPC(t, body, err, "test-tile:1,2")
-	body, err = client.GetPartialTile(context.Background(), &pb.PartialTileRequest{L: 1, N: "2.p", W: 3})
-	checkGRPC(t, body, err, "test-tile:1,2.p,3")
-	body, err = client.GetEntryBundle(context.Background(), &pb.EntryBundleRequest{N: 1})
-	checkGRPC(t, body, err, "test-entries:1")
-	body, err = client.GetPartialEntryBundle(context.Background(), &pb.PartialEntryBundleRequest{N: "1.p", W: 2})
-	checkGRPC(t, body, err, "test-entries:1.p,2")
+func TestServe_grpcTLS(t *testing.T) {
+	server := MockServer{}
+	server.StartTLS(t)
+	defer server.Stop(t)
+
+	certPool := x509.NewCertPool()
+	pemServerCert, err := os.ReadFile(server.gc.certFile)
+	if err != nil {
+		t.Fatalf("failed to read server certificate: %v", err)
+	}
+	if !certPool.AppendCertsFromPEM(pemServerCert) {
+		t.Fatal("failed to add server certificate to pool")
+	}
+
+	creds := credentials.NewTLS(&tls.Config{
+		RootCAs:    certPool,
+		ServerName: "localhost",
+	})
+
+	conn, err := grpc.NewClient(
+		server.gc.GRPCTarget(),
+		grpc.WithTransportCredentials(creds))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer conn.Close()
+
+	client := pb.NewRekorClient(conn)
+	testEndpoints(t, client)
 }
 
 func checkGRPCCreateEntry(t *testing.T, client pb.RekorClient) {
 	if entry, err := client.CreateEntry(context.Background(), &pb.CreateEntryRequest{}); err != nil {
 		t.Fatal(err)
 	} else if !proto.Equal(entry, &testEntry) {
-		t.Errorf("Got entry %q, want %q", entry, &testEntry)
+		t.Errorf("got entry %q, want %q", entry, &testEntry)
 	}
 }
 
@@ -69,6 +95,79 @@ func checkGRPC(t *testing.T, resp *httpbody.HttpBody, err error, expectedBody st
 		t.Fatal(err)
 	}
 	if string(resp.Data) != expectedBody {
-		t.Errorf("Got body %q, want %q", resp.Data, expectedBody)
+		t.Errorf("got body %q, want %q", resp.Data, expectedBody)
 	}
+}
+
+func testEndpoints(t *testing.T, client pb.RekorClient) {
+	t.Helper()
+
+	checkGRPCCreateEntry(t, client)
+
+	t.Run("get checkpoint", func(t *testing.T) {
+		body, err := client.GetCheckpoint(context.Background(), &emptypb.Empty{})
+		checkGRPC(t, body, err, "test-checkpoint")
+	})
+
+	t.Run("get tile", func(t *testing.T) {
+		body, err := client.GetTile(context.Background(), &pb.TileRequest{L: 1, N: 2})
+		checkGRPC(t, body, err, "test-tile:1,2")
+	})
+
+	t.Run("get partial tile", func(t *testing.T) {
+		body, err := client.GetPartialTile(context.Background(), &pb.PartialTileRequest{L: 1, N: "2.p", W: 3})
+		checkGRPC(t, body, err, "test-tile:1,2.p,3")
+	})
+
+	t.Run("get entry bundle", func(t *testing.T) {
+		body, err := client.GetEntryBundle(context.Background(), &pb.EntryBundleRequest{N: 1})
+		checkGRPC(t, body, err, "test-entries:1")
+	})
+
+	t.Run("get partial entry bundle", func(t *testing.T) {
+		body, err := client.GetPartialEntryBundle(context.Background(), &pb.PartialEntryBundleRequest{N: "1.p", W: 2})
+		checkGRPC(t, body, err, "test-entries:1.p,2")
+	})
+}
+func TestLoadTLSCredentials(t *testing.T) {
+	certFile, keyFile := generateSelfSignedCert(t)
+	t.Run("successful credentials loading", func(t *testing.T) {
+		creds, err := loadTLSCredentials(certFile, keyFile)
+		if err != nil {
+			t.Fatalf("loadTLSCredentials failed: %v", err)
+		}
+		if creds == nil {
+			t.Fatal("loadTLSCredentials returned nil credentials")
+		}
+	})
+
+	t.Run("invalid certificate path", func(t *testing.T) {
+		_, err := loadTLSCredentials("non-existent-cert.pem", keyFile)
+		if err == nil {
+			t.Fatal("expected error for invalid certificate path, got nil")
+		}
+	})
+
+	t.Run("invalid key path", func(t *testing.T) {
+		_, err := loadTLSCredentials(certFile, "non-existent-key.pem")
+		if err == nil {
+			t.Fatal("expected error for invalid key path, got nil")
+		}
+	})
+	t.Run("invalid certificate content", func(t *testing.T) {
+		invalidCertFile, err := os.CreateTemp("", "invalid-cert-*.pem")
+		if err != nil {
+			t.Fatalf("failed to create temp file: %v", err)
+		}
+		defer os.Remove(invalidCertFile.Name())
+
+		if err := os.WriteFile(invalidCertFile.Name(), []byte("invalid certificate content"), 0644); err != nil {
+			t.Fatalf("failed to write invalid cert: %v", err)
+		}
+
+		_, err = loadTLSCredentials(invalidCertFile.Name(), keyFile)
+		if err == nil {
+			t.Fatal("expected error for invalid certificate content, got nil")
+		}
+	})
 }

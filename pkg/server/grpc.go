@@ -27,6 +27,7 @@
 package server
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -37,6 +38,7 @@ import (
 
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
@@ -47,25 +49,41 @@ type grpcServer struct {
 
 // newGRPCServer starts a new grpc server and registers the services.
 func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
-	s := grpc.NewServer(grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()))
+	var opts []grpc.ServerOption
+
+	opts = append(opts, grpc.ChainUnaryInterceptor(
+		getMetrics().serverMetrics.UnaryServerInterceptor(),
+	))
+
+	if config.HasTLS() {
+		creds, err := loadTLSCredentials(config.certFile, config.keyFile)
+		if err != nil {
+			slog.Error("failed to load TLS credentials", "error", err)
+			os.Exit(1)
+		}
+		opts = append(opts, grpc.Creds(creds))
+	}
+
+	s := grpc.NewServer(opts...)
 	pb.RegisterRekorServer(s, server)
 	grpc_health_v1.RegisterHealthServer(s, server)
 
 	getMetrics().serverMetrics.InitializeMetrics(s)
 
-	return &grpcServer{s, fmt.Sprintf("%s:%v", config.host, config.port)}
+	return &grpcServer{
+		Server:         s,
+		serverEndpoint: config.GRPCTarget(),
+	}
 }
 
 func (gs *grpcServer) start(wg *sync.WaitGroup) {
-
-	slog.Info("starting grpc Server", "address", gs.serverEndpoint)
+	slog.Info("Starting gRPC server", "address", gs.serverEndpoint)
 
 	lis, err := net.Listen("tcp", gs.serverEndpoint)
 	if err != nil {
-		slog.Error("Failed to create listener:", "errors", err)
+		slog.Error("failed to create listener:", "error", err)
 		os.Exit(1)
 	}
-
 	// update the endpoint to standardize
 	gs.serverEndpoint = lis.Addr().String()
 
@@ -78,17 +96,31 @@ func (gs *grpcServer) start(wg *sync.WaitGroup) {
 
 		gs.GracefulStop()
 		close(waitToClose)
-		slog.Info("stopped grpc Server")
+		slog.Info("stopped gRPC server")
 	}()
 
 	wg.Add(1)
 	go func() {
 		if err := gs.Serve(lis); err != nil {
-			slog.Error("error shutting down grpc Server", "errors", err)
+			slog.Error("error shutting down gRPC server", "error", err)
 			os.Exit(1)
 		}
 		<-waitToClose
 		wg.Done()
-		slog.Info("grpc Server shutdown")
+		slog.Info("gRPC Server shutdown")
 	}()
+}
+
+func loadTLSCredentials(certFile, keyFile string) (credentials.TransportCredentials, error) {
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to load key pair: %w", err)
+	}
+
+	tlsConfig := &tls.Config{
+		Certificates: []tls.Certificate{cert},
+		MinVersion:   tls.VersionTLS13,
+	}
+
+	return credentials.NewTLS(tlsConfig), nil
 }

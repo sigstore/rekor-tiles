@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -29,12 +30,12 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
@@ -61,14 +62,23 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		},
 	}
 
-	// TODO: allow TLS if the startup provides a TLS cert, but for now the proxy connects to grpc without TLS
-	opts := []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	var opts []grpc.DialOption
+	if config.HasTLS() {
+		creds, err := credentials.NewClientTLSFromFile(config.certFile, "")
+		if err != nil {
+			slog.Error("failed to create TLS credentials", "errors", err)
+			os.Exit(1)
+		}
+		opts = []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+	} else {
+		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
+	}
 
 	// GRPC client connection so the http mux's healthz endpoint can reach the grpc healthcheck service.
 	// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/#adding-healthz-endpoint-to-runtimeservemux.
 	cc, err := grpc.NewClient(grpcServer.serverEndpoint, opts...)
 	if err != nil {
-		slog.Error("Failed to connect to grpc server:", "errors", err)
+		slog.Error("failed to connect to grpc server:", "errors", err)
 		os.Exit(1)
 	}
 	mux := runtime.NewServeMux(
@@ -79,7 +89,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 
 	err = pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
 	if err != nil {
-		slog.Error("Failed to register gateway:", "errors", err)
+		slog.Error("failed to register gateway:", "errors", err)
 		os.Exit(1)
 	}
 
@@ -89,24 +99,34 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
 
 	// TODO: configure https connection preferences (time-out, max size, etc)
+	server := &http.Server{
+		Addr:              config.HTTPTarget(),
+		Handler:           handler,
+		ReadTimeout:       60 * time.Second,
+		ReadHeaderTimeout: 60 * time.Second,
+		WriteTimeout:      60 * time.Second,
+		IdleTimeout:       config.idleTimeout,
+	}
 
-	endpoint := fmt.Sprintf("%s:%v", config.host, config.port)
+	if config.HasTLS() {
+		cert, err := tls.LoadX509KeyPair(config.certFile, config.keyFile)
+		if err != nil {
+			slog.Error("failed to load TLS certificates:", "errors", err)
+			os.Exit(1)
+		}
+		server.TLSConfig = &tls.Config{
+			Certificates: []tls.Certificate{cert},
+			MinVersion:   tls.VersionTLS13,
+		}
+	}
+
 	return &httpProxy{
-		Server: &http.Server{
-			Addr:    endpoint,
-			Handler: handler,
-
-			ReadTimeout:       60 * time.Second,
-			ReadHeaderTimeout: 60 * time.Second,
-			WriteTimeout:      60 * time.Second,
-			IdleTimeout:       config.idleTimeout,
-		},
-		serverEndpoint: endpoint,
+		Server:         server,
+		serverEndpoint: config.HTTPTarget(),
 	}
 }
 
 func (hp *httpProxy) start(wg *sync.WaitGroup) {
-
 	lis, err := net.Listen("tcp", hp.serverEndpoint)
 	if err != nil {
 		slog.Error("failed to create listener:", "errors", err)
@@ -115,7 +135,14 @@ func (hp *httpProxy) start(wg *sync.WaitGroup) {
 
 	hp.serverEndpoint = lis.Addr().String()
 
-	slog.Info("starting http proxy", "address", hp.serverEndpoint)
+	var protocol string
+	if hp.TLSConfig != nil {
+		protocol = "HTTPS"
+		slog.Info("starting HTTPS proxy", "address", hp.serverEndpoint)
+	} else {
+		protocol = "HTTP"
+		slog.Info("starting HTTP proxy", "address", hp.serverEndpoint)
+	}
 
 	waitToClose := make(chan struct{})
 	go func() {
@@ -125,22 +152,28 @@ func (hp *httpProxy) start(wg *sync.WaitGroup) {
 		<-sigint
 
 		if err := hp.Shutdown(context.Background()); err != nil {
-			slog.Info("http Server Shutdown error", "errors", err)
+			slog.Info("http server shutdown errors:", "error", err)
 		}
 		close(waitToClose)
-		slog.Info("stopped http Server")
+		slog.Info(fmt.Sprintf("Stopped %s server", protocol))
 	}()
 
 	wg.Add(1)
 	go func() {
+		var err error
+		if hp.TLSConfig != nil {
+			err = hp.ServeTLS(lis, "", "") // skip cert and key as they are already set in TLSConfig
+		} else {
+			err = hp.Serve(lis)
+		}
 
-		if err := hp.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error("could not start http server", "errors", err)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			slog.Error(fmt.Sprintf("could not start %s server:", protocol), "error", err)
 			os.Exit(1)
 		}
 		<-waitToClose
 		wg.Done()
-		slog.Info("http Server shutdown")
+		slog.Info(fmt.Sprintf("%s server shutdown complete", protocol))
 	}()
 }
 

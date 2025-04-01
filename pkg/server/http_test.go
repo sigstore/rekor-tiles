@@ -16,15 +16,30 @@ package server
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"testing"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
+
+var endpointTests = []struct {
+	path         string
+	expectedBody string
+}{
+	{"/api/v2/checkpoint", "test-checkpoint"},
+	{"/api/v2/tile/1/2", "test-tile:1,2"},
+	{"/api/v2/tile/1/2.p/3", "test-tile:1,2.p,3"},
+	{"/api/v2/tile/entries/1", "test-entries:1"},
+	{"/api/v2/tile/entries/1.p/2", "test-entries:1.p,2"},
+	{"/healthz", `{"status":"SERVING"}` + "\n"},
+}
 
 func TestServe_httpSmoke(t *testing.T) {
 	// To debug set slog to output to stdout
@@ -37,22 +52,71 @@ func TestServe_httpSmoke(t *testing.T) {
 	httpBaseURL := fmt.Sprintf("http://%s", server.hc.HTTPTarget())
 	t.Run("check success", func(t *testing.T) {
 		checkHTTPPost(t, httpBaseURL)
-		checkHTTPGet(t, httpBaseURL+"/api/v2/checkpoint", "test-checkpoint")
-		checkHTTPGet(t, httpBaseURL+"/api/v2/tile/1/2", "test-tile:1,2")
-		checkHTTPGet(t, httpBaseURL+"/api/v2/tile/1/2.p/3", "test-tile:1,2.p,3")
-		checkHTTPGet(t, httpBaseURL+"/api/v2/tile/entries/1", "test-entries:1")
-		checkHTTPGet(t, httpBaseURL+"/api/v2/tile/entries/1.p/2", "test-entries:1.p,2")
-
-		// healthcheck
-		checkHTTPGet(t, httpBaseURL+"/healthz", `{"status":"SERVING"}`+"\n") // newline character is expected
+		checkAllEndpoints(t, httpBaseURL, nil)
 	})
 	t.Run("check failures", func(t *testing.T) {
-		checkExtraJSONFieldsErrors(t, httpBaseURL)
+		checkExtraJSONFieldsErrors(t, httpBaseURL, nil)
 	})
 }
 
-func checkHTTPPost(t *testing.T, httpBaseURL string) {
-	resp, err := http.Post(httpBaseURL+"/api/v2/log/entries", "application/json", nil)
+func TestServe_httpstls(t *testing.T) {
+	server := MockServer{}
+	server.StartTLS(t)
+	defer server.Stop(t)
+
+	client := createHTTPSClient(t, server.gc.certFile)
+	httpsBaseURL := fmt.Sprintf("https://%s", server.hc.HTTPTarget())
+
+	t.Run("check success over HTTPS", func(t *testing.T) {
+		checkHTTPPostWithClient(t, httpsBaseURL, client)
+		checkAllEndpoints(t, httpsBaseURL, client)
+	})
+	t.Run("check failures over HTTPS", func(t *testing.T) {
+		checkExtraJSONFieldsErrors(t, httpsBaseURL, client)
+	})
+}
+
+func checkAllEndpoints(t *testing.T, baseURL string, client *http.Client) {
+	for _, tt := range endpointTests {
+		url := baseURL + tt.path
+		if client != nil {
+			checkHTTPGetWithClient(t, url, tt.expectedBody, client)
+		} else {
+			checkHTTPGet(t, url, tt.expectedBody)
+		}
+	}
+}
+
+func createHTTPSClient(t *testing.T, certFile string) *http.Client {
+	caCertPool, err := x509.SystemCertPool()
+	if err != nil || caCertPool == nil {
+		t.Log("system cert pool unavailable, creating a new cert pool")
+		caCertPool = x509.NewCertPool()
+	}
+
+	serverCert, err := os.ReadFile(certFile)
+	if err != nil {
+		t.Fatalf("failed to read server certificate: %v", err)
+	}
+
+	if !caCertPool.AppendCertsFromPEM(serverCert) {
+		t.Fatal("failed to append server certificate")
+	}
+
+	tlsConfig := &tls.Config{
+		RootCAs:    caCertPool,
+		ServerName: "localhost",
+	}
+
+	transport := &http.Transport{
+		TLSClientConfig: tlsConfig,
+	}
+
+	return &http.Client{Transport: transport}
+}
+
+func checkHTTPPostWithClient(t *testing.T, baseURL string, client *http.Client) {
+	resp, err := client.Post(baseURL+"/api/v2/log/entries", "application/json", nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -74,10 +138,10 @@ func checkHTTPPost(t *testing.T, httpBaseURL string) {
 	}
 }
 
-func checkHTTPGet(t *testing.T, url, expectedBody string) {
-	resp, err := http.Get(url)
+func checkHTTPGetWithClient(t *testing.T, url, expectedBody string, client *http.Client) {
+	resp, err := client.Get(url)
 	if err != nil {
-		t.Fatalf(url, err)
+		t.Fatalf("%s: %v", url, err)
 	}
 	defer resp.Body.Close()
 
@@ -95,17 +159,32 @@ func checkHTTPGet(t *testing.T, url, expectedBody string) {
 	}
 }
 
-// we don't care if fields are missing yet (until we had "REQUIRED" validation), but we should fail for
-// junk fields
-func checkExtraJSONFieldsErrors(t *testing.T, httpBaseURL string) {
-	resp, err := http.Post(httpBaseURL+"/api/v2/log/entries", "application/json", bytes.NewBufferString("{\"foo\":\"bar\"}"))
+func checkExtraJSONFieldsErrors(t *testing.T, baseURL string, client *http.Client) {
+	var resp *http.Response
+	var err error
+
+	data := bytes.NewBufferString("{\"foo\":\"bar\"}")
+
+	if client != nil {
+		resp, err = client.Post(baseURL+"/api/v2/log/entries", "application/json", data)
+	} else {
+		resp, err = http.Post(baseURL+"/api/v2/log/entries", "application/json", data)
+	}
+
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("got %d, want %d", resp.StatusCode, http.StatusOK)
-		return
-	}
 
+	if resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("got %d, want %d", resp.StatusCode, http.StatusBadRequest)
+	}
+}
+
+func checkHTTPPost(t *testing.T, baseURL string) {
+	checkHTTPPostWithClient(t, baseURL, http.DefaultClient)
+}
+
+func checkHTTPGet(t *testing.T, url, expectedBody string) {
+	checkHTTPGetWithClient(t, url, expectedBody, http.DefaultClient)
 }

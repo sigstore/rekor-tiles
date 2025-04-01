@@ -17,8 +17,10 @@ package server
 import "strconv"
 
 type GRPCConfig struct {
-	port int
-	host string
+	port     int
+	host     string
+	certFile string
+	keyFile  string
 }
 type GRPCOption func(config *GRPCConfig)
 
@@ -48,4 +50,15 @@ func WithGRPCHost(host string) GRPCOption {
 
 func (gc GRPCConfig) GRPCTarget() string {
 	return gc.host + ":" + strconv.Itoa(gc.port)
+}
+
+func (gc GRPCConfig) HasTLS() bool {
+	return gc.certFile != "" && gc.keyFile != ""
+}
+
+func WithTLSCredentials(certFile, keyFile string) GRPCOption {
+	return func(config *GRPCConfig) {
+		config.certFile = certFile
+		config.keyFile = keyFile
+	}
 }
