@@ -52,6 +52,8 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 		grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()),
 		grpc.ConnectionTimeout(config.timeout),
 		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
+		// explicitly set to 4MB. https://github.com/grpc/grpc-go/blob/cdbdb759dd67c89544f9081f854c284493b5461c/server.go#L59C39-L59C54
+		grpc.MaxRecvMsgSize(4*1024*1024),
 	)
 	pb.RegisterRekorServer(s, server)
 	grpc_health_v1.RegisterHealthServer(s, server)

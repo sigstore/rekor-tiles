@@ -26,7 +26,6 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
-	"time"
 
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
@@ -87,6 +86,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	handler := promhttp.InstrumentMetricHandler(metrics.reg, mux)
 	handler = promhttp.InstrumentHandlerDuration(metrics.httpLatency, handler)
 	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
+	handler = promhttp.InstrumentHandlerRequestSize(metrics.requestSize, handler)
 
 	// TODO: configure https connection preferences (time-out, max size, etc)
 
@@ -96,9 +96,9 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 			Addr:    endpoint,
 			Handler: handler,
 
-			ReadTimeout:       60 * time.Second,
-			ReadHeaderTimeout: 60 * time.Second,
-			WriteTimeout:      60 * time.Second,
+			ReadTimeout:       config.timeout,
+			ReadHeaderTimeout: config.timeout,
+			WriteTimeout:      config.timeout,
 			IdleTimeout:       config.timeout,
 		},
 		serverEndpoint: endpoint,
