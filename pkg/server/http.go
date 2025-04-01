@@ -35,13 +35,18 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
-const httpStatusHeader = "x-http-code"
+const (
+	httpStatusCodeHeader   = "x-http-code"
+	httpErrorMessageHeader = "x-http-error-message"
+)
 
 type httpProxy struct {
 	*http.Server
@@ -83,6 +88,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	}
 	mux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
+		runtime.WithErrorHandler(methodNotAllowedHandler),
 		runtime.WithForwardResponseOption(httpResponseModifier),
 		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)), // localhost:[port]/healthz
 	)
@@ -184,16 +190,45 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Me
 	}
 
 	// set http status code
-	if vals := md.HeaderMD.Get(httpStatusHeader); len(vals) > 0 {
+	if vals := md.HeaderMD.Get(httpStatusCodeHeader); len(vals) > 0 {
 		code, err := strconv.Atoi(vals[0])
 		if err != nil {
 			return err
 		}
 		// delete the headers to not expose any grpc-metadata in http response
-		delete(md.HeaderMD, httpStatusHeader)
+		delete(md.HeaderMD, httpStatusCodeHeader)
 		delete(w.Header(), "Grpc-Metadata-X-Http-Code")
 		w.WriteHeader(code)
 	}
 
+	// set the response body if needed
+	if vals := md.HeaderMD.Get(httpErrorMessageHeader); len(vals) > 0 {
+		msg := vals[0]
+		delete(md.HeaderMD, httpErrorMessageHeader)
+		delete(w.Header(), "Grpc-Metadata-X-Http-Error-Message")
+		_, err := w.Write([]byte(msg + "\n"))
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
+}
+
+// methodNotAllowedHandler remaps the gRPC Unimplemented code to an HTTP 405 Method Not Allowed code.
+// Without this, the proxy defaults to converting the gRPC code to an HTTP 501 Not Implemented.
+func methodNotAllowedHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
+	status, ok := status.FromError(err)
+	if !ok {
+		runtime.DefaultHTTPErrorHandler(ctx, mux, marshaler, w, r, err)
+		return
+	}
+	if status.Code() != codes.Unimplemented {
+		runtime.DefaultHTTPErrorHandler(ctx, mux, marshaler, w, r, err)
+		return
+	}
+	err = httpResponseModifier(ctx, w, nil)
+	if err != nil {
+		runtime.DefaultHTTPErrorHandler(ctx, mux, marshaler, w, r, err)
+	}
 }

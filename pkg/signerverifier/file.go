@@ -16,7 +16,7 @@ limitations under the License.
 
 // Copied from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/file.go
 
-package signer
+package signerverifier
 
 import (
 	"fmt"
@@ -30,16 +30,16 @@ type File struct {
 	signature.SignerVerifier
 }
 
-// NewFileSigner returns an file-based signer and verify, used for spinning up local instances.
-func NewFileSigner(keyPath, keyPass string) (*File, error) {
+// NewFileSignerVerifier returns an file-based signer-verifier, used for spinning up local instances.
+func NewFileSignerVerifier(keyPath, keyPass string) (*File, error) {
 	opaqueKey, err := pemutil.Read(keyPath, pemutil.WithPassword([]byte(keyPass)))
 	if err != nil {
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
 	}
 
-	signer, err := signature.LoadDefaultSignerVerifier(opaqueKey)
+	signerVerifier, err := signature.LoadDefaultSignerVerifier(opaqueKey)
 	if err != nil {
 		return nil, fmt.Errorf(`file: loaded private key from %s can't be used to sign: %w`, keyPath, err)
 	}
-	return &File{signer}, nil
+	return &File{signerVerifier}, nil
 }

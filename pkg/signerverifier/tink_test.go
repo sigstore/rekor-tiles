@@ -14,7 +14,7 @@
 
 // Copied from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/tink_test.go
 
-package signer
+package signerverifier
 
 import (
 	"os"
@@ -61,7 +61,7 @@ func TestNewTinkCA(t *testing.T) {
 		t.Fatalf("error writing enc keyset: %v", err)
 	}
 
-	signer, err := NewTinkSignerWithHandle(a, keysetPath)
+	signer, err := NewTinkSignerVerifierWithHandle(a, keysetPath)
 	if err != nil {
 		t.Fatalf("unexpected error creating signer: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestNewTinkCA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating AEAD key: %v", err)
 	}
-	_, err = NewTinkSignerWithHandle(aeadAlt, keysetPath)
+	_, err = NewTinkSignerVerifierWithHandle(aeadAlt, keysetPath)
 	if err == nil || !strings.Contains(err.Error(), "decryption failed") {
 		t.Fatalf("expected error decrypting keyset, got %v", err)
 	}

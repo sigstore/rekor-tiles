@@ -30,7 +30,7 @@ import (
 
 func TestNewServer(t *testing.T) {
 	storage := &mockStorage{}
-	server := NewServer(storage)
+	server := NewServer(storage, false)
 	expectServer := &Server{storage: &mockStorage{}}
 	assert.Equal(t, expectServer, server)
 }
@@ -138,7 +138,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			storage := &mockStorage{addFn: test.addFn}
-			server := NewServer(storage)
+			server := NewServer(storage, false)
 			gotTle, gotErr := server.CreateEntry(context.Background(), test.req)
 			if test.expectError == nil {
 				assert.NoError(t, gotErr)

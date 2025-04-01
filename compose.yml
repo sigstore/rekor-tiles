@@ -72,6 +72,7 @@ services:
       - curl http://localhost:3000/healthz | grep '{"status":"SERVING"}'
       timeout: 30s
       retries: 10
+      interval: 3s
       # requires docker engine >= v25
       # start_period: 5s
       # start_interval: 1s

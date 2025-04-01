@@ -16,7 +16,7 @@ limitations under the License.
 
 // Copied from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/file_test.go
 
-package signer
+package signerverifier
 
 import (
 	"os"
@@ -65,7 +65,7 @@ func TestFile(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			tc := tc
-			_, err := NewFileSigner(tc.keyPath, tc.keyPass)
+			_, err := NewFileSignerVerifier(tc.keyPath, tc.keyPass)
 			if tc.wantErr != (err != nil) {
 				t.Errorf("NewFile() expected %t, got err %s", tc.wantErr, err)
 			}
