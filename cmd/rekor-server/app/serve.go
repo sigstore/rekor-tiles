@@ -84,7 +84,8 @@ var serveCmd = &cobra.Command{
 			server.NewHTTPConfig(
 				server.WithHTTPPort(viper.GetInt("http-port")),
 				server.WithHTTPHost(viper.GetString("http-address")),
-				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port"))),
+				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
+				server.WithHTTPTimeout(viper.GetDuration("timeout"))),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address")),
