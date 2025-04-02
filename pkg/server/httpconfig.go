@@ -36,7 +36,7 @@ func NewHTTPConfig(options ...func(config *HTTPConfig)) *HTTPConfig {
 		timeout:      60 * time.Second,
 		port:         8080,
 		metricsPort:  2112,
-		maxSizeBytes: 10 * 1024 * 1024, // 4MB
+		maxSizeBytes: defaultMaxSizeBytes,
 	}
 	for _, opt := range options {
 		opt(config)

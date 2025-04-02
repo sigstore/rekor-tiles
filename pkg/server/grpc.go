@@ -43,6 +43,10 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
+const (
+	defaultMaxSizeBytes = 4 * 1024 * 1024
+)
+
 type grpcServer struct {
 	*grpc.Server
 	serverEndpoint string
@@ -57,7 +61,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 		grpc.ConnectionTimeout(config.timeout),
 		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
 		// explicitly set to 4MB. https://github.com/grpc/grpc-go/blob/cdbdb759dd67c89544f9081f854c284493b5461c/server.go#L59C39-L59C54
-		grpc.MaxRecvMsgSize(4*1024*1024),
+		grpc.MaxRecvMsgSize(defaultMaxSizeBytes),
 	)
 
 	if config.HasTLS() {

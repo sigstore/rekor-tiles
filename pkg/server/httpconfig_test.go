@@ -28,8 +28,8 @@ func TestNewHTTPConfig(t *testing.T) {
 	if config.timeout != 60*time.Second {
 		t.Errorf("Expected idleTimeout to be 60s, got %v", config.timeout)
 	}
-	if config.maxSizeBytes != 10*1024*1024 {
-		t.Errorf("Expected maxSize)} to be 10MB, got %d", config.maxSizeBytes)
+	if config.maxSizeBytes != 4*1024*1024 {
+		t.Errorf("Expected maxSize)} to be 4MB, got %d", config.maxSizeBytes)
 	}
 	if config.port != 8080 {
 		t.Errorf("Expected port to be 8080, got %d", config.port)
