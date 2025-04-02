@@ -28,8 +28,8 @@ func TestNewHTTPConfig(t *testing.T) {
 	if config.timeout != 60*time.Second {
 		t.Errorf("Expected idleTimeout to be 60s, got %v", config.timeout)
 	}
-	if config.maxSizeBytes != 4*1024*1024 {
-		t.Errorf("Expected maxSize)} to be 4MB, got %d", config.maxSizeBytes)
+	if config.maxRequestBodySize != 4*1024*1024 {
+		t.Errorf("Expected maxSize)} to be 4MB, got %d", config.maxRequestBodySize)
 	}
 	if config.port != 8080 {
 		t.Errorf("Expected port to be 8080, got %d", config.port)
@@ -59,10 +59,17 @@ func TestWithHTTPHost(t *testing.T) {
 	}
 }
 
-func TestWithHTTPIdleTimeout(t *testing.T) {
+func TestWithHTTTimeout(t *testing.T) {
 	config := NewHTTPConfig(WithHTTPTimeout(30 * time.Second))
 	if config.timeout != 30*time.Second {
 		t.Errorf("Expected idleTimeout to be 30s, got %v", config.timeout)
+	}
+}
+
+func TestWithHTTPMaxRequestBodySize(t *testing.T) {
+	config := NewHTTPConfig(WithHTTPMaxRequestBodySize(2 * 1024 * 1024))
+	if config.maxRequestBodySize != 2*1024*1024 {
+		t.Errorf("Expected maxSize to be) 2MB, got %d", config.maxRequestBodySize)
 	}
 }
 
@@ -78,6 +85,7 @@ func TestMultipleOptions(t *testing.T) {
 		WithHTTPPort(9090),
 		WithHTTPHost("test.example.com"),
 		WithHTTPTimeout(10*time.Second),
+		WithHTTPMaxRequestBodySize(1*1024*1024),
 		WithHTTPMetricsPort(9091),
 	)
 	if config.port != 9090 {
@@ -91,6 +99,9 @@ func TestMultipleOptions(t *testing.T) {
 	}
 	if config.timeout != 10*time.Second {
 		t.Errorf("Expected idleTimeout to be 10s, got %v", config.timeout)
+	}
+	if config.maxRequestBodySize != 1*1024*1024 {
+		t.Errorf("Expected maxSize to be 1MB, got %d", config.maxRequestBodySize)
 	}
 	if config.HTTPTarget() != "test.example.com:9090" {
 		t.Errorf("Expected http target to be test.example.com:9090, got %s", config.HTTPTarget())

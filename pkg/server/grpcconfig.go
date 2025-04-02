@@ -20,30 +20,30 @@ import (
 )
 
 const (
-	// defaultMaxSizeBytes is the default max size of payloads to both the http and grpc servers.
-	defaultMaxSizeBytes = 4 * 1024 * 1024 // 4MB https://github.com/grpc/grpc-go/blob/cdbdb759dd67c89544f9081f854c284493b5461c/server.go#L59C39-L59C54.
+	// defaultMaxSize is the default max size in bytes of payloads to both the http and grpc servers.
+	defaultMaxSize = 4 * 1024 * 1024 // 4MB https://github.com/grpc/grpc-go/blob/cdbdb759dd67c89544f9081f854c284493b5461c/server.go#L59C39-L59C54.
 	// defaultTimeout is the default connection and request timeout for both the http and grpc servers.
 	defaultTimeout = 60 * time.Second
 )
 
 // GRPCConfig contains options for the GRPC server from the CLI.
 type GRPCConfig struct {
-	port                int
-	host                string
-	timeout             time.Duration
-	maxMessageSizeBytes int
-	certFile            string
-	keyFile             string
+	port           int
+	host           string
+	timeout        time.Duration
+	maxMessageSize int
+	certFile       string
+	keyFile        string
 }
 type GRPCOption func(config *GRPCConfig)
 
 // NewGRPCConfig creates a new GRPCConfig with some default options.
 func NewGRPCConfig(options ...func(config *GRPCConfig)) *GRPCConfig {
 	config := &GRPCConfig{
-		port:                8081,
-		host:                "localhost",
-		timeout:             defaultTimeout,
-		maxMessageSizeBytes: defaultMaxSizeBytes,
+		port:           8081,
+		host:           "localhost",
+		timeout:        defaultTimeout,
+		maxMessageSize: defaultMaxSize,
 	}
 	for _, opt := range options {
 		opt(config)
@@ -69,6 +69,13 @@ func WithGRPCHost(host string) GRPCOption {
 func WithGRPCTimeout(timeout time.Duration) GRPCOption {
 	return func(config *GRPCConfig) {
 		config.timeout = timeout
+	}
+}
+
+// WithGRPCMaxMessageSize specifies the maximum size in bytes for a grpc message.
+func WithGRPCMaxMessageSize(maxMessageSize int) GRPCOption {
+	return func(config *GRPCConfig) {
+		config.maxMessageSize = maxMessageSize
 	}
 }
 
