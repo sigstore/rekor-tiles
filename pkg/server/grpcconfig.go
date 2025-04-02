@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	defaultMaxSizeBytes = 4 * 1024 * 1024
+	defaultMaxSizeBytes = 4 * 1024 * 1024 // 4MB https://github.com/grpc/grpc-go/blob/cdbdb759dd67c89544f9081f854c284493b5461c/server.go#L59C39-L59C54.
 	defaultTimeout      = 60 * time.Second
 )
 
