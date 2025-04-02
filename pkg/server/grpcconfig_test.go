@@ -31,6 +31,9 @@ func TestNewGRPCConfig(t *testing.T) {
 	if config.timeout != 60*time.Second {
 		t.Errorf("Expected timeout to be 60 seconds, got %v", config.timeout)
 	}
+	if config.maxMessageSizeBytes != 4*1024*1024 {
+		t.Errorf("Expected maxMessageSize) to be 4MB, got %d", config.maxMessageSizeBytes)
+	}
 }
 
 func TestWithGRPCPort(t *testing.T) {

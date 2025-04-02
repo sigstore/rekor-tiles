@@ -56,7 +56,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 		grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()),
 		grpc.ConnectionTimeout(config.timeout),
 		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
-		grpc.MaxRecvMsgSize(defaultMaxSizeBytes),
+		grpc.MaxRecvMsgSize(config.maxMessageSizeBytes),
 	)
 
 	if config.HasTLS() {

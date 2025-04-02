@@ -107,6 +107,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		ReadHeaderTimeout: config.timeout,
 		WriteTimeout:      config.timeout,
 		IdleTimeout:       config.timeout,
+		MaxHeaderBytes:    int(config.maxSizeBytes),
 	}
 
 	if config.HasTLS() {

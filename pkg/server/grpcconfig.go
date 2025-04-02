@@ -28,20 +28,22 @@ const (
 
 // GRPCConfig contains options for the GRPC server from the CLI.
 type GRPCConfig struct {
-	port     int
-	host     string
-	timeout  time.Duration
-	certFile string
-	keyFile  string
+	port                int
+	host                string
+	timeout             time.Duration
+	maxMessageSizeBytes int
+	certFile            string
+	keyFile             string
 }
 type GRPCOption func(config *GRPCConfig)
 
 // NewGRPCConfig creates a new GRPCConfig with some default options.
 func NewGRPCConfig(options ...func(config *GRPCConfig)) *GRPCConfig {
 	config := &GRPCConfig{
-		port:    8081,
-		host:    "localhost",
-		timeout: defaultTimeout,
+		port:                8081,
+		host:                "localhost",
+		timeout:             defaultTimeout,
+		maxMessageSizeBytes: defaultMaxSizeBytes,
 	}
 	for _, opt := range options {
 		opt(config)
