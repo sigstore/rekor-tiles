@@ -19,6 +19,11 @@ import (
 	"time"
 )
 
+const (
+	defaultMaxSizeBytes = 4 * 1024 * 1024
+	defaultTimeout      = 60 * time.Second
+)
+
 // GRPCConfig contains options for the GRPC server from the CLI.
 type GRPCConfig struct {
 	port     int
@@ -34,7 +39,7 @@ func NewGRPCConfig(options ...func(config *GRPCConfig)) *GRPCConfig {
 	config := &GRPCConfig{
 		port:    8081,
 		host:    "localhost",
-		timeout: 60 * time.Second,
+		timeout: defaultTimeout,
 	}
 	for _, opt := range options {
 		opt(config)

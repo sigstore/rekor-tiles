@@ -43,10 +43,6 @@ import (
 	"google.golang.org/grpc/keepalive"
 )
 
-const (
-	defaultMaxSizeBytes = 4 * 1024 * 1024
-)
-
 type grpcServer struct {
 	*grpc.Server
 	serverEndpoint string

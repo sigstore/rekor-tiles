@@ -33,7 +33,7 @@ type HTTPOption func(config *HTTPConfig)
 func NewHTTPConfig(options ...func(config *HTTPConfig)) *HTTPConfig {
 	config := &HTTPConfig{
 		host:         "localhost",
-		timeout:      60 * time.Second,
+		timeout:      defaultTimeout,
 		port:         8080,
 		metricsPort:  2112,
 		maxSizeBytes: defaultMaxSizeBytes,
