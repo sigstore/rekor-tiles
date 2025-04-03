@@ -29,6 +29,10 @@ message DSSERequestV0_0_2 {
     io.intoto.Envelope envelope = 1 [(google.api.field_behavior) = REQUIRED];
     // All necessary verification material to verify all signatures embedded in the envelope
     repeated Verifier verifiers = 2 [(google.api.field_behavior) = REQUIRED];
+    // An optional hash algorithm to use when recording the DSSE payload hash in the log, by
+    // default the system will use SHA2_256
+    dev.sigstore.common.v1.HashAlgorithm payloadHashAlgorithm = 3 [(google.api.field_behavior) = OPTIONAL];
+
 }
 
 

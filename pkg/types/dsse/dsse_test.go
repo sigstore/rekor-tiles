@@ -15,6 +15,7 @@
 package dsse
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
@@ -257,6 +258,114 @@ func TestToLogEntry(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestToLogEntry_hashing(t *testing.T) {
+	var payload = []byte("payload")
+	var keySignature = b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=")
+	tests := []struct {
+		name                string
+		algorithm           v1.HashAlgorithm
+		expectedPayloadHash *v1.HashOutput
+	}{
+		{
+			name:      "no algorithm specified",
+			algorithm: v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED,
+			expectedPayloadHash: &v1.HashOutput{
+				Algorithm: v1.HashAlgorithm_SHA2_256,
+				Digest:    b64DecodeOrDie(t, "I59Z7VXnN8dxR89VrQwbAwttfudIp0JpUvm4UtWpNeU="),
+			},
+		},
+		{
+			name:      "sha256",
+			algorithm: v1.HashAlgorithm_SHA2_256,
+			expectedPayloadHash: &v1.HashOutput{
+				Algorithm: v1.HashAlgorithm_SHA2_256,
+				Digest:    b64DecodeOrDie(t, "I59Z7VXnN8dxR89VrQwbAwttfudIp0JpUvm4UtWpNeU="),
+			},
+		},
+		{
+			name:      "sha384",
+			algorithm: v1.HashAlgorithm_SHA2_384,
+			expectedPayloadHash: &v1.HashOutput{
+				Algorithm: v1.HashAlgorithm_SHA2_384,
+				Digest:    b64DecodeOrDie(t, "FXAshWoXNarByVcJEwlRxzHl4gY+hTPOdtjUat/geuH11753xhPxKJP+KJcY/8or"),
+			},
+		},
+		{
+			name:      "sha512",
+			algorithm: v1.HashAlgorithm_SHA2_512,
+			expectedPayloadHash: &v1.HashOutput{
+				Algorithm: v1.HashAlgorithm_SHA2_512,
+				Digest:    b64DecodeOrDie(t, "cLM86ckEfjD5F+fqE+Qvd2cAjD9PnJuvSeQ5D8YlVJ6WJe7jm5RUUHTooYJM8/I4RjsRvAPZc0jg/CmZyh//fw=="),
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			request := &pb.DSSERequestV0_0_2{
+				PayloadHashAlgorithm: test.algorithm,
+				Envelope: &dsse.Envelope{
+					Payload:     payload,
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   keySignature,
+							Keyid: "",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
+					{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+					},
+				},
+			}
+			entry, err := ToLogEntry(request)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if diff := deep.Equal(test.expectedPayloadHash, entry.PayloadHash); diff != nil {
+				if !bytes.Equal(test.expectedPayloadHash.Digest, entry.PayloadHash.Digest) {
+					t.Errorf("payloadHash mismatch (-want +got):\n%s\n%s", base64.StdEncoding.EncodeToString(test.expectedPayloadHash.Digest), base64.StdEncoding.EncodeToString(entry.PayloadHash.Digest))
+				}
+				t.Errorf("ToLogEntry() mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+
+	t.Run("unknown hash algorithm", func(t *testing.T) {
+		request := &pb.DSSERequestV0_0_2{
+			PayloadHashAlgorithm: -1,
+			Envelope: &dsse.Envelope{
+				Payload:     payload,
+				PayloadType: "application/vnd.in-toto+json",
+				Signatures: []*dsse.Signature{
+					{
+						Sig:   keySignature,
+						Keyid: "",
+					},
+				},
+			},
+			Verifiers: []*pb.Verifier{
+				{
+					Verifier: &pb.Verifier_PublicKey{
+						PublicKey: &pb.PublicKey{
+							RawBytes: []byte(publicKey),
+						},
+					},
+				},
+			},
+		}
+		_, err := ToLogEntry(request)
+		if err == nil {
+			t.Error("ToLogEntry() should fail with unknown hash algorithm")
+		}
+	})
 }
 
 func TestConverters(t *testing.T) {
