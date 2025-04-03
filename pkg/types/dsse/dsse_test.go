@@ -18,6 +18,7 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
+	"encoding/pem"
 	"fmt"
 	"testing"
 
@@ -32,11 +33,11 @@ import (
 )
 
 var (
-	publicKey = `-----BEGIN PUBLIC KEY-----
+	pemPublicKey = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE850nB+WrwXzivt7yFbhFKw/8M2pa
 qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 -----END PUBLIC KEY-----`
-	x509Cert = `-----BEGIN CERTIFICATE-----
+	pemx509Cert = `-----BEGIN CERTIFICATE-----
 MIICGTCCAb+gAwIBAgIUWi7MFKfQ+/QSDFb0RjUBmyvOCu0wCgYIKoZIzj0EAwIw
 YTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
 dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEaMBgGA1UEAwwRdGVzdC5zaWdzdG9yZS5k
@@ -53,6 +54,18 @@ atI4zS+80vbts4NEFA==
 )
 
 func TestToLogEntry(t *testing.T) {
+	block, rest := pem.Decode([]byte(pemPublicKey))
+	if len(rest) != 0 {
+		t.Fatal("public key decoding had extra data")
+	}
+	publicKey := block.Bytes
+
+	block, rest = pem.Decode([]byte(pemx509Cert))
+	if len(rest) != 0 {
+		t.Fatal("certificate decoding had extra data")
+	}
+	x509Cert := block.Bytes
+
 	var payload = []byte("payload")
 	var payloadHash = sha256.Sum256(payload)
 	var keySignature = b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=")
@@ -84,6 +97,7 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
 			},
@@ -101,6 +115,7 @@ func TestToLogEntry(t *testing.T) {
 									RawBytes: []byte(publicKey),
 								},
 							},
+							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 						},
 					},
 				},
@@ -116,6 +131,7 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
 			},
@@ -151,6 +167,7 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
 			},
@@ -171,6 +188,7 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
 			},
@@ -196,6 +214,7 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
 			},
@@ -221,6 +240,7 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(x509Cert),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
 			},
@@ -238,6 +258,7 @@ func TestToLogEntry(t *testing.T) {
 									RawBytes: []byte(x509Cert),
 								},
 							},
+							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 						},
 					},
 				},
@@ -263,11 +284,12 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
 			},
 			allowedAlgorithms: []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256, v1.PublicKeyDetails_PKIX_ED25519_PH},
-			expectErr:         fmt.Errorf("invalid entry algorithm"),
+			expectErr:         fmt.Errorf("unsupported entry algorithm for key *ecdsa.PublicKey, digest SHA-256"),
 		},
 	}
 	for _, test := range tests {

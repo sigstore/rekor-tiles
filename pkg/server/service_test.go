@@ -61,10 +61,7 @@ func TestCreateEntry(t *testing.T) {
 							Verifier: &pb.Verifier{
 								Verifier: &pb.Verifier_PublicKey{
 									PublicKey: &pb.PublicKey{
-										RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
-2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ==
------END PUBLIC KEY-----`),
+										RawBytes: b64DecodeOrDie(t, "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ=="),
 									},
 								},
 								KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
@@ -96,10 +93,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 							{
 								Verifier: &pb.Verifier_PublicKey{
 									PublicKey: &pb.PublicKey{
-										RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE850nB+WrwXzivt7yFbhFKw/8M2pa
-qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
------END PUBLIC KEY-----`),
+										RawBytes: b64DecodeOrDie(t, "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE850nB+WrwXzivt7yFbhFKw/8M2paqSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g=="),
 									},
 								},
 								KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
@@ -143,10 +137,7 @@ qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 							Verifier: &pb.Verifier{
 								Verifier: &pb.Verifier_PublicKey{
 									PublicKey: &pb.PublicKey{
-										RawBytes: []byte(`-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
-2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ==
------END PUBLIC KEY-----`),
+										RawBytes: b64DecodeOrDie(t, "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ=="),
 									},
 								},
 								KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,

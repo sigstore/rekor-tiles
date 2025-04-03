@@ -17,12 +17,15 @@ package hashedrekord
 import (
 	"bytes"
 	"fmt"
+	"reflect"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
-	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
+	"github.com/sigstore/rekor-tiles/pkg/types/validator"
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
+	"github.com/sigstore/rekor-tiles/pkg/types/verifier/certificate"
+	"github.com/sigstore/rekor-tiles/pkg/types/verifier/publickey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
@@ -39,23 +42,21 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.A
 	if len(hr.Digest) == 0 {
 		return nil, fmt.Errorf("missing digest")
 	}
-	if err := verifier.Validate(hr.Signature.Verifier); err != nil {
+	if err := validator.Validate(hr.Signature.Verifier); err != nil {
 		return nil, err
 	}
-	sigObj, err := x509.NewSignatureWithOpts(bytes.NewReader(hr.Signature.Content), options.WithED25519ph())
-	if err != nil {
-		return nil, fmt.Errorf("parsing signature: %w", err)
-	}
-	var keyObj *x509.PublicKey
+
+	var v verifier.Verifier
+	var err error
 	if pubKey := hr.Signature.Verifier.GetPublicKey(); pubKey != nil {
-		keyObj, err = x509.NewPublicKey(bytes.NewReader(pubKey.RawBytes))
+		v, err = publickey.NewVerifier(bytes.NewReader(pubKey.RawBytes))
 	} else if cert := hr.Signature.Verifier.GetX509Certificate(); cert != nil {
-		keyObj, err = x509.NewPublicKey(bytes.NewReader(cert.RawBytes))
+		v, err = certificate.NewVerifier(bytes.NewReader(cert.RawBytes))
 	} else {
 		return nil, fmt.Errorf("must contain either a public key or X.509 certificate")
 	}
 	if err != nil {
-		return nil, fmt.Errorf("parsing public key: %w", err)
+		return nil, fmt.Errorf("parsing verifier: %w", err)
 	}
 
 	algDetails, err := signature.GetAlgorithmDetails(hr.Signature.Verifier.KeyDetails)
@@ -63,20 +64,27 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.A
 		return nil, fmt.Errorf("getting key algorithm details: %w", err)
 	}
 	alg := algDetails.GetHashType()
-	valid, err := algorithmregistry.CheckEntryAlgorithms(keyObj, alg, algorithmRegistry)
+
+	valid, err := algorithmregistry.CheckEntryAlgorithms(v.PublicKey(), alg, algorithmRegistry)
 	if err != nil {
 		return nil, fmt.Errorf("checking entry algorithm: %w", err)
 	}
 	if !valid {
-		return nil, fmt.Errorf("invalid entry algorithm %s", alg.String())
+		return nil, fmt.Errorf("unsupported entry algorithm for key %s, digest %s", reflect.TypeOf(v.PublicKey()), alg.String())
 	}
 
-	if err := sigObj.Verify(nil, keyObj, options.WithDigest(hr.Digest), options.WithCryptoSignerOpts(alg)); err != nil {
+	sigVerifier, err := signature.LoadVerifierWithOpts(v.PublicKey(), options.WithED25519ph())
+	if err != nil {
+		return nil, fmt.Errorf("loading verifier: %v", err)
+	}
+	if err := sigVerifier.VerifySignature(
+		bytes.NewReader(hr.Signature.Content), nil, options.WithDigest(hr.Digest), options.WithCryptoSignerOpts(alg)); err != nil {
 		return nil, fmt.Errorf("verifying signature: %w", err)
 	}
 
 	return &pb.HashedRekordLogEntryV0_0_2{
 		Signature: hr.Signature,
-		Data:      &v1.HashOutput{Digest: hr.Digest, Algorithm: v1.HashAlgorithm_SHA2_256},
+		// TODO: Remove hardcoded algorithm
+		Data: &v1.HashOutput{Digest: hr.Digest, Algorithm: v1.HashAlgorithm_SHA2_256},
 	}, nil
 }
