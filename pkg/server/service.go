@@ -73,25 +73,27 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	var err error
 	var metricsCounter prometheus.Counter
 	switch req.GetSpec().(type) {
-	case *pb.CreateEntryRequest_HashedRekordRequest:
-		hr := req.GetHashedRekordRequest()
-		if err := hashedrekord.Validate(hr); err != nil {
+	case *pb.CreateEntryRequest_HashedRekordRequestV0_0_2:
+		hr := req.GetHashedRekordRequestV0_0_2()
+		entry, err := hashedrekord.ToLogEntry(hr)
+		if err != nil {
 			slog.Warn("failed validating hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
 		}
-		serialized, err = protojson.Marshal(hr)
+		serialized, err = protojson.Marshal(entry)
 		if err != nil {
 			slog.Warn("failed marshaling hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
 		}
 		metricsCounter = getMetrics().newHashedRekordEntries
-	case *pb.CreateEntryRequest_DsseRequest:
-		ds := req.GetDsseRequest()
-		if err := dsse.Validate(ds); err != nil {
+	case *pb.CreateEntryRequest_DsseRequestV0_0_2:
+		ds := req.GetDsseRequestV0_0_2()
+		entry, err := dsse.ToLogEntry(ds)
+		if err != nil {
 			slog.Warn("failed validating dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")
 		}
-		serialized, err = protojson.Marshal(ds)
+		serialized, err = protojson.Marshal(entry)
 		if err != nil {
 			slog.Warn("failed marshaling dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")

@@ -25,10 +25,12 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/json"
 	"encoding/pem"
 	"fmt"
 	"testing"
+
+	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	dsset "github.com/sigstore/rekor-tiles/pkg/types/dsse"
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -163,8 +165,9 @@ func TestReadWrite(t *testing.T) {
 	tilePart = layout.PartialTileSize(tileLevel, latestTreeSize-1, latestTreeSize)
 	entryBundle, err = reader.ReadEntryBundle(ctx, tileIndex, tilePart)
 	assert.NoError(t, err)
-	expectedPayload := base64.StdEncoding.EncodeToString([]byte("payload"))
-	assert.Contains(t, string(entryBundle), expectedPayload)
+	expectedPayloadHash := sha256.Sum256([]byte("payload"))
+	expectedB64PayloadHash := base64.StdEncoding.EncodeToString(expectedPayloadHash[:])
+	assert.Contains(t, string(entryBundle), expectedB64PayloadHash)
 
 	// Add a second identical entries immediately to check for deduplication
 	// TODO(cmurphy): add more advanced deduplication checking when the Spanner emulator supports the "batch write" operation
@@ -200,29 +203,31 @@ func genKeys() (*ecdsa.PrivateKey, []byte, error) {
 	return privKey, pubPEM, nil
 }
 
-func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64) (*pb.HashedRekordRequest, error) {
+func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64) (*pb.HashedRekordRequestV0_0_2, error) {
 	digest := artifactDigest(idx)
 	sig, err := ecdsa.SignASN1(rand.Reader, privKey, digest)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.HashedRekordRequest{
-		Signature: sig,
-		Data: &v1.HashOutput{
-			Algorithm: v1.HashAlgorithm(v1.HashAlgorithm_SHA2_256),
-			Digest:    digest,
-		},
-		Verifier: &pb.Verifier{
-			Verifier: &pb.Verifier_PublicKey{
-				PublicKey: &pb.PublicKey{
-					RawBytes: pubKey,
+	return &pb.HashedRekordRequestV0_0_2{
+		Signature: &pb.Signature{
+			Content: sig,
+			Verifier: &pb.Verifier{
+				Verifier: &pb.Verifier_PublicKey{
+					PublicKey: &pb.PublicKey{
+						RawBytes: pubKey,
+					},
 				},
 			},
+		},
+		Data: &v1.HashOutput{
+			Algorithm: v1.HashAlgorithm_SHA2_256,
+			Digest:    digest,
 		},
 	}, nil
 }
 
-func newDSSEEnvelope(privKey *ecdsa.PrivateKey) ([]byte, error) {
+func newDSSEEnvelope(privKey *ecdsa.PrivateKey) (*pbdsse.Envelope, error) {
 	ecdsaSigner, err := signature.LoadECDSASigner(privKey, crypto.SHA256)
 	if err != nil {
 		return nil, err
@@ -234,26 +239,23 @@ func newDSSEEnvelope(privKey *ecdsa.PrivateKey) ([]byte, error) {
 		return nil, err
 	}
 	payload := "payload"
-	envelope, err := envelopeSigner.SignPayload(context.Background(), "application/vnd.in-toto+json", []byte(payload))
+	payloadType := "application/vnd.in-toto+json"
+	envelope, err := envelopeSigner.SignPayload(context.Background(), payloadType, []byte(payload))
 	if err != nil {
 		return nil, err
 	}
-	marshaledEnvelope, err := json.Marshal(envelope)
-	if err != nil {
-		return nil, err
-	}
-	return marshaledEnvelope, nil
+	return dsset.ToProto(envelope)
 }
 
-func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequest, error) {
+func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV0_0_2, error) {
 	envelope, err := newDSSEEnvelope(privKey)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.DSSERequest{
-		Envelope: string(envelope),
-		Verifier: []*pb.Verifier{
-			&pb.Verifier{
+	return &pb.DSSERequestV0_0_2{
+		Envelope: envelope,
+		Verifiers: []*pb.Verifier{
+			{
 				Verifier: &pb.Verifier_PublicKey{
 					PublicKey: &pb.PublicKey{
 						RawBytes: pubKey,

@@ -26,36 +26,38 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
-func Validate(hr *pb.HashedRekordRequest) error {
-	if len(hr.Signature) == 0 {
-		return fmt.Errorf("missing signature")
+// ToLogEntry validates a request and converts it to a log entry type for inclusion in the log
+// TODO(#178) separate out ToLogEntry into proto validation, cyrpto validation and log entry conversion
+func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_2, error) {
+	if hr.Signature == nil || len(hr.Signature.Content) == 0 {
+		return nil, fmt.Errorf("missing signature")
 	}
-	if hr.Verifier == nil {
-		return fmt.Errorf("missing verifier")
+	if hr.Signature.Verifier == nil {
+		return nil, fmt.Errorf("missing verifier")
 	}
 	if hr.Data == nil {
-		return fmt.Errorf("missing data")
+		return nil, fmt.Errorf("missing data")
 	}
 	if hr.Data.Digest == nil {
-		return fmt.Errorf("missing data digest")
+		return nil, fmt.Errorf("missing data digest")
 	}
-	if err := verifier.Validate(hr.Verifier); err != nil {
-		return err
+	if err := verifier.Validate(hr.Signature.Verifier); err != nil {
+		return nil, err
 	}
-	sigObj, err := x509.NewSignatureWithOpts(bytes.NewReader(hr.Signature), options.WithED25519ph())
+	sigObj, err := x509.NewSignatureWithOpts(bytes.NewReader(hr.Signature.Content), options.WithED25519ph())
 	if err != nil {
-		return fmt.Errorf("parsing signature: %w", err)
+		return nil, fmt.Errorf("parsing signature: %w", err)
 	}
 	var keyObj *x509.PublicKey
-	if pubKey := hr.Verifier.GetPublicKey(); pubKey != nil {
+	if pubKey := hr.Signature.Verifier.GetPublicKey(); pubKey != nil {
 		keyObj, err = x509.NewPublicKey(bytes.NewReader(pubKey.RawBytes))
-	} else if cert := hr.Verifier.GetX509Certificate(); cert != nil {
+	} else if cert := hr.Signature.Verifier.GetX509Certificate(); cert != nil {
 		keyObj, err = x509.NewPublicKey(bytes.NewReader(cert.RawBytes))
 	} else {
-		return fmt.Errorf("must contain either a public key or X.509 certificate")
+		return nil, fmt.Errorf("must contain either a public key or X.509 certificate")
 	}
 	if err != nil {
-		return fmt.Errorf("parsing public key: %w", err)
+		return nil, fmt.Errorf("parsing public key: %w", err)
 	}
 	var alg crypto.Hash
 	switch hr.Data.Algorithm {
@@ -67,8 +69,11 @@ func Validate(hr *pb.HashedRekordRequest) error {
 		alg = crypto.SHA256
 	}
 	if err := sigObj.Verify(nil, keyObj, options.WithDigest(hr.Data.Digest), options.WithCryptoSignerOpts(alg)); err != nil {
-		return fmt.Errorf("verifying signature: %w", err)
+		return nil, fmt.Errorf("verifying signature: %w", err)
 	}
 
-	return nil
+	return &pb.HashedRekordLogEntryV0_0_2{
+		Signature: hr.Signature,
+		Data:      hr.Data,
+	}, nil
 }

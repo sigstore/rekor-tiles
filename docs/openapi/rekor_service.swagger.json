@@ -253,6 +253,43 @@
       },
       "description": "Message that represents an arbitrary HTTP body. It should only be used for\npayload formats that can't be represented as JSON, such as raw binary or\nan HTML page.\n\n\nThis message can be used both in streaming and non-streaming API methods in\nthe request as well as the response.\n\nIt can be used as a top-level request field, which is convenient if one\nwants to extract parameters from either the URL or HTTP template into the\nrequest fields and also want access to the raw HTTP body.\n\nExample:\n\n    message GetResourceRequest {\n      // A unique request id.\n      string request_id = 1;\n\n      // The raw HTTP body is bound to this field.\n      google.api.HttpBody http_body = 2;\n\n    }\n\n    service ResourceService {\n      rpc GetResource(GetResourceRequest)\n        returns (google.api.HttpBody);\n      rpc UpdateResource(google.api.HttpBody)\n        returns (google.protobuf.Empty);\n\n    }\n\nExample with streaming methods:\n\n    service CaldavService {\n      rpc GetCalendar(stream google.api.HttpBody)\n        returns (stream google.api.HttpBody);\n      rpc UpdateCalendar(stream google.api.HttpBody)\n        returns (stream google.api.HttpBody);\n\n    }\n\nUse of this type only changes how the request and response bodies are\nhandled, all other features will continue to work unchanged."
     },
+    "intotoEnvelope": {
+      "type": "object",
+      "properties": {
+        "payload": {
+          "type": "string",
+          "format": "byte",
+          "description": "Message to be signed. (In JSON, this is encoded as base64.)\nREQUIRED."
+        },
+        "payloadType": {
+          "type": "string",
+          "description": "String unambiguously identifying how to interpret payload.\nREQUIRED."
+        },
+        "signatures": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/iointotoSignature"
+          },
+          "description": "Signature over:\n    PAE(type, payload)\nWhere PAE is defined as:\nPAE(type, payload) = \"DSSEv1\" + SP + LEN(type) + SP + type + SP + LEN(payload) + SP + payload\n+               = concatenation\nSP              = ASCII space [0x20]\n\"DSSEv1\"        = ASCII [0x44, 0x53, 0x53, 0x45, 0x76, 0x31]\nLEN(s)          = ASCII decimal encoding of the byte length of s, with no leading zeros\nREQUIRED (length \u003e= 1)."
+        }
+      },
+      "description": "An authenticated message of arbitrary type."
+    },
+    "iointotoSignature": {
+      "type": "object",
+      "properties": {
+        "sig": {
+          "type": "string",
+          "format": "byte",
+          "description": "Signature itself. (In JSON, this is encoded as base64.)\nREQUIRED."
+        },
+        "keyid": {
+          "type": "string",
+          "description": "*Unauthenticated* hint identifying which public key was used.\nOPTIONAL."
+        }
+      }
+    },
     "protobufAny": {
       "type": "object",
       "properties": {
@@ -281,6 +318,23 @@
       "required": [
         "rawBytes",
         "keyDetails"
+      ]
+    },
+    "rekorv2Signature": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "format": "byte"
+        },
+        "verifier": {
+          "$ref": "#/definitions/v2Verifier"
+        }
+      },
+      "title": "A signature and an associated verifier",
+      "required": [
+        "content",
+        "verifier"
       ]
     },
     "rpcStatus": {
@@ -512,62 +566,57 @@
     "v2CreateEntryRequest": {
       "type": "object",
       "properties": {
-        "hashedRekordRequest": {
-          "$ref": "#/definitions/v2HashedRekordRequest"
+        "hashedRekordRequestV0_0_2": {
+          "$ref": "#/definitions/v2HashedRekordRequestV0_0_2"
         },
-        "dsseRequest": {
-          "$ref": "#/definitions/v2DSSERequest"
+        "dsseRequestV0_0_2": {
+          "$ref": "#/definitions/v2DSSERequestV0_0_2"
         }
       },
       "title": "Create a new HashedRekord or DSSE",
       "required": [
-        "hashedRekordRequest",
-        "dsseRequest"
+        "hashedRekordRequestV0_0_2",
+        "dsseRequestV0_0_2"
       ]
     },
-    "v2DSSERequest": {
+    "v2DSSERequestV0_0_2": {
       "type": "object",
       "properties": {
         "envelope": {
-          "type": "string",
-          "title": "A DSSE envelope (as defined by https://github.com/secure-systems-lab/dsse/blob/master/envelope.proto)\nin stringified JSON"
+          "$ref": "#/definitions/intotoEnvelope",
+          "title": "A DSSE envelope"
         },
-        "verifier": {
+        "verifiers": {
           "type": "array",
           "items": {
             "type": "object",
             "$ref": "#/definitions/v2Verifier"
           },
-          "title": "collection of verification material used to verify"
+          "title": "All necessary verification material to verify all signatures embedded in the envelope"
         }
       },
-      "title": "A request to add a dsse entry to the log",
+      "title": "A request to add a DSSE entry to the log",
       "required": [
-        "envelope"
+        "envelope",
+        "verifiers"
       ]
     },
-    "v2HashedRekordRequest": {
+    "v2HashedRekordRequestV0_0_2": {
       "type": "object",
       "properties": {
-        "signature": {
-          "type": "string",
-          "format": "byte",
-          "title": "A single signature over the hashed data"
-        },
         "data": {
           "$ref": "#/definitions/v1HashOutput",
           "title": "The hashed data"
         },
-        "verifier": {
-          "$ref": "#/definitions/v2Verifier",
-          "title": "A key/cerificate to verify the signature"
+        "signature": {
+          "$ref": "#/definitions/rekorv2Signature",
+          "title": "A single signature over the hashed data with the verifier needed to validate it"
         }
       },
       "title": "A request to add a hashedrekord to the log",
       "required": [
-        "signature",
         "data",
-        "verifier"
+        "signature"
       ]
     },
     "v2Verifier": {

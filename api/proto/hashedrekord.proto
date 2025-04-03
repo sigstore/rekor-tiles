@@ -23,11 +23,16 @@ import "verifier.proto";
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
 // A request to add a hashedrekord to the log
-message HashedRekordRequest {
-    // A single signature over the hashed data
-    bytes signature = 1 [(google.api.field_behavior) = REQUIRED];
+message HashedRekordRequestV0_0_2 {
     // The hashed data
-    dev.sigstore.common.v1.HashOutput data = 2 [(google.api.field_behavior) = REQUIRED];
-    // A key/cerificate to verify the signature
-    Verifier verifier = 3 [(google.api.field_behavior) = REQUIRED];
+    dev.sigstore.common.v1.HashOutput data = 1 [(google.api.field_behavior) = REQUIRED];
+    // A single signature over the hashed data with the verifier needed to validate it
+    Signature signature = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message HashedRekordLogEntryV0_0_2 {
+    // The hashed data
+    dev.sigstore.common.v1.HashOutput data = 1 [(google.api.field_behavior) = REQUIRED];
+    // A single signature over the hashed data with the verifier needed to validate it
+    Signature signature = 2 [(google.api.field_behavior) = REQUIRED];
 }
