@@ -124,8 +124,8 @@ func TestAdd(t *testing.T) {
 		{
 			name: "valid hashedrekord",
 			entry: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.SignatureAndVerifier{
-					Signature: []byte("sign"),
+				Signature: &pb.Signature{
+					Content: []byte("sign"),
 					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{

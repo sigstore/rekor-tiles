@@ -15,6 +15,7 @@
 package dsse
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -53,20 +54,25 @@ atI4zS+80vbts4NEFA==
 )
 
 func TestToLogEntry(t *testing.T) {
+	var payload = []byte("payload")
+	var payloadHash = sha256.Sum256(payload)
+	var keySignature = b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=")
+	var certSignature = b64DecodeOrDie(t, "MEUCIQDoYuLoinEz/gM6B+hEn/0d47lmRDitQ3LfL9vH0sF/gQIgPqVgoBTRsMSPYMXYuJYYCIaTpnuppqQaTSTRn0ubwLI=")
 	tests := []struct {
-		name      string
-		dsse      *pb.DSSERequestV0_0_2
-		expectErr error
+		name          string
+		dsse          *pb.DSSERequestV0_0_2
+		expectErr     error
+		expectedEntry *pb.DSSELogEntryV0_0_2
 	}{
 		{
 			name: "valid dsse",
 			dsse: &pb.DSSERequestV0_0_2{
 				Envelope: &dsse.Envelope{
-					Payload:     []byte("payload"),
+					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
 					Signatures: []*dsse.Signature{
 						{
-							Sig:   b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk="),
+							Sig:   keySignature,
 							Keyid: "",
 						},
 					},
@@ -76,6 +82,24 @@ func TestToLogEntry(t *testing.T) {
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
 								RawBytes: []byte(publicKey),
+							},
+						},
+					},
+				},
+			},
+			expectedEntry: &pb.DSSELogEntryV0_0_2{
+				PayloadHash: &v1.HashOutput{
+					Algorithm: v1.HashAlgorithm_SHA2_256,
+					Digest:    payloadHash[:],
+				},
+				Signatures: []*pb.Signature{
+					{
+						Content: keySignature,
+						Verifier: &pb.Verifier{
+							Verifier: &pb.Verifier_PublicKey{
+								PublicKey: &pb.PublicKey{
+									RawBytes: []byte(publicKey),
+								},
 							},
 						},
 					},
@@ -101,11 +125,11 @@ func TestToLogEntry(t *testing.T) {
 			name: "missing verifiers",
 			dsse: &pb.DSSERequestV0_0_2{
 				Envelope: &dsse.Envelope{
-					Payload:     []byte("payload"),
+					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
 					Signatures: []*dsse.Signature{
 						{
-							Sig:   b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk="),
+							Sig:   keySignature,
 							Keyid: "",
 						},
 					},
@@ -117,7 +141,7 @@ func TestToLogEntry(t *testing.T) {
 			name: "missing signatures",
 			dsse: &pb.DSSERequestV0_0_2{
 				Envelope: &dsse.Envelope{
-					Payload:     []byte("payload"),
+					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
 				},
 				Verifiers: []*pb.Verifier{
@@ -136,7 +160,7 @@ func TestToLogEntry(t *testing.T) {
 			name: "empty signatures",
 			dsse: &pb.DSSERequestV0_0_2{
 				Envelope: &dsse.Envelope{
-					Payload:     []byte("payload"),
+					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
 					Signatures:  []*dsse.Signature{},
 				},
@@ -156,7 +180,7 @@ func TestToLogEntry(t *testing.T) {
 			name: "invalid signature",
 			dsse: &pb.DSSERequestV0_0_2{
 				Envelope: &dsse.Envelope{
-					Payload:     []byte("payload"),
+					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
 					Signatures: []*dsse.Signature{
 						{
@@ -181,11 +205,11 @@ func TestToLogEntry(t *testing.T) {
 			name: "valid dsse with X.509 cert",
 			dsse: &pb.DSSERequestV0_0_2{
 				Envelope: &dsse.Envelope{
-					Payload:     []byte("payload"),
+					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
 					Signatures: []*dsse.Signature{
 						{
-							Sig:   b64DecodeOrDie(t, "MEUCIQDoYuLoinEz/gM6B+hEn/0d47lmRDitQ3LfL9vH0sF/gQIgPqVgoBTRsMSPYMXYuJYYCIaTpnuppqQaTSTRn0ubwLI="),
+							Sig:   certSignature,
 							Keyid: "",
 						},
 					},
@@ -200,13 +224,34 @@ func TestToLogEntry(t *testing.T) {
 					},
 				},
 			},
+			expectedEntry: &pb.DSSELogEntryV0_0_2{
+				PayloadHash: &v1.HashOutput{
+					Algorithm: v1.HashAlgorithm_SHA2_256,
+					Digest:    payloadHash[:],
+				},
+				Signatures: []*pb.Signature{
+					{
+						Content: certSignature,
+						Verifier: &pb.Verifier{
+							Verifier: &pb.Verifier_X509Certificate{
+								X509Certificate: &v1.X509Certificate{
+									RawBytes: []byte(x509Cert),
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			_, gotErr := ToLogEntry(test.dsse)
+			entry, gotErr := ToLogEntry(test.dsse)
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
+				if diff := deep.Equal(test.expectedEntry, entry); diff != nil {
+					t.Errorf("ToLogEntry() mismatch (-want +got):\n%s", diff)
+				}
 			} else {
 				assert.ErrorContains(t, gotErr, test.expectErr.Error())
 			}

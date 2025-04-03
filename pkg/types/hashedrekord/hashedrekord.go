@@ -27,7 +27,7 @@ import (
 )
 
 func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_2, error) {
-	if hr.Signature == nil || len(hr.Signature.Signature) == 0 {
+	if hr.Signature == nil || len(hr.Signature.Content) == 0 {
 		return nil, fmt.Errorf("missing signature")
 	}
 	if hr.Signature.Verifier == nil {
@@ -42,7 +42,7 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_
 	if err := verifier.Validate(hr.Signature.Verifier); err != nil {
 		return nil, err
 	}
-	sigObj, err := x509.NewSignatureWithOpts(bytes.NewReader(hr.Signature.Signature), options.WithED25519ph())
+	sigObj, err := x509.NewSignatureWithOpts(bytes.NewReader(hr.Signature.Content), options.WithED25519ph())
 	if err != nil {
 		return nil, fmt.Errorf("parsing signature: %w", err)
 	}

@@ -210,8 +210,8 @@ func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64
 		return nil, err
 	}
 	return &pb.HashedRekordRequestV0_0_2{
-		Signature: &pb.SignatureAndVerifier{
-			Signature: sig,
+		Signature: &pb.Signature{
+			Content: sig,
 			Verifier: &pb.Verifier{
 				Verifier: &pb.Verifier_PublicKey{
 					PublicKey: &pb.PublicKey{

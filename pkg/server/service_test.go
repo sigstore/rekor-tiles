@@ -49,8 +49,8 @@ func TestCreateEntry(t *testing.T) {
 			req: &pb.CreateEntryRequest{
 				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
 					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
-						Signature: &pb.SignatureAndVerifier{
-							Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
+						Signature: &pb.Signature{
+							Content: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
 							Verifier: &pb.Verifier{
 								Verifier: &pb.Verifier_PublicKey{
 									PublicKey: &pb.PublicKey{
@@ -127,8 +127,8 @@ qSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g==
 			req: &pb.CreateEntryRequest{
 				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
 					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
-						Signature: &pb.SignatureAndVerifier{
-							Signature: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
+						Signature: &pb.Signature{
+							Content: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
 							Verifier: &pb.Verifier{
 								Verifier: &pb.Verifier_PublicKey{
 									PublicKey: &pb.PublicKey{

@@ -77,10 +77,9 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
 // verifyEnvelope takes in an array of possible key bytes and attempts to parse them as x509 public keys.
 // it then uses these to verify the envelope and makes sure that every signature on the envelope is verified.
 // it returns a list of SignatureAndVerifier mapping each signature in the envelope to a provided verifier
-// Copied from https://github.com/sigstore/rekor/blob/73dba7c07d0747f00119417fc0ff994a393f97b2/pkg/types/dsse/v0.0.1/entry.go#L364-L403
-func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelope) ([]*pb.SignatureAndVerifier, error) {
+func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelope) ([]*pb.Signature, error) {
 	env := FromProto(pbenv)
-	savs := make([]*pb.SignatureAndVerifier, 0, len(allPubKeyBytes))
+	savs := make([]*pb.Signature, 0, len(allPubKeyBytes))
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
 	allSigs := make(map[string]struct{})
 	for _, sig := range env.Signatures {
@@ -118,9 +117,9 @@ func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelo
 				// this should be unreachable
 				return nil, fmt.Errorf("could not decode base64 signature: %w", err)
 			}
-			savs = append(savs, &pb.SignatureAndVerifier{
-				Signature: sigBytes,
-				Verifier:  v,
+			savs = append(savs, &pb.Signature{
+				Content:  sigBytes,
+				Verifier: v,
 			})
 		}
 	}

@@ -39,7 +39,7 @@ message Verifier {
 }
 
 // A signature and an associated verifier
-message SignatureAndVerifier {
-    bytes signature = 1 [(google.api.field_behavior) = REQUIRED];
+message Signature {
+    bytes content = 1 [(google.api.field_behavior) = REQUIRED];
     Verifier verifier = 2 [(google.api.field_behavior) = REQUIRED];
 }

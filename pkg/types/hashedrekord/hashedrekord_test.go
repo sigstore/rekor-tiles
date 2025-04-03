@@ -57,8 +57,8 @@ func TestToLogEntry(t *testing.T) {
 		{
 			name: "valid hashedrekord",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.SignatureAndVerifier{
-					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
 					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -75,7 +75,7 @@ func TestToLogEntry(t *testing.T) {
 		{
 			name: "missing signature",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.SignatureAndVerifier{
+				Signature: &pb.Signature{
 					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -93,8 +93,8 @@ func TestToLogEntry(t *testing.T) {
 		{
 			name: "missing verifier",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.SignatureAndVerifier{
-					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
 				},
 				Data: &v1.HashOutput{
 					Digest: hexDecodeOrDie(t, hexEncodedDigest),
@@ -105,8 +105,8 @@ func TestToLogEntry(t *testing.T) {
 		{
 			name: "missing data",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.SignatureAndVerifier{
-					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
 					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -121,8 +121,8 @@ func TestToLogEntry(t *testing.T) {
 		{
 			name: "missing data digest",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.SignatureAndVerifier{
-					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
 					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -138,8 +138,8 @@ func TestToLogEntry(t *testing.T) {
 		{
 			name: "invalid signature",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.SignatureAndVerifier{
-					Signature: []byte("foobar"),
+				Signature: &pb.Signature{
+					Content: []byte("foobar"),
 					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
@@ -157,8 +157,8 @@ func TestToLogEntry(t *testing.T) {
 		{
 			name: "valid hashedrekord with X.509 cert",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.SignatureAndVerifier{
-					Signature: b64DecodeOrDie(t, b64EncodedSignature),
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
 					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_X509Certificate{
 							X509Certificate: &v1.X509Certificate{

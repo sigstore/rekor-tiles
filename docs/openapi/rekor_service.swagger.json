@@ -269,14 +269,14 @@
           "type": "array",
           "items": {
             "type": "object",
-            "$ref": "#/definitions/intotoSignature"
+            "$ref": "#/definitions/iointotoSignature"
           },
           "description": "Signature over:\n    PAE(type, payload)\nWhere PAE is defined as:\nPAE(type, payload) = \"DSSEv1\" + SP + LEN(type) + SP + type + SP + LEN(payload) + SP + payload\n+               = concatenation\nSP              = ASCII space [0x20]\n\"DSSEv1\"        = ASCII [0x44, 0x53, 0x53, 0x45, 0x76, 0x31]\nLEN(s)          = ASCII decimal encoding of the byte length of s, with no leading zeros\nREQUIRED (length \u003e= 1)."
         }
       },
       "description": "An authenticated message of arbitrary type."
     },
-    "intotoSignature": {
+    "iointotoSignature": {
       "type": "object",
       "properties": {
         "sig": {
@@ -318,6 +318,23 @@
       "required": [
         "rawBytes",
         "keyDetails"
+      ]
+    },
+    "rekorv2Signature": {
+      "type": "object",
+      "properties": {
+        "content": {
+          "type": "string",
+          "format": "byte"
+        },
+        "verifier": {
+          "$ref": "#/definitions/v2Verifier"
+        }
+      },
+      "title": "A signature and an associated verifier",
+      "required": [
+        "content",
+        "verifier"
       ]
     },
     "rpcStatus": {
@@ -549,17 +566,17 @@
     "v2CreateEntryRequest": {
       "type": "object",
       "properties": {
-        "hashedRekordRequestV002": {
+        "hashedRekordRequestV0_0_2": {
           "$ref": "#/definitions/v2HashedRekordRequestV0_0_2"
         },
-        "dsseRequestV002": {
+        "dsseRequestV0_0_2": {
           "$ref": "#/definitions/v2DSSERequestV0_0_2"
         }
       },
       "title": "Create a new HashedRekord or DSSE",
       "required": [
-        "hashedRekordRequestV002",
-        "dsseRequestV002"
+        "hashedRekordRequestV0_0_2",
+        "dsseRequestV0_0_2"
       ]
     },
     "v2DSSERequestV0_0_2": {
@@ -575,10 +592,10 @@
             "type": "object",
             "$ref": "#/definitions/v2Verifier"
           },
-          "title": "Signatures and their associated verification material used to verify the payload in the envelope\nThese should be a direct 1:1 mapping with the signatures provided in the envelope"
+          "title": "All necessary verification material to verify all signatures embedded in the envelope"
         }
       },
-      "title": "A request to add a dsse entry to the log",
+      "title": "A request to add a DSSE entry to the log",
       "required": [
         "envelope",
         "verifiers"
@@ -592,7 +609,7 @@
           "title": "The hashed data"
         },
         "signature": {
-          "$ref": "#/definitions/v2SignatureAndVerifier",
+          "$ref": "#/definitions/rekorv2Signature",
           "title": "A single signature over the hashed data with the verifier needed to validate it"
         }
       },
@@ -600,23 +617,6 @@
       "required": [
         "data",
         "signature"
-      ]
-    },
-    "v2SignatureAndVerifier": {
-      "type": "object",
-      "properties": {
-        "signature": {
-          "type": "string",
-          "format": "byte"
-        },
-        "verifier": {
-          "$ref": "#/definitions/v2Verifier"
-        }
-      },
-      "title": "A signature and an associated verifier",
-      "required": [
-        "signature",
-        "verifier"
       ]
     },
     "v2Verifier": {

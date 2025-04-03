@@ -27,12 +27,12 @@ message HashedRekordRequestV0_0_2 {
     // The hashed data
     dev.sigstore.common.v1.HashOutput data = 1 [(google.api.field_behavior) = REQUIRED];
     // A single signature over the hashed data with the verifier needed to validate it
-    SignatureAndVerifier signature = 2 [(google.api.field_behavior) = REQUIRED];
+    Signature signature = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
 message HashedRekordLogEntryV0_0_2 {
     // The hashed data
     dev.sigstore.common.v1.HashOutput data = 1 [(google.api.field_behavior) = REQUIRED];
     // A single signature over the hashed data with the verifier needed to validate it
-    SignatureAndVerifier signature = 2 [(google.api.field_behavior) = REQUIRED];
+    Signature signature = 2 [(google.api.field_behavior) = REQUIRED];
 }

@@ -76,7 +76,7 @@ func NewWriter(writeURL, origin string, verifier signature.Verifier, opts ...cli
 	}, nil
 }
 
-// Add uploads a hashedrekord or dsse log entry and returns the TransparencyLogEntry proving the entry's inclusion in the log.
+// Add uploads a hashedrekord or DSSE log entry and returns the TransparencyLogEntry proving the entry's inclusion in the log.
 func (w *writeClient) Add(ctx context.Context, entry any) (*pbs.TransparencyLogEntry, error) {
 	cer, err := createRequest(entry)
 	if err != nil {
