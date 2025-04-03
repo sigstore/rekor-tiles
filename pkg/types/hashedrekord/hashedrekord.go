@@ -26,6 +26,8 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
+// ToLogEntry validates a request and converts it to a log entry type for inclusion in the log
+// TODO(#178) separate out ToLogEntry into proto validation, cyrpto validation and log entry conversion
 func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_2, error) {
 	if hr.Signature == nil || len(hr.Signature.Content) == 0 {
 		return nil, fmt.Errorf("missing signature")

@@ -34,6 +34,8 @@ import (
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
+// ToLogEntry validates a request and converts it to a log entry type for inclusion in the log
+// TODO(#178) separate out ToLogEntry into proto validation, cyrpto validation and log entry conversion
 func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
 	if ds.Envelope == nil {
 		return nil, fmt.Errorf("missing envelope")
