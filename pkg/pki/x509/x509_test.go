@@ -34,8 +34,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/sigstore/rekor/pkg/pki/identity"
-	"github.com/sigstore/rekor/pkg/pki/x509/testutils"
+	"github.com/sigstore/rekor-tiles/pkg/pki/identity"
+	"github.com/sigstore/rekor-tiles/pkg/pki/x509/testutils"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 )

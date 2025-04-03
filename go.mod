@@ -11,7 +11,6 @@ require (
 	github.com/prometheus/client_golang v1.21.1
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/protobuf-specs v0.4.0
-	github.com/sigstore/rekor v1.3.9
 	github.com/sigstore/sigstore v1.9.2-0.20250311183026-c049f8ddc600
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.2-0.20250311183026-c049f8ddc600
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.2-0.20250311183026-c049f8ddc600

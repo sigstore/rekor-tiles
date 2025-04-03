@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sigstore/rekor/pkg/pki/identity"
+	"github.com/sigstore/rekor-tiles/pkg/pki/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	sigsig "github.com/sigstore/sigstore/pkg/signature"
 )
@@ -60,10 +60,9 @@ func (s Signature) CanonicalValue() ([]byte, error) {
 }
 
 // Verify implements the pki.Signature interface
-func (s Signature) Verify(r io.Reader, k interface{}, opts ...sigsig.VerifyOption) error {
+func (s Signature) Verify(r io.Reader, k any, opts ...sigsig.VerifyOption) error {
 	if len(s.signature) == 0 {
-		//lint:ignore ST1005 X509 is proper use of term
-		return errors.New("X509 signature has not been initialized")
+		return errors.New("x.509 signature has not been initialized")
 	}
 
 	key, ok := k.(*PublicKey)
