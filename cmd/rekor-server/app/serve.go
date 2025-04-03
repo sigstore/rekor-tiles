@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -102,12 +103,16 @@ var serveCmd = &cobra.Command{
 			server.NewHTTPConfig(
 				server.WithHTTPPort(viper.GetInt("http-port")),
 				server.WithHTTPHost(viper.GetString("http-address")),
+				server.WithHTTPTimeout(viper.GetDuration("timeout")),
+				server.WithHTTPMaxRequestBodySize(viper.GetInt("max-request-body-size")),
 				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
 				server.WithHTTPTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
 			),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address")),
+				server.WithGRPCTimeout(viper.GetDuration("timeout")),
+				server.WithGRPCMaxMessageSize(viper.GetInt("max-request-body-size")),
 				server.WithTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
 			),
 			rekorServer,
@@ -124,6 +129,10 @@ func init() {
 	serveCmd.Flags().Int("http-metrics-port", 2112, "HTTP port to bind metrics to")
 	serveCmd.Flags().Int("grpc-port", 3001, "GRPC port to bind to")
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
+	serveCmd.Flags().Duration("timeout", 60*time.Second, "timeout")
+	serveCmd.Flags().Int("max-request-body-size", 4*1024*1024, "maximum request body size in bytes")
+
+	// hostname
 	hostname, err := os.Hostname()
 	if err != nil {
 		hostname = "localhost"

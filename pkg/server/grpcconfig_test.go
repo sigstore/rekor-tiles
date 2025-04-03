@@ -16,6 +16,7 @@ package server
 
 import (
 	"testing"
+	"time"
 )
 
 func TestNewGRPCConfig(t *testing.T) {
@@ -26,6 +27,12 @@ func TestNewGRPCConfig(t *testing.T) {
 	}
 	if config.port != 8081 {
 		t.Errorf("Expected port to be 8081, got %d", config.port)
+	}
+	if config.timeout != 60*time.Second {
+		t.Errorf("Expected timeout to be 60 seconds, got %v", config.timeout)
+	}
+	if config.maxMessageSize != 4*1024*1024 {
+		t.Errorf("Expected maxMessageSize) to be 4MB, got %d", config.maxMessageSize)
 	}
 }
 
@@ -43,16 +50,38 @@ func TestWithGRPCHost(t *testing.T) {
 	}
 }
 
+func TestWithGRPCTimeout(t *testing.T) {
+	config := NewGRPCConfig(WithGRPCTimeout(10 * time.Second))
+	if config.timeout != 10*time.Second {
+		t.Errorf("Expected timeout to be 10 seconds, got %v", config.timeout)
+	}
+}
+
+func TestWithGRPCMaxMessageSize(t *testing.T) {
+	config := NewGRPCConfig(WithGRPCMaxMessageSize(8 * 1024 * 1024))
+	if config.maxMessageSize != 8*1024*1024 {
+		t.Errorf("Expected maxMessageSize to be 8MB, got %d", config.maxMessageSize)
+	}
+}
+
 func TestMultipleGRPCOptions(t *testing.T) {
 	config := NewGRPCConfig(
 		WithGRPCPort(9090),
 		WithGRPCHost("test.example.com"),
+		WithGRPCTimeout(5*time.Second),
+		WithGRPCMaxMessageSize(2*1024*1024),
 	)
 	if config.port != 9090 {
 		t.Errorf("Expected port to be 9090, got %d", config.port)
 	}
 	if config.host != "test.example.com" {
 		t.Errorf("Expected host to be test.example.com, got %s", config.host)
+	}
+	if config.timeout != 5*time.Second {
+		t.Errorf("Expected timeout to be 5 seconds, got %v", config.timeout)
+	}
+	if config.maxMessageSize != 2*1024*1024 {
+		t.Errorf("Expected maxMessageSize to be 2MB, got %d", config.maxMessageSize)
 	}
 }
 

@@ -20,21 +20,23 @@ import (
 )
 
 type HTTPConfig struct {
-	host        string
-	idleTimeout time.Duration
-	port        int
-	metricsPort int
-	certFile    string
-	keyFile     string
+	host               string
+	timeout            time.Duration
+	port               int
+	metricsPort        int
+	maxRequestBodySize int
+	certFile           string
+	keyFile            string
 }
 type HTTPOption func(config *HTTPConfig)
 
 func NewHTTPConfig(options ...func(config *HTTPConfig)) *HTTPConfig {
 	config := &HTTPConfig{
-		host:        "localhost",
-		idleTimeout: 60 * time.Second,
-		port:        8080,
-		metricsPort: 2112,
+		host:               "localhost",
+		timeout:            defaultTimeout,
+		port:               8080,
+		metricsPort:        2112,
+		maxRequestBodySize: defaultMaxSize,
 	}
 	for _, opt := range options {
 		opt(config)
@@ -55,9 +57,16 @@ func WithHTTPHost(host string) HTTPOption {
 	}
 }
 
-func WithHTTPIdleTimeout(idleTimeout time.Duration) HTTPOption {
+func WithHTTPTimeout(timeout time.Duration) HTTPOption {
 	return func(config *HTTPConfig) {
-		config.idleTimeout = idleTimeout
+		config.timeout = timeout
+	}
+}
+
+// WithHTTPMaxRequestBodySize specifies the maximum size of a requests's body.
+func WithHTTPMaxRequestBodySize(size int) HTTPOption {
+	return func(config *HTTPConfig) {
+		config.maxRequestBodySize = size
 	}
 }
 
