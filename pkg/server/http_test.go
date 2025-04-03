@@ -22,6 +22,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
@@ -121,6 +122,13 @@ func checkHTTPPostWithClient(t *testing.T, baseURL string, client *http.Client) 
 		t.Fatal(err)
 	}
 	defer resp.Body.Close()
+
+	for header := range resp.Header {
+		if strings.HasPrefix(header, "Grpc-") {
+			t.Errorf("found gRPC header in HTTP response: %s", header)
+		}
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("got %d, want %d", resp.StatusCode, http.StatusOK)
 		return
@@ -144,6 +152,12 @@ func checkHTTPGetWithClient(t *testing.T, url, expectedBody string, client *http
 		t.Fatalf("%s: %v", url, err)
 	}
 	defer resp.Body.Close()
+
+	for header := range resp.Header {
+		if strings.HasPrefix(header, "Grpc-") {
+			t.Errorf("found gRPC header in HTTP response: %s", header)
+		}
+	}
 
 	if resp.StatusCode != http.StatusOK {
 		t.Errorf("%s: got %d want %d", url, resp.StatusCode, http.StatusOK)
