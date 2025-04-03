@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 
@@ -190,6 +191,12 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Me
 		return nil
 	}
 
+	for header := range w.Header() {
+		if strings.HasPrefix(header, "Grpc-") {
+			delete(w.Header(), header)
+		}
+	}
+
 	// set http status code
 	if vals := md.HeaderMD.Get(httpStatusCodeHeader); len(vals) > 0 {
 		code, err := strconv.Atoi(vals[0])
@@ -198,7 +205,6 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Me
 		}
 		// delete the headers to not expose any grpc-metadata in http response
 		delete(md.HeaderMD, httpStatusCodeHeader)
-		delete(w.Header(), "Grpc-Metadata-X-Http-Code")
 		w.WriteHeader(code)
 	}
 
@@ -206,7 +212,6 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Me
 	if vals := md.HeaderMD.Get(httpErrorMessageHeader); len(vals) > 0 {
 		msg := vals[0]
 		delete(md.HeaderMD, httpErrorMessageHeader)
-		delete(w.Header(), "Grpc-Metadata-X-Http-Error-Message")
 		_, err := w.Write([]byte(msg + "\n"))
 		if err != nil {
 			return err
