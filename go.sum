@@ -1099,8 +1099,6 @@ github.com/secure-systems-lab/go-securesystemslib v0.9.0 h1:rf1HIbL64nUpEIZnjLZ3
 github.com/secure-systems-lab/go-securesystemslib v0.9.0/go.mod h1:DVHKMcZ+V4/woA/peqr+L0joiRXbPpQ042GgJckkFgw=
 github.com/sigstore/protobuf-specs v0.4.0 h1:yoZbdh0kZYKOSiVbYyA8J3f2wLh5aUk2SQB7LgAfIdU=
 github.com/sigstore/protobuf-specs v0.4.0/go.mod h1:FKW5NYhnnFQ/Vb9RKtQk91iYd0MKJ9AxyqInEwU6+OI=
-github.com/sigstore/rekor v1.3.9 h1:sUjRpKVh/hhgqGMs0t+TubgYsksArZ6poLEC3MsGAzU=
-github.com/sigstore/rekor v1.3.9/go.mod h1:xThNUhm6eNEmkJ/SiU/FVU7pLY2f380fSDZFsdDWlcM=
 github.com/sigstore/sigstore v1.9.2-0.20250311183026-c049f8ddc600 h1:JHkNzxxB5ZukIt+1uIMvB695xOtQ334htdelYMPLnvY=
 github.com/sigstore/sigstore v1.9.2-0.20250311183026-c049f8ddc600/go.mod h1:hRFC8Rc3D7khJdppxtMGIFCNDt+dINy4AhsWgR9Wt1c=
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.2-0.20250311183026-c049f8ddc600 h1:VSh0XhMa+21pmhwaImF957/TFDDXHLysoyOrl2xpUe8=
