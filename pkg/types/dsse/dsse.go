@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -65,14 +66,14 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
 	if err != nil {
 		return nil, err
 	}
-	payloadHash := sha256.Sum256(ds.Envelope.Payload)
+	payloadHash, err := hash(ds.PayloadHashAlgorithm, ds.Envelope.Payload)
+	if err != nil {
+		return nil, err
+	}
 
 	return &pb.DSSELogEntryV0_0_2{
-		PayloadHash: &v1.HashOutput{
-			Algorithm: v1.HashAlgorithm_SHA2_256,
-			Digest:    payloadHash[:],
-		},
-		Signatures: signerVerifiers,
+		PayloadHash: payloadHash,
+		Signatures:  signerVerifiers,
 	}, nil
 }
 
@@ -171,4 +172,28 @@ func ToProto(env *dsse.Envelope) (*pbdsse.Envelope, error) {
 		newEnv.Signatures = append(newEnv.Signatures, ns)
 	}
 	return &newEnv, nil
+}
+
+func hash(alg v1.HashAlgorithm, data []byte) (*v1.HashOutput, error) {
+	if alg == v1.HashAlgorithm_HASH_ALGORITHM_UNSPECIFIED {
+		alg = v1.HashAlgorithm_SHA2_256
+	}
+	var digest []byte
+	switch alg {
+	case v1.HashAlgorithm_SHA2_256:
+		d := sha256.Sum256(data)
+		digest = d[:]
+	case v1.HashAlgorithm_SHA2_384:
+		d := sha512.Sum384(data)
+		digest = d[:]
+	case v1.HashAlgorithm_SHA2_512:
+		d := sha512.Sum512(data)
+		digest = d[:]
+	default:
+		return nil, fmt.Errorf("unknown hash algorithm: %s", alg)
+	}
+	return &v1.HashOutput{
+		Algorithm: alg,
+		Digest:    digest,
+	}, nil
 }

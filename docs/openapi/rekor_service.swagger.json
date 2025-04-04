@@ -593,6 +593,10 @@
             "$ref": "#/definitions/v2Verifier"
           },
           "title": "All necessary verification material to verify all signatures embedded in the envelope"
+        },
+        "payloadHashAlgorithm": {
+          "$ref": "#/definitions/v1HashAlgorithm",
+          "title": "An optional hash algorithm to use when recording the DSSE payload hash in the log, by\ndefault the system will use SHA2_256"
         }
       },
       "title": "A request to add a DSSE entry to the log",
