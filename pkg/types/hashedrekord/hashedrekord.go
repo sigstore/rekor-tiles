@@ -35,11 +35,8 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_
 	if hr.Signature.Verifier == nil {
 		return nil, fmt.Errorf("missing verifier")
 	}
-	if hr.Data == nil {
-		return nil, fmt.Errorf("missing data")
-	}
-	if hr.Data.Digest == nil {
-		return nil, fmt.Errorf("missing data digest")
+	if len(hr.Digest) == 0 {
+		return nil, fmt.Errorf("missing digest")
 	}
 	if err := verifier.Validate(hr.Signature.Verifier); err != nil {
 		return nil, err
@@ -59,21 +56,16 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2) (*pb.HashedRekordLogEntryV0_0_
 	if err != nil {
 		return nil, fmt.Errorf("parsing public key: %w", err)
 	}
-	var alg crypto.Hash
-	switch hr.Data.Algorithm {
-	case v1.HashAlgorithm_SHA2_384:
-		alg = crypto.SHA384
-	case v1.HashAlgorithm_SHA2_512:
-		alg = crypto.SHA512
-	default:
-		alg = crypto.SHA256
-	}
-	if err := sigObj.Verify(nil, keyObj, options.WithDigest(hr.Data.Digest), options.WithCryptoSignerOpts(alg)); err != nil {
+
+	// TODO: Look up hash with sigstore/sigstore's GetAlgorithmDetails(hr.Signature.Verifier.KeyDetails).GetHashType()
+	// Update hardcoded SHA256 during signature verification and as output
+
+	if err := sigObj.Verify(nil, keyObj, options.WithDigest(hr.Digest), options.WithCryptoSignerOpts(crypto.SHA256)); err != nil {
 		return nil, fmt.Errorf("verifying signature: %w", err)
 	}
 
 	return &pb.HashedRekordLogEntryV0_0_2{
 		Signature: hr.Signature,
-		Data:      hr.Data,
+		Data:      &v1.HashOutput{Digest: hr.Digest, Algorithm: v1.HashAlgorithm_SHA2_256},
 	}, nil
 }
