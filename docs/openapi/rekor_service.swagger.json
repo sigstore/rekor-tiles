@@ -307,17 +307,12 @@
         "rawBytes": {
           "type": "string",
           "format": "byte",
-          "description": "DER-encoded public key, encoding method is specified by the\nkey_details attribute."
-        },
-        "keyDetails": {
-          "$ref": "#/definitions/v1PublicKeyDetails",
-          "description": "Key encoding and signature algorithm to use for this key."
+          "title": "DER-encoded public key"
         }
       },
-      "title": "Fork of protobuf-specs/sigstore_common PublicKey without validity window",
+      "title": "PublicKey contains an encoded public key",
       "required": [
-        "rawBytes",
-        "keyDetails"
+        "rawBytes"
       ]
     },
     "rekorv2Signature": {
@@ -367,33 +362,6 @@
       "required": [
         "envelope"
       ]
-    },
-    "v1HashAlgorithm": {
-      "type": "string",
-      "enum": [
-        "HASH_ALGORITHM_UNSPECIFIED",
-        "SHA2_256",
-        "SHA2_384",
-        "SHA2_512",
-        "SHA3_256",
-        "SHA3_384"
-      ],
-      "default": "HASH_ALGORITHM_UNSPECIFIED",
-      "description": "Only a subset of the secure hash standard algorithms are supported.\nSee \u003chttps://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf\u003e for more\ndetails.\nUNSPECIFIED SHOULD not be used, primary reason for inclusion is to force\nany proto JSON serialization to emit the used hash algorithm, as default\noption is to *omit* the default value of an enum (which is the first\nvalue, represented by '0'."
-    },
-    "v1HashOutput": {
-      "type": "object",
-      "properties": {
-        "algorithm": {
-          "$ref": "#/definitions/v1HashAlgorithm"
-        },
-        "digest": {
-          "type": "string",
-          "format": "byte",
-          "description": "This is the raw octets of the message digest as computed by\nthe hash algorithm."
-        }
-      },
-      "description": "HashOutput captures a digest of a 'message' (generic octet sequence)\nand the corresponding hash algorithm used."
     },
     "v1InclusionPromise": {
       "type": "object",
@@ -604,8 +572,9 @@
     "v2HashedRekordRequestV0_0_2": {
       "type": "object",
       "properties": {
-        "data": {
-          "$ref": "#/definitions/v1HashOutput",
+        "digest": {
+          "type": "string",
+          "format": "byte",
           "title": "The hashed data"
         },
         "signature": {
@@ -615,7 +584,7 @@
       },
       "title": "A request to add a hashedrekord to the log",
       "required": [
-        "data",
+        "digest",
         "signature"
       ]
     },
@@ -623,16 +592,23 @@
       "type": "object",
       "properties": {
         "publicKey": {
-          "$ref": "#/definitions/rekorv2PublicKey"
+          "$ref": "#/definitions/rekorv2PublicKey",
+          "title": "DER-encoded public key. Encoding method is specified by the key_details attribute"
         },
         "x509Certificate": {
-          "$ref": "#/definitions/v1X509Certificate"
+          "$ref": "#/definitions/v1X509Certificate",
+          "title": "DER-encoded certificate"
+        },
+        "keyDetails": {
+          "$ref": "#/definitions/v1PublicKeyDetails",
+          "title": "Key encoding and signature algorithm to use for this key"
         }
       },
-      "title": "Either a raw public key or a x509 cerificiate with embedded publicKey",
+      "title": "Either a public key or a X.509 cerificiate with an embedded public key",
       "required": [
         "publicKey",
-        "x509Certificate"
+        "x509Certificate",
+        "keyDetails"
       ]
     }
   }

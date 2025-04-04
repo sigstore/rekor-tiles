@@ -20,22 +20,22 @@ import "google/api/field_behavior.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
-// Fork of protobuf-specs/sigstore_common PublicKey without validity window
+// PublicKey contains an encoded public key
 message PublicKey {
-    // DER-encoded public key, encoding method is specified by the
-    // key_details attribute.
+    // DER-encoded public key
     bytes raw_bytes = 1 [(google.api.field_behavior) = REQUIRED];
-    // Key encoding and signature algorithm to use for this key.
-    dev.sigstore.common.v1.PublicKeyDetails key_details = 2 [(google.api.field_behavior) = REQUIRED];
-
 }
 
-// Either a raw public key or a x509 cerificiate with embedded publicKey
+// Either a public key or a X.509 cerificiate with an embedded public key
 message Verifier {
     oneof verifier {
-        PublicKey publicKey = 1 [(google.api.field_behavior) = REQUIRED];
+        // DER-encoded public key. Encoding method is specified by the key_details attribute
+        PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
+        // DER-encoded certificate
         dev.sigstore.common.v1.X509Certificate x509_certificate = 2 [(google.api.field_behavior) = REQUIRED];
     }
+    // Key encoding and signature algorithm to use for this key
+    dev.sigstore.common.v1.PublicKeyDetails key_details = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 // A signature and an associated verifier

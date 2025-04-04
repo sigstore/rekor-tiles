@@ -65,11 +65,10 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
-				Data: &v1.HashOutput{
-					Digest: hexDecodeOrDie(t, hexEncodedDigest),
-				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
 			},
 		},
 		{
@@ -82,11 +81,10 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
-				Data: &v1.HashOutput{
-					Digest: hexDecodeOrDie(t, hexEncodedDigest),
-				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
 			},
 			expectErr: fmt.Errorf("missing signature"),
 		},
@@ -96,14 +94,12 @@ func TestToLogEntry(t *testing.T) {
 				Signature: &pb.Signature{
 					Content: b64DecodeOrDie(t, b64EncodedSignature),
 				},
-				Data: &v1.HashOutput{
-					Digest: hexDecodeOrDie(t, hexEncodedDigest),
-				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
 			},
 			expectErr: fmt.Errorf("missing verifier"),
 		},
 		{
-			name: "missing data",
+			name: "missing digest",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
 				Signature: &pb.Signature{
 					Content: b64DecodeOrDie(t, b64EncodedSignature),
@@ -113,27 +109,11 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
 			},
-			expectErr: fmt.Errorf("missing data"),
-		},
-		{
-			name: "missing data digest",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
-				Signature: &pb.Signature{
-					Content: b64DecodeOrDie(t, b64EncodedSignature),
-					Verifier: &pb.Verifier{
-						Verifier: &pb.Verifier_PublicKey{
-							PublicKey: &pb.PublicKey{
-								RawBytes: []byte(publicKey),
-							},
-						},
-					},
-				},
-				Data: &v1.HashOutput{},
-			},
-			expectErr: fmt.Errorf("missing data digest"),
+			expectErr: fmt.Errorf("missing digest"),
 		},
 		{
 			name: "invalid signature",
@@ -146,11 +126,10 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(publicKey),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
-				Data: &v1.HashOutput{
-					Digest: hexDecodeOrDie(t, hexEncodedDigest),
-				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
 			},
 			expectErr: fmt.Errorf("verifying signature: "),
 		},
@@ -165,11 +144,10 @@ func TestToLogEntry(t *testing.T) {
 								RawBytes: []byte(x509Cert),
 							},
 						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
-				Data: &v1.HashOutput{
-					Digest: hexDecodeOrDie(t, hexEncodedDigest),
-				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
 			},
 		},
 	}

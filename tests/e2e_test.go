@@ -218,12 +218,10 @@ func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64
 						RawBytes: pubKey,
 					},
 				},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 			},
 		},
-		Data: &v1.HashOutput{
-			Algorithm: v1.HashAlgorithm_SHA2_256,
-			Digest:    digest,
-		},
+		Digest: digest,
 	}, nil
 }
 
@@ -261,6 +259,7 @@ func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV0
 						RawBytes: pubKey,
 					},
 				},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 			},
 		},
 	}, nil

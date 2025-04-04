@@ -25,7 +25,7 @@ option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 // A request to add a hashedrekord to the log
 message HashedRekordRequestV0_0_2 {
     // The hashed data
-    dev.sigstore.common.v1.HashOutput data = 1 [(google.api.field_behavior) = REQUIRED];
+    bytes digest = 1 [(google.api.field_behavior) = REQUIRED];
     // A single signature over the hashed data with the verifier needed to validate it
     Signature signature = 2 [(google.api.field_behavior) = REQUIRED];
 }
