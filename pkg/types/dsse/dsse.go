@@ -28,8 +28,10 @@ import (
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
-	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
+	"github.com/sigstore/rekor-tiles/pkg/types/validator"
 	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
+	"github.com/sigstore/rekor-tiles/pkg/types/verifier/certificate"
+	"github.com/sigstore/rekor-tiles/pkg/types/verifier/publickey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
@@ -44,21 +46,32 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
 		return nil, fmt.Errorf("missing verifiers")
 	}
 	for _, v := range ds.Verifiers {
-		if err := verifier.Validate(v); err != nil {
+		if err := validator.Validate(v); err != nil {
 			return nil, err
 		}
 	}
 	if len(ds.Envelope.Signatures) == 0 {
 		return nil, fmt.Errorf("envelope missing signatures")
 	}
-	allPubKeyBytes := make(map[*pb.Verifier][]byte, 0)
+	allPubKeyBytes := make(map[*pb.Verifier]verifier.Verifier, 0)
 	for _, v := range ds.Verifiers {
 		pubKey := v.GetPublicKey()
 		cert := v.GetX509Certificate()
-		if pubKey != nil {
-			allPubKeyBytes[v] = pubKey.RawBytes
-		} else {
-			allPubKeyBytes[v] = cert.RawBytes
+		switch {
+		case pubKey != nil:
+			vf, err := publickey.NewVerifier(bytes.NewReader(pubKey.RawBytes))
+			if err != nil {
+				return nil, fmt.Errorf("parsing public key: %v", err)
+			}
+			allPubKeyBytes[v] = vf
+		case cert != nil:
+			vf, err := certificate.NewVerifier(bytes.NewReader(cert.RawBytes))
+			if err != nil {
+				return nil, fmt.Errorf("parsing certificate: %v", err)
+			}
+			allPubKeyBytes[v] = vf
+		default:
+			return nil, fmt.Errorf("must contain either a public key or X.509 certificate")
 		}
 	}
 	signerVerifiers, err := verifyEnvelope(allPubKeyBytes, ds.Envelope)
@@ -79,7 +92,7 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2) (*pb.DSSELogEntryV0_0_2, error) {
 // verifyEnvelope takes in an array of possible key bytes and attempts to parse them as x509 public keys.
 // it then uses these to verify the envelope and makes sure that every signature on the envelope is verified.
 // it returns a list of SignatureAndVerifier mapping each signature in the envelope to a provided verifier
-func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelope) ([]*pb.Signature, error) {
+func verifyEnvelope(allPubKeyBytes map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope) ([]*pb.Signature, error) {
 	env := FromProto(pbenv)
 	savs := make([]*pb.Signature, 0, len(allPubKeyBytes))
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
@@ -88,16 +101,12 @@ func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelo
 		allSigs[sig.Sig] = struct{}{}
 	}
 
-	for v, pubKeyBytes := range allPubKeyBytes {
+	for v, verifierKey := range allPubKeyBytes {
 		if len(allSigs) == 0 {
 			break // if all signatures have been verified, do not attempt anymore
 		}
-		key, err := x509.NewPublicKey(bytes.NewReader(pubKeyBytes))
-		if err != nil {
-			return nil, fmt.Errorf("could not parse public key as x509: %w", err)
-		}
 
-		vfr, err := signature.LoadVerifier(key.CryptoPubKey(), crypto.SHA256)
+		vfr, err := signature.LoadVerifier(verifierKey.PublicKey(), crypto.SHA256)
 		if err != nil {
 			return nil, fmt.Errorf("could not load verifier: %w", err)
 		}
