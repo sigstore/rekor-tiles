@@ -64,7 +64,6 @@ func NewServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signat
 		algorithmRegistry: algorithmRegistry,
 	}
 }
-
 func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
 	if s.readOnly {
 		slog.Warn("rekor is in read-only mode, cannot create new entry")

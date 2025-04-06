@@ -71,7 +71,6 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	s := grpc.NewServer(opts...)
 	pb.RegisterRekorServer(s, server)
 	grpc_health_v1.RegisterHealthServer(s, server)
-
 	getMetrics().serverMetrics.InitializeMetrics(s)
 
 	return &grpcServer{
