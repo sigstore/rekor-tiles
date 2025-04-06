@@ -27,20 +27,26 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"sync"
 	"syscall"
+	"time"
 
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 type grpcServer struct {
@@ -53,7 +59,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	var opts []grpc.ServerOption
 
 	opts = append(opts,
-		grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()),
+		grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor(), customMetricsInterceptor),
 		grpc.ConnectionTimeout(config.timeout),
 		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
 		grpc.MaxRecvMsgSize(config.maxMessageSize),
@@ -126,4 +132,42 @@ func loadTLSCredentials(certFile, keyFile string) (credentials.TransportCredenti
 	}
 
 	return credentials.NewTLS(tlsConfig), nil
+}
+
+func customMetricsInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (interface{}, error) {
+	start := time.Now()
+
+	resp, err := handler(ctx, req)
+	if err != nil {
+		slog.Error("error handling request", "error", err)
+	}
+	m := getMetrics()
+	method := info.FullMethod
+	code := status.Code(err).String()
+
+	parts := strings.Split(method, "/")
+	service := ""
+	if len(parts) >= 2 {
+		service = parts[1]
+	}
+
+	source := "direct"
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if ua := md.Get("user-agent"); len(ua) > 0 && strings.Contains(ua[0], "grpc-gateway") {
+			source = "http"
+		}
+	}
+
+	latency := time.Since(start).Seconds()
+
+	reqSize := 0
+	if msg, ok := req.(proto.Message); ok {
+		reqSize = proto.Size(msg)
+	}
+
+	m.grpcQPS.WithLabelValues(service, method, code, source).Inc()
+	m.grpcLatency.WithLabelValues(service, method, code, source).Observe(latency)
+	m.grpcRequestSize.WithLabelValues(service, method, code, source).Observe(float64(reqSize))
+
+	return resp, err
 }

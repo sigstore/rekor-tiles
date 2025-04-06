@@ -41,6 +41,9 @@ type metrics struct {
 	httpLatency            *prometheus.HistogramVec
 	httpRequestsCount      *prometheus.CounterVec
 	requestSize            *prometheus.HistogramVec
+	grpcLatency            *prometheus.HistogramVec
+	grpcQPS                *prometheus.CounterVec
+	grpcRequestSize        *prometheus.HistogramVec
 }
 
 // Metrics provides the singleton metrics instance
@@ -81,6 +84,21 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		Name: "rekor_http_api_request_size",
 		Help: "API Request size on HTTP calls",
 	}, []string{"code", "method"})
+
+	m.grpcLatency = f.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "rekor_latency_by_api_grpc",
+		Help: "GRPC latency by service and method",
+	}, []string{"service", "method", "code", "source"})
+
+	m.grpcQPS = f.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_qps_by_api_grpc",
+		Help: "GRPC QPS by service and method",
+	}, []string{"service", "method", "code", "source"})
+
+	m.grpcRequestSize = f.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "rekor_grpc_request_size_bytes",
+		Help: "GRPC request size in bytes",
+	}, []string{"service", "method", "code", "source"})
 
 	// TODO(appu): add metrics from rekor v1 (anything but Counter appears to need to be a pointer)
 	// https://github.com/sigstore/rekor-tiles/issues/123
