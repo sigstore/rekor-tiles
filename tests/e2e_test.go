@@ -47,7 +47,7 @@ import (
 )
 
 const (
-	defaultRekorURL        = "http://localhost:3000"
+	defaultRekorURL        = "http://localhost:3003"
 	defaultRekorHostname   = "rekor-local"
 	defaultGCSURL          = "http://localhost:7080/tiles"
 	defaultServerPublicKey = "./testdata/pki/ed25519-pub-key.pem"

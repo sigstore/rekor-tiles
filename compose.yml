@@ -63,9 +63,9 @@ services:
     - "--signer-filepath=/pki/ed25519-priv-key.pem"
     - "--checkpoint-interval=2s"
     ports:
-    - "3000:3000" # http port
+    - "3003:3000" # http port
     - "3001:3001" # grpc port
-    - "2112:2112" # metrics port
+    - "2114:2112" # metrics port
     healthcheck:
       test:
       - CMD-SHELL
