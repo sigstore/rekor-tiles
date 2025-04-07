@@ -46,7 +46,7 @@ MC4CAQAwBQYDK2VwBCIEIGuZ8UWTFmXi/26ZgF4VYL8HfLSuW12TN5XMFQRt1Loc
 `
 
 func TestNewWriter(t *testing.T) {
-	writeURL := "http://localhost:3000"
+	writeURL := "http://localhost:3003"
 	origin := "rekor-local"
 	verifier, err := getVerifier(ed25519PrivKey)
 	if err != nil {
@@ -60,7 +60,7 @@ func TestNewWriter(t *testing.T) {
 		{
 			name: "no options",
 			expected: &writeClient{
-				baseURL: &url.URL{Scheme: "http", Host: "localhost:3000"},
+				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
 				client:  &http.Client{Transport: http.DefaultTransport},
 				origin:  "rekor-local",
 			},
@@ -71,7 +71,7 @@ func TestNewWriter(t *testing.T) {
 				client.WithUserAgent("test"),
 			},
 			expected: &writeClient{
-				baseURL: &url.URL{Scheme: "http", Host: "localhost:3000"},
+				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
 				client:  &http.Client{Transport: client.CreateRoundTripper(nil, "test")},
 				origin:  "rekor-local",
 			},
@@ -82,7 +82,7 @@ func TestNewWriter(t *testing.T) {
 				client.WithTimeout(1 * time.Second),
 			},
 			expected: &writeClient{
-				baseURL: &url.URL{Scheme: "http", Host: "localhost:3000"},
+				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
 				client:  &http.Client{Transport: http.DefaultTransport, Timeout: 1 * time.Second},
 				origin:  "rekor-local",
 			},
@@ -94,7 +94,7 @@ func TestNewWriter(t *testing.T) {
 				client.WithTimeout(1 * time.Second),
 			},
 			expected: &writeClient{
-				baseURL: &url.URL{Scheme: "http", Host: "localhost:3000"},
+				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
 				client: &http.Client{Transport: client.CreateRoundTripper(nil, "test"),
 					Timeout: 1 * time.Second,
 				},
