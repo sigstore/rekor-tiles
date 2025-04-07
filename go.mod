@@ -10,7 +10,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.26.3
 	github.com/prometheus/client_golang v1.21.1
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
-	github.com/sigstore/protobuf-specs v0.4.0
+	github.com/sigstore/protobuf-specs v0.4.1
 	github.com/sigstore/sigstore v1.9.2-0.20250311183026-c049f8ddc600
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.2-0.20250311183026-c049f8ddc600
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.2-0.20250311183026-c049f8ddc600
@@ -30,7 +30,7 @@ require (
 	golang.org/x/mod v0.24.0
 	golang.org/x/sync v0.13.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250303144028-a0af3efb3deb
-	google.golang.org/grpc v1.71.0
+	google.golang.org/grpc v1.71.1
 	google.golang.org/protobuf v1.36.6
 	sigs.k8s.io/release-utils v0.11.1
 )
