@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM google/cloud-sdk:stable@sha256:c68294ece6db11d797a565919a1a88257c5bf7a7ba8ac1344eda23d33fdc8db8
+FROM google/cloud-sdk:stable@sha256:982401fdc4f5778498877c10d6beb4e7e09b0af9008af48f785bc79ddde2328d
 
 ADD ./config/emulator_init.sh /root/
 RUN chmod +x /root/emulator_init.sh
