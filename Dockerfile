@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.24.2@sha256:991aa6a6e4431f2f01e869a812934bd60fbc87fb939e4a1ea54b8494ab9d2fc6 AS builder
+FROM golang:1.24.2@sha256:fb224f950b0dfb889f8f1122bf3dfc21976735ccf983b73a1e6e014215a272f5 AS builder
 ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
@@ -30,7 +30,7 @@ RUN go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
 RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug ./cmd/rekor-server
 
 # Multi-Stage production build
-FROM golang:1.24.2@sha256:991aa6a6e4431f2f01e869a812934bd60fbc87fb939e4a1ea54b8494ab9d2fc6 AS deploy
+FROM golang:1.24.2@sha256:fb224f950b0dfb889f8f1122bf3dfc21976735ccf983b73a1e6e014215a272f5 AS deploy
 
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
@@ -39,7 +39,7 @@ COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 CMD ["rekor-server", "serve"]
 
 # debug compile options & debugger
-FROM deploy as debug
+FROM deploy AS debug
 # dlv v1.24.1
 RUN go install github.com/go-delve/delve/cmd/dlv@fc6a439f2206c796bb20f56f37f8e10eb26cb158
 
