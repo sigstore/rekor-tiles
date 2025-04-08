@@ -107,7 +107,7 @@ func (ms *MockServer) StartTLS(t *testing.T) {
 	time.Sleep(1 * time.Second)
 }
 
-func (ms *MockServer) StartServerWithAuth(t *testing.T, httpAuth, grpcAuth string) {
+func (ms *MockServer) StartServerWithAuth(_ *testing.T, httpAuth, grpcAuth string) {
 	ms.gc = NewGRPCConfig(
 		WithGRPCHost("localhost"),
 		WithGRPCPort(8081),
