@@ -27,6 +27,7 @@ type HTTPConfig struct {
 	maxRequestBodySize int
 	certFile           string
 	keyFile            string
+	reqAuthenticator   string
 }
 type HTTPOption func(config *HTTPConfig)
 
@@ -91,4 +92,17 @@ func WithHTTPTLSCredentials(certFile, keyFile string) HTTPOption {
 		config.certFile = certFile
 		config.keyFile = keyFile
 	}
+}
+
+func WithHTTPRequestAuthenticator(authenticator string) HTTPOption {
+	return func(config *HTTPConfig) {
+		config.reqAuthenticator = authenticator
+	}
+}
+
+func (hc HTTPConfig) ReqAuthenticator() string {
+	if hc.reqAuthenticator == "" {
+		return "none"
+	}
+	return hc.reqAuthenticator
 }

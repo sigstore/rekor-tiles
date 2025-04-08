@@ -117,6 +117,7 @@ var serveCmd = &cobra.Command{
 				server.WithHTTPMaxRequestBodySize(viper.GetInt("max-request-body-size")),
 				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
 				server.WithHTTPTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+				server.WithHTTPRequestAuthenticator(viper.GetString("http-request-authenticator")),
 			),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
@@ -124,6 +125,7 @@ var serveCmd = &cobra.Command{
 				server.WithGRPCTimeout(viper.GetDuration("timeout")),
 				server.WithGRPCMaxMessageSize(viper.GetInt("max-request-body-size")),
 				server.WithTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+				server.WithGRPCRequestAuthenticator(viper.GetString("http-request-authenticator")),
 			),
 			rekorServer,
 			shutdownFn,

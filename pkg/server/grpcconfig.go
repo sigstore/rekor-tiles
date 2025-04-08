@@ -28,12 +28,13 @@ const (
 
 // GRPCConfig contains options for the GRPC server from the CLI.
 type GRPCConfig struct {
-	port           int
-	host           string
-	timeout        time.Duration
-	maxMessageSize int
-	certFile       string
-	keyFile        string
+	port             int
+	host             string
+	timeout          time.Duration
+	maxMessageSize   int
+	certFile         string
+	keyFile          string
+	reqAuthenticator string
 }
 type GRPCOption func(config *GRPCConfig)
 
@@ -91,5 +92,18 @@ func WithTLSCredentials(certFile, keyFile string) GRPCOption {
 	return func(config *GRPCConfig) {
 		config.certFile = certFile
 		config.keyFile = keyFile
+	}
+}
+
+func (gc GRPCConfig) ReqAuthenticator() string {
+	if gc.reqAuthenticator == "" {
+		return "none"
+	}
+	return gc.reqAuthenticator
+}
+
+func WithGRPCRequestAuthenticator(authenticator string) GRPCOption {
+	return func(config *GRPCConfig) {
+		config.reqAuthenticator = authenticator
 	}
 }

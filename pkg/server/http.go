@@ -39,13 +39,15 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
 const (
-	httpStatusCodeHeader   = "x-http-code"
-	httpErrorMessageHeader = "x-http-error-message"
+	httpStatusCodeHeader    = "x-http-code"
+	httpErrorMessageHeader  = "x-http-error-message"
+	HTTPReqAuthenticatorKey = "x-rekor-auth"
 )
 
 type httpProxy struct {
@@ -53,17 +55,20 @@ type httpProxy struct {
 	serverEndpoint string
 }
 
+func withAuthenticator(auth string) grpc.DialOption {
+	return grpc.WithUnaryInterceptor(func(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, invoker grpc.UnaryInvoker, opts ...grpc.CallOption) error {
+		ctx = metadata.AppendToOutgoingContext(ctx, HTTPReqAuthenticatorKey, auth)
+		return invoker(ctx, method, req, reply, cc, opts...)
+	})
+}
+
 // newHTTProxy creates a mux for each of the service grpc methods, including the grpc heatlhcheck.
 func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServer) *httpProxy {
 	// configure a custom marshaler to fail on unknown fields
 	strictMarshaler := runtime.HTTPBodyMarshaler{
 		Marshaler: &runtime.JSONPb{
-			MarshalOptions: protojson.MarshalOptions{
-				EmitUnpopulated: true,
-			},
-			UnmarshalOptions: protojson.UnmarshalOptions{
-				DiscardUnknown: false,
-			},
+			MarshalOptions:   protojson.MarshalOptions{EmitUnpopulated: true},
+			UnmarshalOptions: protojson.UnmarshalOptions{DiscardUnknown: false},
 		},
 	}
 
@@ -81,6 +86,10 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 
 	// GRPC client connection so the http mux's healthz endpoint can reach the grpc healthcheck service.
 	// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/#adding-healthz-endpoint-to-runtimeservemux.
+	if config.ReqAuthenticator() != "" {
+		opts = append(opts, withAuthenticator(config.ReqAuthenticator()))
+	}
+
 	cc, err := grpc.NewClient(grpcServer.serverEndpoint, opts...)
 	if err != nil {
 		slog.Error("failed to connect to grpc server:", "errors", err)
@@ -102,8 +111,9 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	metrics := getMetrics()
 	handler := promhttp.InstrumentMetricHandler(metrics.reg, mux)
 	handler = promhttp.InstrumentHandlerDuration(metrics.httpLatency, handler)
+	handler = promhttp.InstrumentHandlerCounter(metrics.httpQPS, handler)
 	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
-	handler = promhttp.InstrumentHandlerRequestSize(metrics.requestSize, handler)
+	handler = promhttp.InstrumentHandlerRequestSize(metrics.httpRequestSize, handler)
 	handler = http.MaxBytesHandler(handler, int64(config.maxRequestBodySize))
 
 	server := &http.Server{
