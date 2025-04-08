@@ -33,7 +33,7 @@ ifeq ($(DIFF), 1)
 endif
 
 PROTO_DIRS = pkg/generated/protobuf/ api/proto/ protoc-builder/
-SRC = $(shell find -iname "*.go" | grep -v -e $(subst $() $(), -e ,$(strip $(PROTO_DIRS))))
+SRC = $(shell find . -iname "*.go" | grep -v -e $(subst $() $(), -e ,$(strip $(PROTO_DIRS))))
 PROTO_SRC = $(shell find $(PROTO_DIRS))
 
 REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
