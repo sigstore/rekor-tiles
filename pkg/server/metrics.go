@@ -51,7 +51,7 @@ func getMetrics() *metrics {
 var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 	m := metrics{
 		reg:           prometheus.NewRegistry(),
-		serverMetrics: grpc_prometheus.NewServerMetrics(),
+		serverMetrics: grpc_prometheus.NewServerMetrics(grpc_prometheus.WithServerHandlingTimeHistogram()),
 	}
 	m.reg.MustRegister(m.serverMetrics)
 
