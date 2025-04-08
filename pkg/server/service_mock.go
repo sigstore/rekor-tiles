@@ -51,10 +51,12 @@ func (ms *MockServer) Start(_ *testing.T) {
 	ms.gc = NewGRPCConfig(
 		WithGRPCHost("localhost"),
 		WithGRPCPort(8081),
+		WithGRPCRequestAuthenticator("test-auth"),
 	)
 	ms.hc = NewHTTPConfig(
 		WithHTTPHost("localhost"),
 		WithHTTPPort(8080),
+		WithHTTPRequestAuthenticator("test-auth"),
 	)
 
 	s := &mockRekorServer{}
@@ -80,12 +82,14 @@ func (ms *MockServer) StartTLS(t *testing.T) {
 		WithGRPCHost("localhost"),
 		WithGRPCPort(8081),
 		WithTLSCredentials(certFile, keyFile),
+		WithGRPCRequestAuthenticator("test-auth"),
 	)
 
 	ms.hc = NewHTTPConfig(
 		WithHTTPHost("localhost"),
 		WithHTTPPort(8080),
 		WithHTTPTLSCredentials(certFile, keyFile),
+		WithHTTPRequestAuthenticator("test-auth"),
 	)
 
 	s := &mockRekorServer{}
@@ -100,6 +104,31 @@ func (ms *MockServer) StartTLS(t *testing.T) {
 	ms.wg.Add(1)
 
 	// TODO: see if health endpoint is up, but for now just wait a second
+	time.Sleep(1 * time.Second)
+}
+
+func (ms *MockServer) StartServerWithAuth(t *testing.T, httpAuth, grpcAuth string) {
+	ms.gc = NewGRPCConfig(
+		WithGRPCHost("localhost"),
+		WithGRPCPort(8081),
+		WithGRPCRequestAuthenticator(grpcAuth),
+	)
+	ms.hc = NewHTTPConfig(
+		WithHTTPHost("localhost"),
+		WithHTTPPort(8080),
+		WithHTTPRequestAuthenticator(httpAuth),
+	)
+
+	s := &mockRekorServer{}
+	shutdownFn := func(context.Context) error { return nil }
+
+	ms.wg = &sync.WaitGroup{}
+	go func() {
+		Serve(context.Background(), ms.hc, ms.gc, s, shutdownFn)
+		ms.wg.Done()
+	}()
+	ms.wg.Add(1)
+
 	time.Sleep(1 * time.Second)
 }
 

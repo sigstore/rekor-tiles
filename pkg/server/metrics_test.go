@@ -58,6 +58,7 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 		"rekor_new_hashedrekord_entries",
 		"rekor_new_dsse_entries",
 		"build_info",
+		"rekor_http_qps",
 		"rekor_http_api_latency",
 		"rekor_http_requests_total",
 		"grpc_server_started_total",     // should imply we have the default set of grpc server metrics

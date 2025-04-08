@@ -77,6 +77,88 @@ func TestServe_httpstls(t *testing.T) {
 	})
 }
 
+func TestServe_httpWithAuth(t *testing.T) {
+	server := MockServer{}
+	secret := "test-auth"
+
+	server.StartServerWithAuth(t, secret, secret)
+	defer server.Stop(t)
+
+	httpBaseURL := fmt.Sprintf("http://%s", server.hc.HTTPTarget())
+	t.Run("check HTTP proxy with authenticator", func(t *testing.T) {
+		checkHTTPPost(t, httpBaseURL)
+	})
+
+	t.Run("check HTTP proxy with authenticator", func(t *testing.T) {
+		resp, err := http.Post(httpBaseURL+"/api/v2/log/entries", "application/json", nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer resp.Body.Close()
+
+		for header, values := range resp.Header {
+			if strings.EqualFold(header, HTTPReqAuthenticatorKey) {
+				t.Errorf("secret header %q found in HTTP response", header)
+			}
+			for _, val := range values {
+				if strings.Contains(val, secret) {
+					t.Errorf("secret %q exposed in header %q: %q", secret, header, val)
+				}
+			}
+		}
+
+		body, err := io.ReadAll(resp.Body)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(body), secret) {
+			t.Errorf("secret %q exposed in response body: %q", secret, body)
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			t.Errorf("got %d, want %d", resp.StatusCode, http.StatusOK)
+		}
+	})
+}
+
+func TestServe_httpWithInvalidAuth(t *testing.T) {
+	incorrectSecret := "wrong-secret-999"
+	server := MockServer{}
+
+	server.StartServerWithAuth(t, incorrectSecret, "correct-secret")
+	defer server.Stop(t)
+
+	httpBaseURL := fmt.Sprintf("http://%s", server.hc.HTTPTarget())
+	resp, err := http.Post(httpBaseURL+"/api/v2/log/entries", "application/json", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusUnauthorized {
+		t.Errorf("got %d, want %d (Unauthorized) for invalid authenticator", resp.StatusCode, http.StatusUnauthorized)
+	}
+
+	for header, values := range resp.Header {
+		if strings.EqualFold(header, HTTPReqAuthenticatorKey) {
+			t.Errorf("secret header %q found in HTTP response", header)
+		}
+		for _, val := range values {
+			if strings.Contains(val, incorrectSecret) {
+				t.Errorf("secret %q exposed in header %q: %q", incorrectSecret, header, val)
+			}
+		}
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Contains(string(body), incorrectSecret) {
+		t.Errorf("secret %q exposed in response body: %q", incorrectSecret, body)
+	}
+}
+
 func checkAllEndpoints(t *testing.T, baseURL string, client *http.Client) {
 	for _, tt := range endpointTests {
 		url := baseURL + tt.path
