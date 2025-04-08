@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package publickey
+package certificate
 
 import (
 	"crypto"
@@ -23,53 +23,47 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sigstore/rekor-tiles/pkg/types/verifier/identity"
+	"github.com/sigstore/rekor-tiles/pkg/verifier/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 
-// PublicKey implements verifier.Verifier
-type PublicKey struct {
-	key crypto.PublicKey
+// Certificate implements verifier.Verifier
+type Certificate struct {
+	cert *x509.Certificate
 }
 
-func NewVerifier(r io.Reader) (*PublicKey, error) {
+func NewVerifier(r io.Reader) (*Certificate, error) {
 	if r == nil {
-		return nil, errors.New("public key reader is nil")
+		return nil, errors.New("certificate reader is nil")
 	}
 	derVerifier, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
-
-	key, err := x509.ParsePKIXPublicKey(derVerifier)
+	cert, err := x509.ParseCertificate(derVerifier)
 	if err != nil {
-		return nil, fmt.Errorf("parsing public key: %v", err)
+		return nil, fmt.Errorf("parsing certificate: %v", err)
 	}
-	return &PublicKey{key: key}, nil
+	return &Certificate{cert: cert}, nil
 }
 
-func (k PublicKey) String() string {
-	encoded, err := cryptoutils.MarshalPublicKeyToPEM(k.key)
+func (c Certificate) String() string {
+	encoded, err := cryptoutils.MarshalCertificateToPEM(c.cert)
 	if err != nil {
 		return ""
 	}
 	return string(encoded)
-
 }
 
-func (k PublicKey) PublicKey() crypto.PublicKey {
-	return k.key
+func (c Certificate) PublicKey() crypto.PublicKey {
+	return c.cert.PublicKey
 }
 
-func (k PublicKey) Identities() ([]identity.Identity, error) {
-	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(k.key)
-	if err != nil {
-		return nil, err
-	}
-	digest := sha256.Sum256(pkixKey)
+func (c Certificate) Identities() ([]identity.Identity, error) {
+	digest := sha256.Sum256(c.cert.Raw)
 	return []identity.Identity{{
-		Crypto:      k.key,
-		Raw:         pkixKey,
+		Crypto:      c.cert,
+		Raw:         c.cert.Raw,
 		Fingerprint: hex.EncodeToString(digest[:]),
 	}}, nil
 }

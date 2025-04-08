@@ -30,9 +30,9 @@ import (
 	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/types/validator"
-	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
-	"github.com/sigstore/rekor-tiles/pkg/types/verifier/certificate"
-	"github.com/sigstore/rekor-tiles/pkg/types/verifier/publickey"
+	"github.com/sigstore/rekor-tiles/pkg/verifier"
+	"github.com/sigstore/rekor-tiles/pkg/verifier/certificate"
+	"github.com/sigstore/rekor-tiles/pkg/verifier/publickey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
