@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.24.2@sha256:1ecc479bc712a6bdb56df3e346e33edcc141f469f82840bab9f4bc2bc41bf91d AS builder
+# Debian 12 (Bookworm) image to build binary for distroless/static-debian12
+FROM golang:1.24.2-bookworm@sha256:00eccd446e023d3cd9566c25a6e6a02b90db3e1e0bbe26a48fc29cd96e800901 AS builder
 ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
@@ -26,21 +27,13 @@ ADD ./cmd/ $APP_ROOT/src/cmd/
 ADD ./pkg/ $APP_ROOT/src/pkg/
 
 ARG SERVER_LDFLAGS
-# Build server for deployment
-RUN go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
-# Build server for debugger
-RUN CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug ./cmd/rekor-server
+# Build server for deployment. Build without cgo since distroless/static-debian12 doesn't include lib/cgo
+RUN CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
 
 # Multi-stage deployment build
-FROM golang:1.24.2@sha256:1ecc479bc712a6bdb56df3e346e33edcc141f469f82840bab9f4bc2bc41bf91d AS deploy
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:c0f429e16b13e583da7e5a6ec20dd656d325d88e6819cafe0adb0828976529dc AS deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 # Set the binary as the entrypoint of the container
 CMD ["rekor-server", "serve"]
 
-# Multi-stage debugger build
-FROM deploy AS debug
-# dlv v1.24.2
-RUN go install github.com/go-delve/delve/cmd/dlv@f0cc62bfcaa18b9f2cd01cebd818fad537ee93ec
-# Overwrite server binary
-COPY --from=builder /opt/app-root/src/rekor-server_debug /usr/local/bin/rekor-server

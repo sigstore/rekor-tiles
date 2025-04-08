@@ -3,3 +3,5 @@ rekorImagerefs
 .idea
 tools/bin/
 .vscode/
+# Added by goreleaser init:
+dist/

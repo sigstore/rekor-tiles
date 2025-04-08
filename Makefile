@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-.PHONY: all test clean lint gosec ko-local tools
+.PHONY: all test clean lint gosec ko-local tools ldflags
 
 all: rekor-server
 
@@ -36,7 +36,8 @@ PROTO_DIRS = pkg/generated/protobuf/ api/proto/ protoc-builder/
 SRC = $(shell find . -iname "*.go" | grep -v -e $(subst $() $(), -e ,$(strip $(PROTO_DIRS))))
 PROTO_SRC = $(shell find $(PROTO_DIRS))
 
-REKOR_LDFLAGS=-X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
+REKOR_LDFLAGS=-buildid= \
+              -X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
               -X sigs.k8s.io/release-utils/version.gitCommit=$(GIT_HASH) \
               -X sigs.k8s.io/release-utils/version.gitTreeState=$(GIT_TREESTATE) \
               -X sigs.k8s.io/release-utils/version.buildDate=$(BUILD_DATE)
@@ -59,6 +60,9 @@ gosec: ## Run gosec security scanner
 
 rekor-server: $(SRC) $(PROTO_SRC)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/rekor-server
+
+ldflags: ## Print ldflags
+	@echo $(SERVER_LDFLAGS)
 
 test: ## Run all tests
 	go test ./...
