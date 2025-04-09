@@ -171,7 +171,7 @@ func TestReadWrite(t *testing.T) {
 	assert.Contains(t, string(entryBundle), expectedB64PayloadHash)
 
 	// Add a second identical entries immediately to check for deduplication
-	// TODO(cmurphy): add more advanced deduplication checking when the Spanner emulator supports the "batch write" operation
+	// TODO(#158): add more advanced deduplication checking when the Spanner emulator supports the "batch write" operation
 	// (https://cloud.google.com/spanner/docs/batch-write) (https://github.com/GoogleCloudPlatform/cloud-spanner-emulator/issues/172).
 	oldIndex := tle.LogIndex
 	_, err = writer.Add(ctx, dr)

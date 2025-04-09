@@ -82,8 +82,7 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		Help: "API Request size on HTTP calls",
 	}, []string{"code", "method"})
 
-	// TODO(appu): add metrics from rekor v1 (anything but Counter appears to need to be a pointer)
-	// https://github.com/sigstore/rekor-tiles/issues/123
+	// TODO(#123): add metrics from rekor v1 (anything but Counter appears to need to be a pointer)
 
 	_ = f.NewGaugeFunc(
 		prometheus.GaugeOpts{
@@ -112,8 +111,6 @@ func newHTTPMetrics(_ context.Context, config *HTTPConfig) *httpMetrics {
 	mux.Handle("/", promhttp.HandlerFor(getMetrics().reg, promhttp.HandlerOpts{
 		Timeout: config.timeout,
 	}))
-
-	// TODO: configure https connection preferences (time-out, max size, etc)
 
 	endpoint := config.HTTPMetricsTarget()
 	return &httpMetrics{

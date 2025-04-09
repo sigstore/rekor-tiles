@@ -83,7 +83,7 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 
 	return &pb.DSSELogEntryV0_0_2{
 		PayloadHash: &v1.HashOutput{
-			// TODO: Change hardocded algorithm
+			// TODO(#195): Change hardocded algorithm
 			Algorithm: v1.HashAlgorithm_SHA2_256,
 			Digest:    payloadHash[:],
 		},

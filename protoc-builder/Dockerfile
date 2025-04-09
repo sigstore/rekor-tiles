@@ -36,7 +36,7 @@ RUN chown myuser /protobuf /googleapis /protobuf-specs
 USER myuser
 
 # Download specific release of protoc
-# TODO: add dependabot-like feature to check for release updates
+# TODO(#66): add dependabot-like feature to check for release updates
 ARG PROTOC_VERSION
 ARG PROTOC_VERSION_TAG
 ARG PROTOC_CHECKSUM
@@ -53,7 +53,8 @@ RUN git clone --filter=blob:none --no-checkout --depth=1 https://github.com/goog
     git checkout ${GOOGLEAPIS_COMMIT} && \
     rm -rf .git
 
-# fetch HEAD of protobuf-specs (TODO: adjust this to latest release like googleapis)
+# fetch HEAD of protobuf-specs
+# TODO(#66): adjust this to latest release like googleapis
 ARG PROTOBUF_SPECS_COMMIT
 RUN git clone --filter=blob:none --no-checkout --depth=1 https://github.com/sigstore/protobuf-specs.git /protobuf-specs && \
     cd /protobuf-specs && \

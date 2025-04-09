@@ -21,7 +21,6 @@ import (
 )
 
 func Validate(v *pb.Verifier) error {
-	// TODO(cmurphy): hash/public key compatibility check (https://github.com/sigstore/rekor-tiles/issues/100)
 	publicKey := v.GetPublicKey()
 	x509Cert := v.GetX509Certificate()
 	if publicKey == nil && x509Cert == nil {

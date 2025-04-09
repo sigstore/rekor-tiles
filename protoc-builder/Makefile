@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# TODO: replace this whole build with https://github.com/sigstore/protobuf-specs/issues/542
+# TODO(#66): replace this whole build with https://github.com/sigstore/protobuf-specs/issues/542
 
 PROTOC_REKOR_IMAGE = protoc-rekor
 
