@@ -25,7 +25,6 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/pem"
 	"fmt"
 	"testing"
 
@@ -195,12 +194,7 @@ func genKeys() (*ecdsa.PrivateKey, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	block := &pem.Block{
-		Type:  "PUBLIC KEY",
-		Bytes: pubKey,
-	}
-	pubPEM := pem.EncodeToMemory(block)
-	return privKey, pubPEM, nil
+	return privKey, pubKey, nil
 }
 
 func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64) (*pb.HashedRekordRequestV0_0_2, error) {

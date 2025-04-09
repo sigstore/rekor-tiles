@@ -17,6 +17,7 @@ package hashedrekord
 import (
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"testing"
 
@@ -29,11 +30,11 @@ import (
 var (
 	b64EncodedSignature = "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"
 	hexEncodedDigest    = "5b3513f580c8397212ff2c8f459c199efc0c90e4354a5f3533adf0a3fff3a530"
-	publicKey           = `-----BEGIN PUBLIC KEY-----
+	pemPublicKey        = `-----BEGIN PUBLIC KEY-----
 MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ==
 -----END PUBLIC KEY-----`
-	x509Cert = `-----BEGIN CERTIFICATE-----
+	pemx509Cert = `-----BEGIN CERTIFICATE-----
 MIICGTCCAb+gAwIBAgIUbzTFcv75teYBpaXsDOoYUv5GgWgwCgYIKoZIzj0EAwIw
 YTELMAkGA1UEBhMCQVUxEzARBgNVBAgMClNvbWUtU3RhdGUxITAfBgNVBAoMGElu
 dGVybmV0IFdpZGdpdHMgUHR5IEx0ZDEaMBgGA1UEAwwRdGVzdC5zaWdzdG9yZS5k
@@ -50,6 +51,18 @@ fRnK+CuN46tvzGu+9A==
 )
 
 func TestToLogEntry(t *testing.T) {
+	block, rest := pem.Decode([]byte(pemPublicKey))
+	if len(rest) != 0 {
+		t.Fatal("public key decoding had extra data")
+	}
+	publicKey := block.Bytes
+
+	block, rest = pem.Decode([]byte(pemx509Cert))
+	if len(rest) != 0 {
+		t.Fatal("certificate decoding had extra data")
+	}
+	x509Cert := block.Bytes
+
 	tests := []struct {
 		name              string
 		hashedrekord      *pb.HashedRekordRequestV0_0_2
@@ -169,7 +182,7 @@ func TestToLogEntry(t *testing.T) {
 				Digest: hexDecodeOrDie(t, hexEncodedDigest),
 			},
 			allowedAlgorithms: []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256, v1.PublicKeyDetails_PKIX_ED25519_PH},
-			expectErr:         fmt.Errorf("invalid entry algorithm SHA-256"),
+			expectErr:         fmt.Errorf("unsupported entry algorithm for key *ecdsa.PublicKey, digest SHA-256"),
 		},
 	}
 	for _, test := range tests {

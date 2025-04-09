@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
 	"github.com/sigstore/sigstore/pkg/signature"
 )
 
@@ -67,11 +66,10 @@ func AlgorithmRegistry(algorithmOptions []string) (*signature.AlgorithmRegistryC
 
 // CheckEntryAlgorithms checks that the combination public key and message
 // digest algorithm are allowed given an algorithm registry.
-func CheckEntryAlgorithms(keyObj *x509.PublicKey, alg crypto.Hash, algorithmRegistry *signature.AlgorithmRegistryConfig) (bool, error) {
-	publicKey := keyObj.CryptoPubKey()
+func CheckEntryAlgorithms(pubKey crypto.PublicKey, alg crypto.Hash, algorithmRegistry *signature.AlgorithmRegistryConfig) (bool, error) {
 	// Check if all the verifiers public keys (together with the
 	// artifactHashValue) are allowed according to the policy
-	isPermitted, err := algorithmRegistry.IsAlgorithmPermitted(publicKey, alg)
+	isPermitted, err := algorithmRegistry.IsAlgorithmPermitted(pubKey, alg)
 	if err != nil {
 		return false, fmt.Errorf("checking if algorithm is permitted: %w", err)
 	}

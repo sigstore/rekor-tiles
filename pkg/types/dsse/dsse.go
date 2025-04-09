@@ -17,11 +17,11 @@ package dsse
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"reflect"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 
@@ -29,8 +29,10 @@ import (
 	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
-	"github.com/sigstore/rekor-tiles/pkg/pki/x509"
-	"github.com/sigstore/rekor-tiles/pkg/types/verifier"
+	"github.com/sigstore/rekor-tiles/pkg/types/validator"
+	"github.com/sigstore/rekor-tiles/pkg/verifier"
+	"github.com/sigstore/rekor-tiles/pkg/verifier/certificate"
+	"github.com/sigstore/rekor-tiles/pkg/verifier/publickey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
@@ -45,25 +47,35 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 		return nil, fmt.Errorf("missing verifiers")
 	}
 	for _, v := range ds.Verifiers {
-		if err := verifier.Validate(v); err != nil {
+		if err := validator.Validate(v); err != nil {
 			return nil, err
 		}
 	}
 	if len(ds.Envelope.Signatures) == 0 {
 		return nil, fmt.Errorf("envelope missing signatures")
 	}
-	allPubKeyBytes := make(map[*pb.Verifier][]byte, 0)
+	verifiers := make(map[*pb.Verifier]verifier.Verifier, 0)
 	for _, v := range ds.Verifiers {
 		pubKey := v.GetPublicKey()
 		cert := v.GetX509Certificate()
-		if pubKey != nil {
-			allPubKeyBytes[v] = pubKey.RawBytes
-		} else {
-			allPubKeyBytes[v] = cert.RawBytes
+		switch {
+		case pubKey != nil:
+			vf, err := publickey.NewVerifier(bytes.NewReader(pubKey.RawBytes))
+			if err != nil {
+				return nil, fmt.Errorf("parsing public key: %v", err)
+			}
+			verifiers[v] = vf
+		case cert != nil:
+			vf, err := certificate.NewVerifier(bytes.NewReader(cert.RawBytes))
+			if err != nil {
+				return nil, fmt.Errorf("parsing certificate: %v", err)
+			}
+			verifiers[v] = vf
+		default:
+			return nil, fmt.Errorf("must contain either a public key or X.509 certificate")
 		}
 	}
-	// TODO: infer hash algorithm from public key info (#176)
-	signerVerifiers, err := verifyEnvelope(allPubKeyBytes, ds.Envelope, crypto.SHA256, algorithmRegistry)
+	signerVerifiers, err := verifyEnvelope(verifiers, ds.Envelope, algorithmRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +83,7 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 
 	return &pb.DSSELogEntryV0_0_2{
 		PayloadHash: &v1.HashOutput{
+			// TODO: Change hardocded algorithm
 			Algorithm: v1.HashAlgorithm_SHA2_256,
 			Digest:    payloadHash[:],
 		},
@@ -78,36 +91,37 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 	}, nil
 }
 
-// verifyEnvelope takes in an array of possible key bytes and attempts to parse them as x509 public keys.
-// it then uses these to verify the envelope and makes sure that every signature on the envelope is verified.
-// it returns a list of SignatureAndVerifier mapping each signature in the envelope to a provided verifier
-func verifyEnvelope(allPubKeyBytes map[*pb.Verifier][]byte, pbenv *pbdsse.Envelope, alg crypto.Hash, algorithmRegistry *signature.AlgorithmRegistryConfig) ([]*pb.Signature, error) {
+// verifyEnvelope takes in verifiers, a map of key details to the signature verifier. Verifiers are used to
+// to verify the envelope's signatures. A list of signatures mapped to their verifiers is returned.
+func verifyEnvelope(verifiers map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope, algorithmRegistry *signature.AlgorithmRegistryConfig) ([]*pb.Signature, error) {
 	env := FromProto(pbenv)
-	savs := make([]*pb.Signature, 0, len(allPubKeyBytes))
+	savs := make([]*pb.Signature, 0, len(verifiers))
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
 	allSigs := make(map[string]struct{})
 	for _, sig := range env.Signatures {
 		allSigs[sig.Sig] = struct{}{}
 	}
 
-	for v, pubKeyBytes := range allPubKeyBytes {
+	for v, verifierKey := range verifiers {
 		if len(allSigs) == 0 {
 			break // if all signatures have been verified, do not attempt anymore
 		}
-		key, err := x509.NewPublicKey(bytes.NewReader(pubKeyBytes))
-		if err != nil {
-			return nil, fmt.Errorf("could not parse public key as x509: %w", err)
-		}
 
-		valid, err := algorithmregistry.CheckEntryAlgorithms(key, alg, algorithmRegistry)
+		algDetails, err := signature.GetAlgorithmDetails(v.KeyDetails)
+		if err != nil {
+			return nil, fmt.Errorf("getting key algorithm details: %w", err)
+		}
+		alg := algDetails.GetHashType()
+
+		valid, err := algorithmregistry.CheckEntryAlgorithms(verifierKey.PublicKey(), alg, algorithmRegistry)
 		if err != nil {
 			return nil, fmt.Errorf("checking entry algorithm: %w", err)
 		}
 		if !valid {
-			return nil, fmt.Errorf("invalid entry algorithm %s", alg.String())
+			return nil, fmt.Errorf("unsupported entry algorithm for key %s, digest %s", reflect.TypeOf(verifierKey.PublicKey()), alg.String())
 		}
 
-		vfr, err := signature.LoadVerifier(key.CryptoPubKey(), crypto.SHA256)
+		vfr, err := signature.LoadVerifier(verifierKey.PublicKey(), alg)
 		if err != nil {
 			return nil, fmt.Errorf("could not load verifier: %w", err)
 		}
