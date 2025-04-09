@@ -31,10 +31,21 @@ updates:
         update-types:
           - "patch"
   - package-ecosystem: "docker"
-    directory: "/"
+    directories:
+      - "/"
+      - "/protoc-builder"
     schedule:
       interval: "weekly"
     groups:
       docker-patch-updates:
+        update-types:
+          - "patch"
+  - package-ecosystem: "docker-compose"
+    directories:
+      - "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      docker-compose-patch-updates:
         update-types:
           - "patch"
