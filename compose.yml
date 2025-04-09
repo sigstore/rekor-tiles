@@ -62,6 +62,8 @@ services:
     - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
     - "--signer-filepath=/pki/ed25519-priv-key.pem"
     - "--checkpoint-interval=2s"
+    - "--http-request-authenticator"
+    - "nsjdfssjfb2n2jdqo2bdien3o"  
     ports:
     - "3003:3000" # http port
     - "3001:3001" # grpc port
