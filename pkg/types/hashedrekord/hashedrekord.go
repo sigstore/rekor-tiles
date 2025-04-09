@@ -84,7 +84,7 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.A
 
 	return &pb.HashedRekordLogEntryV0_0_2{
 		Signature: hr.Signature,
-		// TODO: Remove hardcoded algorithm
+		// TODO(#195): Remove hardcoded algorithm
 		Data: &v1.HashOutput{Digest: hr.Digest, Algorithm: v1.HashAlgorithm_SHA2_256},
 	}, nil
 }

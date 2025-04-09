@@ -22,10 +22,13 @@ import (
 	"crypto/x509/pkix"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"math/big"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"syscall"
 	"testing"
@@ -47,7 +50,7 @@ type MockServer struct {
 	cleanupFiles []string
 }
 
-func (ms *MockServer) Start(_ *testing.T) {
+func (ms *MockServer) Start(t *testing.T) {
 	ms.gc = NewGRPCConfig(
 		WithGRPCHost("localhost"),
 		WithGRPCPort(8081),
@@ -68,8 +71,24 @@ func (ms *MockServer) Start(_ *testing.T) {
 	}()
 	ms.wg.Add(1)
 
-	// TODO: see if health endpoint is up, but for now just wait a second
-	time.Sleep(1 * time.Second)
+	// Healthcheck: Ping the /healthz endpoint until healthy
+	for i := range 6 {
+		if i == 5 {
+			t.Fatal("mock server failed to startup")
+		}
+		resp, err := http.Get("http://localhost:8080/healthz")
+		if err == nil && resp.StatusCode == http.StatusOK {
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("parsing response body: %v", err)
+			}
+			if strings.Contains(string(body), `{"status":"SERVING"}`) {
+				break
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func (ms *MockServer) StartTLS(t *testing.T) {
@@ -99,8 +118,25 @@ func (ms *MockServer) StartTLS(t *testing.T) {
 	}()
 	ms.wg.Add(1)
 
-	// TODO: see if health endpoint is up, but for now just wait a second
-	time.Sleep(1 * time.Second)
+	// Healthcheck: Ping the /healthz endpoint until it returns an expected error
+	// because we're not initializing a connection over TLS.
+	for i := range 6 {
+		if i == 5 {
+			t.Fatal("mock TLS server failed to startup")
+		}
+		resp, err := http.Get("http://localhost:8080/healthz")
+		if err == nil && resp.StatusCode == http.StatusBadRequest {
+			defer resp.Body.Close()
+			body, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("parsing response body: %v", err)
+			}
+			if strings.Contains(string(body), "Client sent an HTTP request to an HTTPS server") {
+				break
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
 }
 
 func (ms *MockServer) Stop(t *testing.T) {
