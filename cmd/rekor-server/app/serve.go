@@ -174,6 +174,7 @@ func init() {
 	serveCmd.Flags().Uint("antispam-max-batch-size", tessera.DefaultAntispamMaxBatchSize, "maximum batch size for deduplication operations; recommend around 1500 for Spanner instances with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
 	serveCmd.Flags().Uint("antispam-pushback-threshold", tessera.DefaultAntispamPushbackThreshold, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back")
 
+	serveCmd.Flags().String("http-request-authenticator", "", "shared secret for HTTP-to-gRPC authentication")
 	// allowed entry signing algorithms
 	keyAlgorithmTypes, err := defaultKeyAlgorithms()
 	if err != nil {
