@@ -27,6 +27,7 @@
 package server
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"log/slog"
@@ -38,9 +39,13 @@ import (
 
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/proto"
 )
 
 type grpcServer struct {
@@ -53,7 +58,12 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	var opts []grpc.ServerOption
 
 	opts = append(opts,
-		grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()),
+		grpc.ChainUnaryInterceptor(
+			getMetrics().serverMetrics.UnaryServerInterceptor(),
+			func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+				return customMetricsInterceptor(ctx, req, info, handler, config)
+			},
+		),
 		grpc.ConnectionTimeout(config.timeout),
 		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
 		grpc.MaxRecvMsgSize(config.maxMessageSize),
@@ -71,7 +81,6 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	s := grpc.NewServer(opts...)
 	pb.RegisterRekorServer(s, server)
 	grpc_health_v1.RegisterHealthServer(s, server)
-
 	getMetrics().serverMetrics.InitializeMetrics(s)
 
 	return &grpcServer{
@@ -127,4 +136,38 @@ func loadTLSCredentials(certFile, keyFile string) (credentials.TransportCredenti
 	}
 
 	return credentials.NewTLS(tlsConfig), nil
+}
+
+func customMetricsInterceptor(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler, config *GRPCConfig) (any, error) {
+	resp, err := handler(ctx, req)
+	if err != nil {
+		return resp, fmt.Errorf("grpcServiceError: %w", err)
+	}
+	m := getMetrics()
+	method := info.FullMethod
+	code := status.Code(err).String()
+
+	service := info.FullMethod
+
+	source := "grpc"
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		if auth := md.Get(HTTPReqAuthenticatorKey); len(auth) > 0 {
+			if auth[0] == config.reqAuthenticator {
+				source = "http"
+			} else {
+				slog.Warn("invalid http-request-authenticator", "provided", auth[0])
+				return nil, status.Errorf(codes.Unauthenticated, "invalid authenticator")
+			}
+		}
+	}
+
+	reqSize := 0
+	if msg, ok := req.(proto.Message); ok {
+		reqSize = proto.Size(msg)
+	}
+
+	m.grpcQPS.WithLabelValues(service, method, code, source).Inc()
+	m.grpcRequestSize.WithLabelValues(service, method, code, source).Observe(float64(reqSize))
+
+	return resp, err
 }

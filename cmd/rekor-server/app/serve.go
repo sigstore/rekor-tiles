@@ -117,6 +117,7 @@ var serveCmd = &cobra.Command{
 				server.WithHTTPMaxRequestBodySize(viper.GetInt("max-request-body-size")),
 				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
 				server.WithHTTPTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+				server.WithHTTPRequestAuthenticator(viper.GetString("http-request-authenticator")),
 			),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
@@ -124,6 +125,7 @@ var serveCmd = &cobra.Command{
 				server.WithGRPCTimeout(viper.GetDuration("timeout")),
 				server.WithGRPCMaxMessageSize(viper.GetInt("max-request-body-size")),
 				server.WithTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+				server.WithGRPCRequestAuthenticator(viper.GetString("http-request-authenticator")),
 			),
 			rekorServer,
 			shutdownFn,
@@ -172,6 +174,7 @@ func init() {
 	serveCmd.Flags().Uint("antispam-max-batch-size", tessera.DefaultAntispamMaxBatchSize, "maximum batch size for deduplication operations; recommend around 1500 for Spanner instances with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
 	serveCmd.Flags().Uint("antispam-pushback-threshold", tessera.DefaultAntispamPushbackThreshold, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back")
 
+	serveCmd.Flags().String("http-request-authenticator", "", "shared secret for HTTP-to-gRPC authentication")
 	// allowed entry signing algorithms
 	keyAlgorithmTypes, err := defaultKeyAlgorithms()
 	if err != nil {

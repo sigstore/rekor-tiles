@@ -39,8 +39,11 @@ type metrics struct {
 	newHashedRekordEntries prometheus.Counter
 	newDsseEntries         prometheus.Counter
 	httpLatency            *prometheus.HistogramVec
+	httpQPS                *prometheus.CounterVec
 	httpRequestsCount      *prometheus.CounterVec
-	requestSize            *prometheus.HistogramVec
+	httpRequestSize        *prometheus.HistogramVec
+	grpcQPS                *prometheus.CounterVec
+	grpcRequestSize        *prometheus.HistogramVec
 }
 
 // Metrics provides the singleton metrics instance
@@ -72,15 +75,30 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		Help: "API Latency on HTTP calls",
 	}, []string{"code", "method"})
 
+	m.httpQPS = f.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_http_qps",
+		Help: "QPS on HTTP calls",
+	}, []string{"code", "method"})
+
 	m.httpRequestsCount = f.NewCounterVec(prometheus.CounterOpts{
 		Name: "rekor_http_requests_total",
 		Help: "Count all HTTP requests",
 	}, []string{"code", "method"})
 
-	m.requestSize = f.NewHistogramVec(prometheus.HistogramOpts{
+	m.httpRequestSize = f.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "rekor_http_api_request_size",
 		Help: "API Request size on HTTP calls",
 	}, []string{"code", "method"})
+
+	m.grpcQPS = f.NewCounterVec(prometheus.CounterOpts{
+		Name: "rekor_grpc_qps_by_api",
+		Help: "GRPC QPS by service and method",
+	}, []string{"service", "method", "code", "source"})
+
+	m.grpcRequestSize = f.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "rekor_grpc_api_request_size",
+		Help: "GRPC request size in bytes",
+	}, []string{"service", "method", "code", "source"})
 
 	// TODO(appu): add metrics from rekor v1 (anything but Counter appears to need to be a pointer)
 	// https://github.com/sigstore/rekor-tiles/issues/123
