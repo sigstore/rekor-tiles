@@ -91,6 +91,9 @@ func TestReadWrite(t *testing.T) {
 	// Add new entries - more than one tile's worth
 	numNewEntries := uint64(260)
 	group := new(errgroup.Group)
+	// Limit number of concurrent requests, as e2e tests fail on macOS
+	// without a reasonable limit set
+	group.SetLimit(50)
 	for i := uint64(1); i <= numNewEntries; i++ {
 		i := i
 		group.Go(func() error {
@@ -99,7 +102,6 @@ func TestReadWrite(t *testing.T) {
 				return err
 			}
 			_, err = writer.Add(ctx, hr) // We don't need to check the TLE here, the client verifies the inclusion proof for us
-
 			assert.NoError(t, err)
 			return nil
 		})
