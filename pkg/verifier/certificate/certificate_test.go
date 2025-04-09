@@ -157,7 +157,7 @@ func TestCertificate_PublicKey(t *testing.T) {
 	}
 }
 
-func TestCertificate_Identities(t *testing.T) {
+func TestCertificate_Identity(t *testing.T) {
 	cert, der, err := generateTestCertificate()
 	if err != nil {
 		t.Fatalf("failed to generate test certificate: %v", err)
@@ -165,16 +165,11 @@ func TestCertificate_Identities(t *testing.T) {
 
 	verifier := &Certificate{cert: cert}
 
-	identities, err := verifier.Identities()
+	id, err := verifier.Identity()
 	if err != nil {
-		t.Fatalf("Identities() returned unexpected error: %v", err)
+		t.Fatalf("Identity() returned unexpected error: %v", err)
 	}
 
-	if len(identities) != 1 {
-		t.Fatalf("Identities() returned %d identities, want 1", len(identities))
-	}
-
-	id := identities[0]
 	if !reflect.DeepEqual(id.Crypto, cert) {
 		t.Errorf("Identity Crypto field mismatch. Got: %+v, Want: %+v", id.Crypto, cert)
 	}

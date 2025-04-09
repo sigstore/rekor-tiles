@@ -24,8 +24,8 @@ import (
 type Verifier interface {
 	// PublicKey returns the underlying public key for signature verification
 	PublicKey() crypto.PublicKey
-	// Identities returns a list of typed keys and certificates
-	Identities() ([]identity.Identity, error)
+	// Identity returns the identity of the verifier from a key or certificate
+	Identity() (identity.Identity, error)
 	// String returns a human-readable representation of the verifier, e.g. PEM-encoded
 	String() string
 }

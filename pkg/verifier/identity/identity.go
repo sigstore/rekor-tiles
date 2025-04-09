@@ -27,6 +27,8 @@ type Identity struct {
 	// - PKIX ASN.1 DER-encoded public key
 	// - ASN.1 DER-encoded certificate
 	Raw []byte
-	// Contains hex-encoded SHA-256 digest of the public key or certificate
+	// Contains hex-encoded SHA-256 digest of Raw. Values include:
+	// - SHA-256 digest of the PKIX ASN.1 DER-encoded public key
+	// - SHA-256 digest of the ASN.1 DER-encoded certificate
 	Fingerprint string
 }

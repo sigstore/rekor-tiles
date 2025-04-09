@@ -61,15 +61,15 @@ func (k PublicKey) PublicKey() crypto.PublicKey {
 	return k.key
 }
 
-func (k PublicKey) Identities() ([]identity.Identity, error) {
+func (k PublicKey) Identity() (identity.Identity, error) {
 	pkixKey, err := cryptoutils.MarshalPublicKeyToDER(k.key)
 	if err != nil {
-		return nil, err
+		return identity.Identity{}, err
 	}
 	digest := sha256.Sum256(pkixKey)
-	return []identity.Identity{{
+	return identity.Identity{
 		Crypto:      k.key,
 		Raw:         pkixKey,
 		Fingerprint: hex.EncodeToString(digest[:]),
-	}}, nil
+	}, nil
 }

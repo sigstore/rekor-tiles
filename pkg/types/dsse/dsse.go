@@ -54,7 +54,7 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 	if len(ds.Envelope.Signatures) == 0 {
 		return nil, fmt.Errorf("envelope missing signatures")
 	}
-	allPubKeyBytes := make(map[*pb.Verifier]verifier.Verifier, 0)
+	verifiers := make(map[*pb.Verifier]verifier.Verifier, 0)
 	for _, v := range ds.Verifiers {
 		pubKey := v.GetPublicKey()
 		cert := v.GetX509Certificate()
@@ -64,18 +64,18 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 			if err != nil {
 				return nil, fmt.Errorf("parsing public key: %v", err)
 			}
-			allPubKeyBytes[v] = vf
+			verifiers[v] = vf
 		case cert != nil:
 			vf, err := certificate.NewVerifier(bytes.NewReader(cert.RawBytes))
 			if err != nil {
 				return nil, fmt.Errorf("parsing certificate: %v", err)
 			}
-			allPubKeyBytes[v] = vf
+			verifiers[v] = vf
 		default:
 			return nil, fmt.Errorf("must contain either a public key or X.509 certificate")
 		}
 	}
-	signerVerifiers, err := verifyEnvelope(allPubKeyBytes, ds.Envelope, algorithmRegistry)
+	signerVerifiers, err := verifyEnvelope(verifiers, ds.Envelope, algorithmRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -91,19 +91,18 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 	}, nil
 }
 
-// verifyEnvelope takes in an array of possible key bytes and attempts to parse them as x509 public keys.
-// it then uses these to verify the envelope and makes sure that every signature on the envelope is verified.
-// it returns a list of SignatureAndVerifier mapping each signature in the envelope to a provided verifier
-func verifyEnvelope(allPubKeyBytes map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope, algorithmRegistry *signature.AlgorithmRegistryConfig) ([]*pb.Signature, error) {
+// verifyEnvelope takes in verifiers, a map of key details to the signature verifier. Verifiers are used to
+// to verify the envelope's signatures. A list of signatures mapped to their verifiers is returned.
+func verifyEnvelope(verifiers map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope, algorithmRegistry *signature.AlgorithmRegistryConfig) ([]*pb.Signature, error) {
 	env := FromProto(pbenv)
-	savs := make([]*pb.Signature, 0, len(allPubKeyBytes))
+	savs := make([]*pb.Signature, 0, len(verifiers))
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
 	allSigs := make(map[string]struct{})
 	for _, sig := range env.Signatures {
 		allSigs[sig.Sig] = struct{}{}
 	}
 
-	for v, verifierKey := range allPubKeyBytes {
+	for v, verifierKey := range verifiers {
 		if len(allSigs) == 0 {
 			break // if all signatures have been verified, do not attempt anymore
 		}

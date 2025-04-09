@@ -150,7 +150,7 @@ func TestPublicKey_PublicKey(t *testing.T) {
 	}
 }
 
-func TestPublicKey_Identities(t *testing.T) {
+func TestPublicKey_Identity(t *testing.T) {
 	pubKey, pkixDER, err := generateTestPublicKey()
 	if err != nil {
 		t.Fatalf("failed to generate test public key: %v", err)
@@ -158,16 +158,10 @@ func TestPublicKey_Identities(t *testing.T) {
 
 	verifier := &PublicKey{key: pubKey}
 
-	identities, err := verifier.Identities()
+	id, err := verifier.Identity()
 	if err != nil {
-		t.Fatalf("Identities() returned unexpected error: %v", err)
+		t.Fatalf("Identity() returned unexpected error: %v", err)
 	}
-
-	if len(identities) != 1 {
-		t.Fatalf("Identities() returned %d identities, want 1", len(identities))
-	}
-
-	id := identities[0]
 
 	if !reflect.DeepEqual(id.Crypto, pubKey) {
 		t.Errorf("Identity Crypto field mismatch. Got: %+v, Want: %+v", id.Crypto, pubKey)

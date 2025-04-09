@@ -59,11 +59,11 @@ func (c Certificate) PublicKey() crypto.PublicKey {
 	return c.cert.PublicKey
 }
 
-func (c Certificate) Identities() ([]identity.Identity, error) {
+func (c Certificate) Identity() (identity.Identity, error) {
 	digest := sha256.Sum256(c.cert.Raw)
-	return []identity.Identity{{
+	return identity.Identity{
 		Crypto:      c.cert,
 		Raw:         c.cert.Raw,
 		Fingerprint: hex.EncodeToString(digest[:]),
-	}}, nil
+	}, nil
 }
