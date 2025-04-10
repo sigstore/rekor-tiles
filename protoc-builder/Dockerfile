@@ -61,7 +61,7 @@ RUN git clone --filter=blob:none --no-checkout --depth=1 https://github.com/sigs
     git checkout ${PROTOBUF_SPECS_COMMIT} && \
     rm -rf .git
 
-FROM golang:1.24.0-alpine@sha256:2d40d4fc278dad38be0777d5e2a88a2c6dee51b0b29c97a764fc6c6a11ca893c AS go-builder
+FROM golang:1.24.2-alpine@sha256:7772cb5322baa875edd74705556d08f0eeca7b9c4b5367754ce3f2f00041ccee AS go-builder
 
 ADD go.* tools/
 
