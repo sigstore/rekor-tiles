@@ -16,6 +16,7 @@ package dsse
 
 import (
 	"crypto/sha256"
+	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
@@ -51,6 +52,11 @@ Nrp1zdYGMA8GA1UdEwEB/wQFMAMBAf8wCgYIKoZIzj0EAwIDSAAwRQIhALrgqHZR
 5glHunRCQ60XVtn7xEUvHIkyWdhQvocrEQ+KAiAlucBaXZ5NQ9viz1ATrdSyuj+a
 atI4zS+80vbts4NEFA==
 -----END CERTIFICATE-----`
+	pemPublicKeyP384 = `-----BEGIN PUBLIC KEY-----
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEhM6AR/E5+rwuiWx5YE07ZpSNlG9NCFLb
+m+gjNn0q5uByc7GmCwH3fUF3SFyTDCm6+lm9DMiSQHpFqt1IP6HpnAzMwseTOsS7
+cc1SxluRyLGYAJEFcNxc01Y/9cT79mf/
+-----END PUBLIC KEY-----`
 )
 
 func TestToLogEntry(t *testing.T) {
@@ -66,10 +72,19 @@ func TestToLogEntry(t *testing.T) {
 	}
 	x509Cert := block.Bytes
 
+	block, rest = pem.Decode([]byte(pemPublicKeyP384))
+	if len(rest) != 0 {
+		t.Fatal("ECDSA-P384 public key decoding had extra data")
+	}
+	publicKeyP384 := block.Bytes
+
 	var payload = []byte("payload")
 	var payloadHash = sha256.Sum256(payload)
+	var payloadHash384 = sha512.Sum384(payload)
 	var keySignature = b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=")
 	var certSignature = b64DecodeOrDie(t, "MEUCIQDoYuLoinEz/gM6B+hEn/0d47lmRDitQ3LfL9vH0sF/gQIgPqVgoBTRsMSPYMXYuJYYCIaTpnuppqQaTSTRn0ubwLI=")
+	var keySignatureP384 = b64DecodeOrDie(t, "MGYCMQDdKEzOCt71AzF+KKxrDQgCcPtsnfPZORmPlFZutXFqM8y/fi77sEAOjYkVdc4xxJwCMQC/4JuQ/bDWQV4QzPRA/u03pG49iTUDskoCFIrmabe0XyC9JkY1yyeuNS2LixMCaCI=")
+
 	tests := []struct {
 		name              string
 		dsse              *pb.DSSERequestV0_0_2
@@ -291,12 +306,148 @@ func TestToLogEntry(t *testing.T) {
 			allowedAlgorithms: []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256, v1.PublicKeyDetails_PKIX_ED25519_PH},
 			expectErr:         fmt.Errorf("unsupported entry algorithm for key *ecdsa.PublicKey, digest SHA-256"),
 		},
+		{
+			name: "valid DSSE with multiple signatures, different algorithm",
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     payload,
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   keySignature,
+							Keyid: "",
+						},
+						{
+							Sig:   keySignatureP384,
+							Keyid: "",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
+					{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+					},
+					{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKeyP384),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+					},
+				},
+			},
+			expectedEntry: &pb.DSSELogEntryV0_0_2{
+				PayloadHash: &v1.HashOutput{
+					Algorithm: v1.HashAlgorithm_SHA2_384,
+					Digest:    payloadHash384[:],
+				},
+				Signatures: []*pb.Signature{
+					{
+						Content: keySignature,
+						Verifier: &pb.Verifier{
+							Verifier: &pb.Verifier_PublicKey{
+								PublicKey: &pb.PublicKey{
+									RawBytes: []byte(publicKey),
+								},
+							},
+							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+						},
+					},
+					{
+						Content: keySignatureP384,
+						Verifier: &pb.Verifier{
+							Verifier: &pb.Verifier_PublicKey{
+								PublicKey: &pb.PublicKey{
+									RawBytes: []byte(publicKeyP384),
+								},
+							},
+							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+						},
+					},
+				},
+			},
+		},
+		{
+			// test input is same as "valid DSSE with multiple signatures, different algorithm",
+			// but with signature input swapped, to show that response signature order is canonicalized
+			name: "valid DSSE with multiple signatures in consistent order",
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     payload,
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   keySignatureP384,
+							Keyid: "",
+						},
+						{
+							Sig:   keySignature,
+							Keyid: "",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
+					{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+					},
+					{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKeyP384),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+					},
+				},
+			},
+			expectedEntry: &pb.DSSELogEntryV0_0_2{
+				PayloadHash: &v1.HashOutput{
+					Algorithm: v1.HashAlgorithm_SHA2_384,
+					Digest:    payloadHash384[:],
+				},
+				Signatures: []*pb.Signature{
+					{
+						Content: keySignature,
+						Verifier: &pb.Verifier{
+							Verifier: &pb.Verifier_PublicKey{
+								PublicKey: &pb.PublicKey{
+									RawBytes: []byte(publicKey),
+								},
+							},
+							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+						},
+					},
+					{
+						Content: keySignatureP384,
+						Verifier: &pb.Verifier{
+							Verifier: &pb.Verifier_PublicKey{
+								PublicKey: &pb.PublicKey{
+									RawBytes: []byte(publicKeyP384),
+								},
+							},
+							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			allowedAlgs := test.allowedAlgorithms
 			if allowedAlgs == nil {
-				allowedAlgs = []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256}
+				allowedAlgs = []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384}
 			}
 			algReg, err := signature.NewAlgorithmRegistryConfig(allowedAlgs)
 			if err != nil {
