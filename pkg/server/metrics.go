@@ -41,6 +41,7 @@ type metrics struct {
 	httpLatency            *prometheus.HistogramVec
 	httpRequestsCount      *prometheus.CounterVec
 	requestSize            *prometheus.HistogramVec
+	panicsTotal            prometheus.Counter
 }
 
 // Metrics provides the singleton metrics instance
@@ -81,6 +82,11 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		Name: "rekor_http_api_request_size",
 		Help: "API Request size on HTTP calls",
 	}, []string{"code", "method"})
+
+	m.panicsTotal = f.NewCounter(prometheus.CounterOpts{
+		Name: "grpc_req_panics_recovered_total",
+		Help: "Total number of gRPC requests recovered from internal panic.",
+	})
 
 	// TODO(#123): add metrics from rekor v1 (anything but Counter appears to need to be a pointer)
 
