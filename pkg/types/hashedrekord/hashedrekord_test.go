@@ -48,6 +48,13 @@ FJvvzmcqq8f+AiXCgAlE4IgdwTq+MB8GA1UdIwQYMBaAFJvvzmcqq8f+AiXCgAlE
 eH2jEARoIeXY0SRKnaNhVvullmremGvvd6QCIQDrL1WI3a7m8rlHN/7vvCCGtep1
 fRnK+CuN46tvzGu+9A==
 -----END CERTIFICATE-----`
+	pemPublicKeyP384 = `-----BEGIN PUBLIC KEY-----
+MHYwEAYHKoZIzj0CAQYFK4EEACIDYgAEhM6AR/E5+rwuiWx5YE07ZpSNlG9NCFLb
+m+gjNn0q5uByc7GmCwH3fUF3SFyTDCm6+lm9DMiSQHpFqt1IP6HpnAzMwseTOsS7
+cc1SxluRyLGYAJEFcNxc01Y/9cT79mf/
+-----END PUBLIC KEY-----`
+	b64EncodedSignatureP384 = "MGUCMAq2KPdc07xIaNXOX8xNZGn11HFb5OIL049K1I5loaIiogGUunGwFWh/Ae00YBybNwIxALXYkptfZCa+fUfwIW3rbXWAs7vo+DfMyGPcddXfpej1m4i3z+4vL8OJtnrV6kc7lg=="
+	hexEncodedDigest384     = "fe23e15e1b7ee8f48a7f878fedbee8f72a57fdf7c6141ddb0b00d23056c9da30e6c0c51588f0f888c830cfce8f29604c"
 )
 
 func TestToLogEntry(t *testing.T) {
@@ -62,6 +69,12 @@ func TestToLogEntry(t *testing.T) {
 		t.Fatal("certificate decoding had extra data")
 	}
 	x509Cert := block.Bytes
+
+	block, rest = pem.Decode([]byte(pemPublicKeyP384))
+	if len(rest) != 0 {
+		t.Fatal("ECDSA-P384 public key decoding had extra data")
+	}
+	publicKeyP384 := block.Bytes
 
 	tests := []struct {
 		name              string
@@ -184,12 +197,29 @@ func TestToLogEntry(t *testing.T) {
 			allowedAlgorithms: []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256, v1.PublicKeyDetails_PKIX_ED25519_PH},
 			expectErr:         fmt.Errorf("unsupported entry algorithm for key *ecdsa.PublicKey, digest SHA-256"),
 		},
+		{
+			name: "valid hashedrekord with different algorithm",
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignatureP384),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKeyP384),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+					},
+				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest384),
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			allowedAlgs := test.allowedAlgorithms
 			if allowedAlgs == nil {
-				allowedAlgs = []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256}
+				allowedAlgs = []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256, v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384}
 			}
 			algReg, err := signature.NewAlgorithmRegistryConfig(allowedAlgs)
 			if err != nil {
