@@ -60,6 +60,7 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 		"build_info",
 		"rekor_http_api_latency",
 		"rekor_http_requests_total",
+		"grpc_req_panics_recovered_total",
 		"grpc_server_started_total",    // should imply we have the default set of grpc server metrics
 		"grpc_server_handling_seconds", // should imply we have the default set of latency stats on grpc servers
 		"promhttp_metric_handler",      // should imply we have the default set of promhttp metrics

@@ -33,8 +33,13 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime/debug"
 	"sync"
 	"syscall"
+
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
@@ -52,8 +57,17 @@ type grpcServer struct {
 func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	var opts []grpc.ServerOption
 
+	grpcPanicRecoveryHandler := func(p any) (err error) {
+		getMetrics().panicsTotal.Inc()
+		slog.Error("recovered from panic", "panic", p, "stack", debug.Stack())
+		return status.Errorf(codes.Internal, "%s", p)
+	}
+
 	opts = append(opts,
-		grpc.ChainUnaryInterceptor(getMetrics().serverMetrics.UnaryServerInterceptor()),
+		grpc.ChainUnaryInterceptor(
+			getMetrics().serverMetrics.UnaryServerInterceptor(),
+			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)), // panic handler should be last
+		),
 		grpc.ConnectionTimeout(config.timeout),
 		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
 		grpc.MaxRecvMsgSize(config.maxMessageSize),
