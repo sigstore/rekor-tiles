@@ -29,12 +29,6 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 	server.Start(t)
 	defer server.Stop(t)
 
-	// Call an endpoint to create HTTP latency and request metrics
-	cpEndpoint := fmt.Sprintf("http://%s:%v/checkpoint", server.hc.host, server.hc.port)
-	if _, err := http.Get(cpEndpoint); err != nil {
-		t.Fatalf("fetching checkpoint from %s: %v", cpEndpoint, err)
-	}
-
 	// Check if we can hit the metrics endpoint
 	metricsURL := fmt.Sprintf("http://%s", server.hc.HTTPMetricsTarget())
 
@@ -54,13 +48,18 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 	}
 
 	b := string(body)
+
+	// we ping healthz in our MockServer that will initialize some http stats for us. On a raw
+	// server with no requests ever recorded, rekor_http_* statistics may be uninitialized
 	expectedMetrics := []string{
 		"rekor_new_hashedrekord_entries",
 		"rekor_new_dsse_entries",
 		"build_info",
 		"rekor_http_api_latency",
 		"rekor_http_requests_total",
+		"rekor_http_api_request_size",
 		"grpc_req_panics_recovered_total",
+		"grpc_api_request_size",
 		"grpc_server_started_total",    // should imply we have the default set of grpc server metrics
 		"grpc_server_handling_seconds", // should imply we have the default set of latency stats on grpc servers
 		"promhttp_metric_handler",      // should imply we have the default set of promhttp metrics

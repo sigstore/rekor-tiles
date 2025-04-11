@@ -25,6 +25,8 @@ import (
 	"sync"
 	"syscall"
 
+	"google.golang.org/grpc/reflection"
+
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -40,8 +42,9 @@ type metrics struct {
 	newDsseEntries         prometheus.Counter
 	httpLatency            *prometheus.HistogramVec
 	httpRequestsCount      *prometheus.CounterVec
-	requestSize            *prometheus.HistogramVec
+	httpRequestSize        *prometheus.HistogramVec
 	panicsTotal            prometheus.Counter
+	grpcRequestSize        *prometheus.HistogramVec
 }
 
 // Metrics provides the singleton metrics instance
@@ -68,6 +71,13 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		Help: "The total number of new dsse log entries",
 	})
 
+	// grpc_packet_part should always be "payload" but we can measure "header" or "trailer" in the future
+	// if we so desire
+	m.grpcRequestSize = f.NewHistogramVec(prometheus.HistogramOpts{
+		Name: "grpc_api_request_size",
+		Help: "API Request size on GRPC calls",
+	}, []string{"grpc_service", "grpc_method", "grpc_packet_part"})
+
 	m.httpLatency = f.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "rekor_http_api_latency",
 		Help: "API Latency on HTTP calls",
@@ -78,7 +88,7 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		Help: "Count all HTTP requests",
 	}, []string{"code", "method"})
 
-	m.requestSize = f.NewHistogramVec(prometheus.HistogramOpts{
+	m.httpRequestSize = f.NewHistogramVec(prometheus.HistogramOpts{
 		Name: "rekor_http_api_request_size",
 		Help: "API Request size on HTTP calls",
 	}, []string{"code", "method"})
@@ -87,8 +97,6 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		Name: "grpc_req_panics_recovered_total",
 		Help: "Total number of gRPC requests recovered from internal panic.",
 	})
-
-	// TODO(#123): add metrics from rekor v1 (anything but Counter appears to need to be a pointer)
 
 	_ = f.NewGaugeFunc(
 		prometheus.GaugeOpts{
@@ -170,4 +178,17 @@ func (hp *httpMetrics) start(wg *sync.WaitGroup) {
 		wg.Done()
 		slog.Info("http metrics Server shutdown")
 	}()
+}
+
+// InitializeCustomGrpcMetrics mirrors the functionality of prometheus.ServerMetrics InitializeMetrics but for our own
+// custom grpc metrics
+func (m *metrics) InitializeCustomGrpcMetrics(server reflection.ServiceInfoProvider) {
+	serviceInfo := server.GetServiceInfo()
+	for serviceName, info := range serviceInfo {
+		for _, mInfo := range info.Methods {
+			methodName := mInfo.Name
+			// These are just references (no increments), as just referencing will create the labels but not set values.
+			_, _ = m.grpcRequestSize.GetMetricWithLabelValues(serviceName, methodName, "payload")
+		}
+	}
 }

@@ -38,14 +38,13 @@ import (
 	"syscall"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/status"
-
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/status"
 )
 
 type grpcServer struct {
@@ -71,6 +70,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 		grpc.ConnectionTimeout(config.timeout),
 		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
 		grpc.MaxRecvMsgSize(config.maxMessageSize),
+		grpc.StatsHandler(NewGrpcStatsHandler()),
 	)
 
 	if config.HasTLS() {
@@ -87,6 +87,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	grpc_health_v1.RegisterHealthServer(s, server)
 
 	getMetrics().serverMetrics.InitializeMetrics(s)
+	getMetrics().InitializeCustomGrpcMetrics(s)
 
 	return &grpcServer{
 		Server:         s,
