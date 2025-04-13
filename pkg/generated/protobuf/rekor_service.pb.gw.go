@@ -71,7 +71,7 @@ func request_Rekor_GetTile_0(ctx context.Context, marshaler runtime.Marshaler, c
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "L")
 	}
-	protoReq.L, err = runtime.Int32(val)
+	protoReq.L, err = runtime.Uint32(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "L", err)
 	}
@@ -79,7 +79,7 @@ func request_Rekor_GetTile_0(ctx context.Context, marshaler runtime.Marshaler, c
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "N")
 	}
-	protoReq.N, err = runtime.Int32(val)
+	protoReq.N, err = runtime.String(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "N", err)
 	}
@@ -97,7 +97,7 @@ func local_request_Rekor_GetTile_0(ctx context.Context, marshaler runtime.Marsha
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "L")
 	}
-	protoReq.L, err = runtime.Int32(val)
+	protoReq.L, err = runtime.Uint32(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "L", err)
 	}
@@ -105,80 +105,11 @@ func local_request_Rekor_GetTile_0(ctx context.Context, marshaler runtime.Marsha
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "N")
 	}
-	protoReq.N, err = runtime.Int32(val)
+	protoReq.N, err = runtime.String(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "N", err)
 	}
 	msg, err := server.GetTile(ctx, &protoReq)
-	return msg, metadata, err
-}
-
-func request_Rekor_GetPartialTile_0(ctx context.Context, marshaler runtime.Marshaler, client RekorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq PartialTileRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["L"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "L")
-	}
-	protoReq.L, err = runtime.Int32(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "L", err)
-	}
-	val, ok = pathParams["N"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "N")
-	}
-	protoReq.N, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "N", err)
-	}
-	val, ok = pathParams["W"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "W")
-	}
-	protoReq.W, err = runtime.Int32(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "W", err)
-	}
-	msg, err := client.GetPartialTile(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_Rekor_GetPartialTile_0(ctx context.Context, marshaler runtime.Marshaler, server RekorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq PartialTileRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	val, ok := pathParams["L"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "L")
-	}
-	protoReq.L, err = runtime.Int32(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "L", err)
-	}
-	val, ok = pathParams["N"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "N")
-	}
-	protoReq.N, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "N", err)
-	}
-	val, ok = pathParams["W"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "W")
-	}
-	protoReq.W, err = runtime.Int32(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "W", err)
-	}
-	msg, err := server.GetPartialTile(ctx, &protoReq)
 	return msg, metadata, err
 }
 
@@ -193,7 +124,7 @@ func request_Rekor_GetEntryBundle_0(ctx context.Context, marshaler runtime.Marsh
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "N")
 	}
-	protoReq.N, err = runtime.Int32(val)
+	protoReq.N, err = runtime.String(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "N", err)
 	}
@@ -211,64 +142,11 @@ func local_request_Rekor_GetEntryBundle_0(ctx context.Context, marshaler runtime
 	if !ok {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "N")
 	}
-	protoReq.N, err = runtime.Int32(val)
+	protoReq.N, err = runtime.String(val)
 	if err != nil {
 		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "N", err)
 	}
 	msg, err := server.GetEntryBundle(ctx, &protoReq)
-	return msg, metadata, err
-}
-
-func request_Rekor_GetPartialEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, client RekorClient, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq PartialEntryBundleRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	io.Copy(io.Discard, req.Body)
-	val, ok := pathParams["N"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "N")
-	}
-	protoReq.N, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "N", err)
-	}
-	val, ok = pathParams["W"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "W")
-	}
-	protoReq.W, err = runtime.Int32(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "W", err)
-	}
-	msg, err := client.GetPartialEntryBundle(ctx, &protoReq, grpc.Header(&metadata.HeaderMD), grpc.Trailer(&metadata.TrailerMD))
-	return msg, metadata, err
-}
-
-func local_request_Rekor_GetPartialEntryBundle_0(ctx context.Context, marshaler runtime.Marshaler, server RekorServer, req *http.Request, pathParams map[string]string) (proto.Message, runtime.ServerMetadata, error) {
-	var (
-		protoReq PartialEntryBundleRequest
-		metadata runtime.ServerMetadata
-		err      error
-	)
-	val, ok := pathParams["N"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "N")
-	}
-	protoReq.N, err = runtime.String(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "N", err)
-	}
-	val, ok = pathParams["W"]
-	if !ok {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "missing parameter %s", "W")
-	}
-	protoReq.W, err = runtime.Int32(val)
-	if err != nil {
-		return nil, metadata, status.Errorf(codes.InvalidArgument, "type mismatch, parameter: %s, error: %v", "W", err)
-	}
-	msg, err := server.GetPartialEntryBundle(ctx, &protoReq)
 	return msg, metadata, err
 }
 
@@ -323,7 +201,7 @@ func RegisterRekorHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N=**}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -337,33 +215,13 @@ func RegisterRekorHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 		}
 		forward_Rekor_GetTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Rekor_GetPartialTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetPartialTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}/{W}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_Rekor_GetPartialTile_0(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_Rekor_GetPartialTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
 	mux.Handle(http.MethodGet, pattern_Rekor_GetEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		var stream runtime.ServerTransportStream
 		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}"))
+		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N=**}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -376,26 +234,6 @@ func RegisterRekorHandlerServer(ctx context.Context, mux *runtime.ServeMux, serv
 			return
 		}
 		forward_Rekor_GetEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
-	mux.Handle(http.MethodGet, pattern_Rekor_GetPartialEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		var stream runtime.ServerTransportStream
-		ctx = grpc.NewContextWithServerTransportStream(ctx, &stream)
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateIncomingContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetPartialEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}/{W}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := local_request_Rekor_GetPartialEntryBundle_0(annotatedContext, inboundMarshaler, server, req, pathParams)
-		md.HeaderMD, md.TrailerMD = metadata.Join(md.HeaderMD, stream.Header()), metadata.Join(md.TrailerMD, stream.Trailer())
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_Rekor_GetPartialEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodGet, pattern_Rekor_GetCheckpoint_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -478,7 +316,7 @@ func RegisterRekorHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N=**}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -491,28 +329,11 @@ func RegisterRekorHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 		}
 		forward_Rekor_GetTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
-	mux.Handle(http.MethodGet, pattern_Rekor_GetPartialTile_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetPartialTile", runtime.WithHTTPPathPattern("/api/v2/tile/{L}/{N}/{W}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_Rekor_GetPartialTile_0(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_Rekor_GetPartialTile_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
 	mux.Handle(http.MethodGet, pattern_Rekor_GetEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
 		defer cancel()
 		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}"))
+		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N=**}"))
 		if err != nil {
 			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
 			return
@@ -524,23 +345,6 @@ func RegisterRekorHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 			return
 		}
 		forward_Rekor_GetEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
-	})
-	mux.Handle(http.MethodGet, pattern_Rekor_GetPartialEntryBundle_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
-		ctx, cancel := context.WithCancel(req.Context())
-		defer cancel()
-		inboundMarshaler, outboundMarshaler := runtime.MarshalerForRequest(mux, req)
-		annotatedContext, err := runtime.AnnotateContext(ctx, mux, req, "/dev.sigstore.rekor.v2.Rekor/GetPartialEntryBundle", runtime.WithHTTPPathPattern("/api/v2/tile/entries/{N}/{W}"))
-		if err != nil {
-			runtime.HTTPError(ctx, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		resp, md, err := request_Rekor_GetPartialEntryBundle_0(annotatedContext, inboundMarshaler, client, req, pathParams)
-		annotatedContext = runtime.NewServerMetadataContext(annotatedContext, md)
-		if err != nil {
-			runtime.HTTPError(annotatedContext, mux, outboundMarshaler, w, req, err)
-			return
-		}
-		forward_Rekor_GetPartialEntryBundle_0(annotatedContext, mux, outboundMarshaler, w, req, resp, mux.GetForwardResponseOptions()...)
 	})
 	mux.Handle(http.MethodGet, pattern_Rekor_GetCheckpoint_0, func(w http.ResponseWriter, req *http.Request, pathParams map[string]string) {
 		ctx, cancel := context.WithCancel(req.Context())
@@ -563,19 +367,15 @@ func RegisterRekorHandlerClient(ctx context.Context, mux *runtime.ServeMux, clie
 }
 
 var (
-	pattern_Rekor_CreateEntry_0           = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v2", "log", "entries"}, ""))
-	pattern_Rekor_GetTile_0               = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v2", "tile", "L", "N"}, ""))
-	pattern_Rekor_GetPartialTile_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"api", "v2", "tile", "L", "N", "W"}, ""))
-	pattern_Rekor_GetEntryBundle_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4}, []string{"api", "v2", "tile", "entries", "N"}, ""))
-	pattern_Rekor_GetPartialEntryBundle_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 1, 0, 4, 1, 5, 4, 1, 0, 4, 1, 5, 5}, []string{"api", "v2", "tile", "entries", "N", "W"}, ""))
-	pattern_Rekor_GetCheckpoint_0         = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"api", "v2", "checkpoint"}, ""))
+	pattern_Rekor_CreateEntry_0    = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3}, []string{"api", "v2", "log", "entries"}, ""))
+	pattern_Rekor_GetTile_0        = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 1, 0, 4, 1, 5, 3, 3, 0, 4, 1, 5, 4}, []string{"api", "v2", "tile", "L", "N"}, ""))
+	pattern_Rekor_GetEntryBundle_0 = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2, 2, 3, 3, 0, 4, 1, 5, 4}, []string{"api", "v2", "tile", "entries", "N"}, ""))
+	pattern_Rekor_GetCheckpoint_0  = runtime.MustPattern(runtime.NewPattern(1, []int{2, 0, 2, 1, 2, 2}, []string{"api", "v2", "checkpoint"}, ""))
 )
 
 var (
-	forward_Rekor_CreateEntry_0           = runtime.ForwardResponseMessage
-	forward_Rekor_GetTile_0               = runtime.ForwardResponseMessage
-	forward_Rekor_GetPartialTile_0        = runtime.ForwardResponseMessage
-	forward_Rekor_GetEntryBundle_0        = runtime.ForwardResponseMessage
-	forward_Rekor_GetPartialEntryBundle_0 = runtime.ForwardResponseMessage
-	forward_Rekor_GetCheckpoint_0         = runtime.ForwardResponseMessage
+	forward_Rekor_CreateEntry_0    = runtime.ForwardResponseMessage
+	forward_Rekor_GetTile_0        = runtime.ForwardResponseMessage
+	forward_Rekor_GetEntryBundle_0 = runtime.ForwardResponseMessage
+	forward_Rekor_GetCheckpoint_0  = runtime.ForwardResponseMessage
 )

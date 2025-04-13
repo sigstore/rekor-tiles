@@ -127,14 +127,8 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 func (s *Server) GetTile(context.Context, *pb.TileRequest) (*httpbody.HttpBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTile not implemented")
 }
-func (s *Server) GetPartialTile(context.Context, *pb.PartialTileRequest) (*httpbody.HttpBody, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPartialTile not implemented")
-}
 func (s *Server) GetEntryBundle(context.Context, *pb.EntryBundleRequest) (*httpbody.HttpBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetEntryBundle not implemented")
-}
-func (s *Server) GetPartialEntryBundle(context.Context, *pb.PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetPartialEntryBundle not implemented")
 }
 func (s *Server) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetCheckpoint not implemented")

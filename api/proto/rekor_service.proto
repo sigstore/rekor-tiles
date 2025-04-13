@@ -35,29 +35,18 @@ service Rekor {
             body: "*"
         };
     }
+
     // Get a tile from the log
     rpc GetTile (TileRequest) returns (google.api.HttpBody) {
         option (google.api.http) = {
-            get: "/api/v2/tile/{L}/{N}"
-        };
-    }
-    // Get a partial tile from the log
-    rpc GetPartialTile (PartialTileRequest) returns (google.api.HttpBody) {
-        option (google.api.http) = {
-            get: "/api/v2/tile/{L}/{N}/{W}"
+            get: "/api/v2/tile/{L}/{N=**}"
         };
     }
 
     // Get an entry bundle from the log
     rpc GetEntryBundle (EntryBundleRequest) returns (google.api.HttpBody) {
         option (google.api.http) = {
-            get: "/api/v2/tile/entries/{N}"
-        };
-    }
-    // Get a partial entry bundle from the log
-    rpc GetPartialEntryBundle (PartialEntryBundleRequest) returns (google.api.HttpBody) {
-        option (google.api.http) = {
-            get: "/api/v2/tile/entries/{N}/{W}"
+            get: "/api/v2/tile/entries/{N=**}"
         };
     }
 
@@ -83,26 +72,18 @@ message CreateEntryRequest {
     }
 }
 
-// a request for a full tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
+// Request for a full or partial tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
 message TileRequest {
-    int32 L = 1;
-    int32 N = 2;
+    uint32 L = 1;
+    // N must be either an index encoded as zero-padded 3-digit path elements, e.g. "x123/x456/789",
+    // and may end with ".p/<W>", where "<W>" is a uint8
+    string N = 2;
 }
 
-// a request for a partial tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
-message PartialTileRequest {
-    int32 L = 1;
-    string N = 2; // must match <int32>.p
-    int32 W = 3;
-}
-
-// a request for an entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
+// Request for a full or partial entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
 message EntryBundleRequest {
-    int32 N = 1;
+    // N must be either an index encoded as zero-padded 3-digit path elements, e.g. "x123/x456/789",
+    // and may end with ".p/<W>", where "<W>" is a uint8
+    string N = 1;
 }
 
-// a request for a partial entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
-message PartialEntryBundleRequest {
-    string N = 1; // must match <int32>.p
-    int32 W = 2;
-}

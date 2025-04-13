@@ -122,11 +122,13 @@ func (*CreateEntryRequest_HashedRekordRequestV0_0_2) isCreateEntryRequest_Spec()
 
 func (*CreateEntryRequest_DsseRequestV0_0_2) isCreateEntryRequest_Spec() {}
 
-// a request for a full tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
+// Request for a full or partial tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
 type TileRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	L             int32                  `protobuf:"varint,1,opt,name=L,proto3" json:"L,omitempty"`
-	N             int32                  `protobuf:"varint,2,opt,name=N,proto3" json:"N,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	L     uint32                 `protobuf:"varint,1,opt,name=L,proto3" json:"L,omitempty"`
+	// N must be either an index encoded as zero-padded 3-digit path elements, e.g. "x123/x456/789",
+	// and may end with ".p/<W>", where "<W>" is a uint8
+	N             string `protobuf:"bytes,2,opt,name=N,proto3" json:"N,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -161,92 +163,33 @@ func (*TileRequest) Descriptor() ([]byte, []int) {
 	return file_rekor_service_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *TileRequest) GetL() int32 {
+func (x *TileRequest) GetL() uint32 {
 	if x != nil {
 		return x.L
 	}
 	return 0
 }
 
-func (x *TileRequest) GetN() int32 {
-	if x != nil {
-		return x.N
-	}
-	return 0
-}
-
-// a request for a partial tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
-type PartialTileRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	L             int32                  `protobuf:"varint,1,opt,name=L,proto3" json:"L,omitempty"`
-	N             string                 `protobuf:"bytes,2,opt,name=N,proto3" json:"N,omitempty"` // must match <int32>.p
-	W             int32                  `protobuf:"varint,3,opt,name=W,proto3" json:"W,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PartialTileRequest) Reset() {
-	*x = PartialTileRequest{}
-	mi := &file_rekor_service_proto_msgTypes[2]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PartialTileRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PartialTileRequest) ProtoMessage() {}
-
-func (x *PartialTileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rekor_service_proto_msgTypes[2]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PartialTileRequest.ProtoReflect.Descriptor instead.
-func (*PartialTileRequest) Descriptor() ([]byte, []int) {
-	return file_rekor_service_proto_rawDescGZIP(), []int{2}
-}
-
-func (x *PartialTileRequest) GetL() int32 {
-	if x != nil {
-		return x.L
-	}
-	return 0
-}
-
-func (x *PartialTileRequest) GetN() string {
+func (x *TileRequest) GetN() string {
 	if x != nil {
 		return x.N
 	}
 	return ""
 }
 
-func (x *PartialTileRequest) GetW() int32 {
-	if x != nil {
-		return x.W
-	}
-	return 0
-}
-
-// a request for an entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
+// Request for a full or partial entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
 type EntryBundleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	N             int32                  `protobuf:"varint,1,opt,name=N,proto3" json:"N,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// N must be either an index encoded as zero-padded 3-digit path elements, e.g. "x123/x456/789",
+	// and may end with ".p/<W>", where "<W>" is a uint8
+	N             string `protobuf:"bytes,1,opt,name=N,proto3" json:"N,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *EntryBundleRequest) Reset() {
 	*x = EntryBundleRequest{}
-	mi := &file_rekor_service_proto_msgTypes[3]
+	mi := &file_rekor_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -258,7 +201,7 @@ func (x *EntryBundleRequest) String() string {
 func (*EntryBundleRequest) ProtoMessage() {}
 
 func (x *EntryBundleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rekor_service_proto_msgTypes[3]
+	mi := &file_rekor_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -271,67 +214,14 @@ func (x *EntryBundleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntryBundleRequest.ProtoReflect.Descriptor instead.
 func (*EntryBundleRequest) Descriptor() ([]byte, []int) {
-	return file_rekor_service_proto_rawDescGZIP(), []int{3}
+	return file_rekor_service_proto_rawDescGZIP(), []int{2}
 }
 
-func (x *EntryBundleRequest) GetN() int32 {
-	if x != nil {
-		return x.N
-	}
-	return 0
-}
-
-// a request for a partial entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
-type PartialEntryBundleRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	N             string                 `protobuf:"bytes,1,opt,name=N,proto3" json:"N,omitempty"` // must match <int32>.p
-	W             int32                  `protobuf:"varint,2,opt,name=W,proto3" json:"W,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
-}
-
-func (x *PartialEntryBundleRequest) Reset() {
-	*x = PartialEntryBundleRequest{}
-	mi := &file_rekor_service_proto_msgTypes[4]
-	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-	ms.StoreMessageInfo(mi)
-}
-
-func (x *PartialEntryBundleRequest) String() string {
-	return protoimpl.X.MessageStringOf(x)
-}
-
-func (*PartialEntryBundleRequest) ProtoMessage() {}
-
-func (x *PartialEntryBundleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rekor_service_proto_msgTypes[4]
-	if x != nil {
-		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
-		if ms.LoadMessageInfo() == nil {
-			ms.StoreMessageInfo(mi)
-		}
-		return ms
-	}
-	return mi.MessageOf(x)
-}
-
-// Deprecated: Use PartialEntryBundleRequest.ProtoReflect.Descriptor instead.
-func (*PartialEntryBundleRequest) Descriptor() ([]byte, []int) {
-	return file_rekor_service_proto_rawDescGZIP(), []int{4}
-}
-
-func (x *PartialEntryBundleRequest) GetN() string {
+func (x *EntryBundleRequest) GetN() string {
 	if x != nil {
 		return x.N
 	}
 	return ""
-}
-
-func (x *PartialEntryBundleRequest) GetW() int32 {
-	if x != nil {
-		return x.W
-	}
-	return 0
 }
 
 var File_rekor_service_proto protoreflect.FileDescriptor
@@ -345,23 +235,14 @@ const file_rekor_service_proto_rawDesc = "" +
 	"\x13dsse_request_v0_0_2\x18\x02 \x01(\v2(.dev.sigstore.rekor.v2.DSSERequestV0_0_2B\x03\xe0A\x02H\x00R\x11dsseRequestV0_0_2B\x06\n" +
 	"\x04spec\")\n" +
 	"\vTileRequest\x12\f\n" +
-	"\x01L\x18\x01 \x01(\x05R\x01L\x12\f\n" +
-	"\x01N\x18\x02 \x01(\x05R\x01N\">\n" +
-	"\x12PartialTileRequest\x12\f\n" +
-	"\x01L\x18\x01 \x01(\x05R\x01L\x12\f\n" +
-	"\x01N\x18\x02 \x01(\tR\x01N\x12\f\n" +
-	"\x01W\x18\x03 \x01(\x05R\x01W\"\"\n" +
+	"\x01L\x18\x01 \x01(\rR\x01L\x12\f\n" +
+	"\x01N\x18\x02 \x01(\tR\x01N\"\"\n" +
 	"\x12EntryBundleRequest\x12\f\n" +
-	"\x01N\x18\x01 \x01(\x05R\x01N\"7\n" +
-	"\x19PartialEntryBundleRequest\x12\f\n" +
-	"\x01N\x18\x01 \x01(\tR\x01N\x12\f\n" +
-	"\x01W\x18\x02 \x01(\x05R\x01W2\xbf\x05\n" +
+	"\x01N\x18\x01 \x01(\tR\x01N2\xc8\x03\n" +
 	"\x05Rekor\x12\x85\x01\n" +
-	"\vCreateEntry\x12).dev.sigstore.rekor.v2.CreateEntryRequest\x1a+.dev.sigstore.rekor.v1.TransparencyLogEntry\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v2/log/entries\x12a\n" +
-	"\aGetTile\x12\".dev.sigstore.rekor.v2.TileRequest\x1a\x14.google.api.HttpBody\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/api/v2/tile/{L}/{N}\x12s\n" +
-	"\x0eGetPartialTile\x12).dev.sigstore.rekor.v2.PartialTileRequest\x1a\x14.google.api.HttpBody\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/v2/tile/{L}/{N}/{W}\x12s\n" +
-	"\x0eGetEntryBundle\x12).dev.sigstore.rekor.v2.EntryBundleRequest\x1a\x14.google.api.HttpBody\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/v2/tile/entries/{N}\x12\x85\x01\n" +
-	"\x15GetPartialEntryBundle\x120.dev.sigstore.rekor.v2.PartialEntryBundleRequest\x1a\x14.google.api.HttpBody\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/v2/tile/entries/{N}/{W}\x12Y\n" +
+	"\vCreateEntry\x12).dev.sigstore.rekor.v2.CreateEntryRequest\x1a+.dev.sigstore.rekor.v1.TransparencyLogEntry\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v2/log/entries\x12d\n" +
+	"\aGetTile\x12\".dev.sigstore.rekor.v2.TileRequest\x1a\x14.google.api.HttpBody\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/v2/tile/{L}/{N=**}\x12v\n" +
+	"\x0eGetEntryBundle\x12).dev.sigstore.rekor.v2.EntryBundleRequest\x1a\x14.google.api.HttpBody\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/v2/tile/entries/{N=**}\x12Y\n" +
 	"\rGetCheckpoint\x12\x16.google.protobuf.Empty\x1a\x14.google.api.HttpBody\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/v2/checkpointB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
 
 var (
@@ -376,36 +257,30 @@ func file_rekor_service_proto_rawDescGZIP() []byte {
 	return file_rekor_service_proto_rawDescData
 }
 
-var file_rekor_service_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
+var file_rekor_service_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_rekor_service_proto_goTypes = []any{
 	(*CreateEntryRequest)(nil),        // 0: dev.sigstore.rekor.v2.CreateEntryRequest
 	(*TileRequest)(nil),               // 1: dev.sigstore.rekor.v2.TileRequest
-	(*PartialTileRequest)(nil),        // 2: dev.sigstore.rekor.v2.PartialTileRequest
-	(*EntryBundleRequest)(nil),        // 3: dev.sigstore.rekor.v2.EntryBundleRequest
-	(*PartialEntryBundleRequest)(nil), // 4: dev.sigstore.rekor.v2.PartialEntryBundleRequest
-	(*HashedRekordRequestV0_0_2)(nil), // 5: dev.sigstore.rekor.v2.HashedRekordRequestV0_0_2
-	(*DSSERequestV0_0_2)(nil),         // 6: dev.sigstore.rekor.v2.DSSERequestV0_0_2
-	(*emptypb.Empty)(nil),             // 7: google.protobuf.Empty
-	(*v1.TransparencyLogEntry)(nil),   // 8: dev.sigstore.rekor.v1.TransparencyLogEntry
-	(*httpbody.HttpBody)(nil),         // 9: google.api.HttpBody
+	(*EntryBundleRequest)(nil),        // 2: dev.sigstore.rekor.v2.EntryBundleRequest
+	(*HashedRekordRequestV0_0_2)(nil), // 3: dev.sigstore.rekor.v2.HashedRekordRequestV0_0_2
+	(*DSSERequestV0_0_2)(nil),         // 4: dev.sigstore.rekor.v2.DSSERequestV0_0_2
+	(*emptypb.Empty)(nil),             // 5: google.protobuf.Empty
+	(*v1.TransparencyLogEntry)(nil),   // 6: dev.sigstore.rekor.v1.TransparencyLogEntry
+	(*httpbody.HttpBody)(nil),         // 7: google.api.HttpBody
 }
 var file_rekor_service_proto_depIdxs = []int32{
-	5, // 0: dev.sigstore.rekor.v2.CreateEntryRequest.hashed_rekord_request_v0_0_2:type_name -> dev.sigstore.rekor.v2.HashedRekordRequestV0_0_2
-	6, // 1: dev.sigstore.rekor.v2.CreateEntryRequest.dsse_request_v0_0_2:type_name -> dev.sigstore.rekor.v2.DSSERequestV0_0_2
+	3, // 0: dev.sigstore.rekor.v2.CreateEntryRequest.hashed_rekord_request_v0_0_2:type_name -> dev.sigstore.rekor.v2.HashedRekordRequestV0_0_2
+	4, // 1: dev.sigstore.rekor.v2.CreateEntryRequest.dsse_request_v0_0_2:type_name -> dev.sigstore.rekor.v2.DSSERequestV0_0_2
 	0, // 2: dev.sigstore.rekor.v2.Rekor.CreateEntry:input_type -> dev.sigstore.rekor.v2.CreateEntryRequest
 	1, // 3: dev.sigstore.rekor.v2.Rekor.GetTile:input_type -> dev.sigstore.rekor.v2.TileRequest
-	2, // 4: dev.sigstore.rekor.v2.Rekor.GetPartialTile:input_type -> dev.sigstore.rekor.v2.PartialTileRequest
-	3, // 5: dev.sigstore.rekor.v2.Rekor.GetEntryBundle:input_type -> dev.sigstore.rekor.v2.EntryBundleRequest
-	4, // 6: dev.sigstore.rekor.v2.Rekor.GetPartialEntryBundle:input_type -> dev.sigstore.rekor.v2.PartialEntryBundleRequest
-	7, // 7: dev.sigstore.rekor.v2.Rekor.GetCheckpoint:input_type -> google.protobuf.Empty
-	8, // 8: dev.sigstore.rekor.v2.Rekor.CreateEntry:output_type -> dev.sigstore.rekor.v1.TransparencyLogEntry
-	9, // 9: dev.sigstore.rekor.v2.Rekor.GetTile:output_type -> google.api.HttpBody
-	9, // 10: dev.sigstore.rekor.v2.Rekor.GetPartialTile:output_type -> google.api.HttpBody
-	9, // 11: dev.sigstore.rekor.v2.Rekor.GetEntryBundle:output_type -> google.api.HttpBody
-	9, // 12: dev.sigstore.rekor.v2.Rekor.GetPartialEntryBundle:output_type -> google.api.HttpBody
-	9, // 13: dev.sigstore.rekor.v2.Rekor.GetCheckpoint:output_type -> google.api.HttpBody
-	8, // [8:14] is the sub-list for method output_type
-	2, // [2:8] is the sub-list for method input_type
+	2, // 4: dev.sigstore.rekor.v2.Rekor.GetEntryBundle:input_type -> dev.sigstore.rekor.v2.EntryBundleRequest
+	5, // 5: dev.sigstore.rekor.v2.Rekor.GetCheckpoint:input_type -> google.protobuf.Empty
+	6, // 6: dev.sigstore.rekor.v2.Rekor.CreateEntry:output_type -> dev.sigstore.rekor.v1.TransparencyLogEntry
+	7, // 7: dev.sigstore.rekor.v2.Rekor.GetTile:output_type -> google.api.HttpBody
+	7, // 8: dev.sigstore.rekor.v2.Rekor.GetEntryBundle:output_type -> google.api.HttpBody
+	7, // 9: dev.sigstore.rekor.v2.Rekor.GetCheckpoint:output_type -> google.api.HttpBody
+	6, // [6:10] is the sub-list for method output_type
+	2, // [2:6] is the sub-list for method input_type
 	2, // [2:2] is the sub-list for extension type_name
 	2, // [2:2] is the sub-list for extension extendee
 	0, // [0:2] is the sub-list for field type_name
@@ -428,7 +303,7 @@ func file_rekor_service_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rekor_service_proto_rawDesc), len(file_rekor_service_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   5,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
