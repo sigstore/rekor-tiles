@@ -28,7 +28,7 @@ var (
 	// AllowedClientSigningAlgorithms is the default set of supported signing
 	// algorithms for log entry signatures.
 	// When adding a new PublicKeyDetails, hashAlgorithmOrder must be updated
-	// if the that uses a hash algorithm not specified in hashAlgorithmOrder
+	// if it uses a hash algorithm not specified in hashAlgorithmOrder.
 	AllowedClientSigningAlgorithms = []v1.PublicKeyDetails{
 		v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256,
 		v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256,
@@ -41,7 +41,7 @@ var (
 	}
 	// Opinionated ordering of hash algorithms from oldest and weakest to newest and strongest.
 	// Must be updated if AllowedClientSigningAlgorithms is updated with a new digest.
-	// Used to select payload hash algorithm for entry with multiple signatures
+	// Used to select payload hash algorithm for entry with multiple signatures.
 	hashAlgorithmOrder = []crypto.Hash{crypto.SHA256, crypto.SHA384, crypto.SHA512}
 )
 

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package validator
+package verifier
 
 import (
 	"fmt"
@@ -20,6 +20,7 @@ import (
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 )
 
+// Validate validates there are no missing field in a Verifier protobuf
 func Validate(v *pb.Verifier) error {
 	publicKey := v.GetPublicKey()
 	x509Cert := v.GetX509Certificate()

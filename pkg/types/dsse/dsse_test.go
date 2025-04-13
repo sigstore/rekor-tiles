@@ -169,6 +169,30 @@ func TestToLogEntry(t *testing.T) {
 			expectErr: fmt.Errorf("missing verifiers"),
 		},
 		{
+			name: "invalid verifier",
+			dsse: &pb.DSSERequestV0_0_2{
+				Envelope: &dsse.Envelope{
+					Payload:     []byte("payload"),
+					PayloadType: "application/vnd.in-toto+json",
+					Signatures: []*dsse.Signature{
+						{
+							Sig:   []byte("sig"),
+							Keyid: "",
+						},
+					},
+				},
+				Verifiers: []*pb.Verifier{
+					{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+					},
+				},
+			},
+			expectErr: fmt.Errorf("invalid verifier"),
+		},
+		{
 			name: "missing signatures",
 			dsse: &pb.DSSERequestV0_0_2{
 				Envelope: &dsse.Envelope{

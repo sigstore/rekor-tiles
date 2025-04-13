@@ -24,13 +24,12 @@ import (
 	"reflect"
 	"slices"
 
-	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
-	"github.com/sigstore/rekor-tiles/pkg/types/validator"
+	pbverifier "github.com/sigstore/rekor-tiles/pkg/types/verifier"
 	"github.com/sigstore/rekor-tiles/pkg/verifier"
 	"github.com/sigstore/rekor-tiles/pkg/verifier/certificate"
 	"github.com/sigstore/rekor-tiles/pkg/verifier/publickey"
@@ -38,50 +37,24 @@ import (
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
-// ToLogEntry validates a request and converts it to a log entry type for inclusion in the log
-// TODO(#178) separate out ToLogEntry into proto validation, cyrpto validation and log entry conversion
+// ToLogEntry validates a request, verifies all envelope signatures, and converts it to a log entry type for inclusion in the log
 func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.DSSELogEntryV0_0_2, error) {
-	if ds.Envelope == nil {
-		return nil, fmt.Errorf("missing envelope")
+	if err := validate(ds); err != nil {
+		return nil, err
 	}
-	if len(ds.Verifiers) == 0 {
-		return nil, fmt.Errorf("missing verifiers")
-	}
-	for _, v := range ds.Verifiers {
-		if err := validator.Validate(v); err != nil {
-			return nil, err
-		}
-	}
-	if len(ds.Envelope.Signatures) == 0 {
-		return nil, fmt.Errorf("envelope missing signatures")
-	}
-	verifiers := make(map[*pb.Verifier]verifier.Verifier, 0)
-	for _, v := range ds.Verifiers {
-		pubKey := v.GetPublicKey()
-		cert := v.GetX509Certificate()
-		switch {
-		case pubKey != nil:
-			vf, err := publickey.NewVerifier(bytes.NewReader(pubKey.RawBytes))
-			if err != nil {
-				return nil, fmt.Errorf("parsing public key: %v", err)
-			}
-			verifiers[v] = vf
-		case cert != nil:
-			vf, err := certificate.NewVerifier(bytes.NewReader(cert.RawBytes))
-			if err != nil {
-				return nil, fmt.Errorf("parsing certificate: %v", err)
-			}
-			verifiers[v] = vf
-		default:
-			return nil, fmt.Errorf("must contain either a public key or X.509 certificate")
-		}
-	}
-	signerVerifiers, dsseHashAlgs, err := verifyEnvelope(verifiers, ds.Envelope, algorithmRegistry)
+
+	verifiers, err := extractVerifiers(ds)
 	if err != nil {
 		return nil, err
 	}
 
-	// Canonicalize the order of the signatures
+	signerVerifiers, dsseHashAlgs, err := verifyEnvelopeAndSupportedAlgs(verifiers, ds.Envelope, algorithmRegistry)
+	if err != nil {
+		return nil, err
+	}
+
+	// Canonicalize the order of the signatures. Signatures are sorted in ascending order by the stringified
+	// representation of the raw (e.g. not base64-encoded) signature.
 	var sortedSigs []string
 	for sig := range signerVerifiers {
 		sortedSigs = append(sortedSigs, sig)
@@ -116,10 +89,60 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 	}, nil
 }
 
-// verifyEnvelope takes in verifiers, a map of key details to the signature verifier. Verifiers are used to
+// validate validates there are no missing fields in a DSSERequestV0_0_2 protobuf
+func validate(ds *pb.DSSERequestV0_0_2) error {
+	if ds.Envelope == nil {
+		return fmt.Errorf("missing envelope")
+	}
+	if len(ds.Verifiers) == 0 {
+		return fmt.Errorf("missing verifiers")
+	}
+	for _, v := range ds.Verifiers {
+		if err := pbverifier.Validate(v); err != nil {
+			return fmt.Errorf("invalid verifier: %v", err)
+		}
+	}
+	if len(ds.Envelope.Signatures) == 0 {
+		return fmt.Errorf("envelope missing signatures")
+	}
+	for _, s := range ds.Envelope.Signatures {
+		if s == nil || len(s.Sig) == 0 {
+			return fmt.Errorf("envelope signature empty")
+		}
+	}
+	return nil
+}
+
+// extractVerifiers returns a map of protobuf verifiers to verifier interface
+func extractVerifiers(ds *pb.DSSERequestV0_0_2) (map[*pb.Verifier]verifier.Verifier, error) {
+	verifiers := make(map[*pb.Verifier]verifier.Verifier, 0)
+	for _, v := range ds.Verifiers {
+		pubKey := v.GetPublicKey()
+		cert := v.GetX509Certificate()
+		switch {
+		case pubKey != nil:
+			vf, err := publickey.NewVerifier(bytes.NewReader(pubKey.RawBytes))
+			if err != nil {
+				return nil, fmt.Errorf("parsing public key: %v", err)
+			}
+			verifiers[v] = vf
+		case cert != nil:
+			vf, err := certificate.NewVerifier(bytes.NewReader(cert.RawBytes))
+			if err != nil {
+				return nil, fmt.Errorf("parsing certificate: %v", err)
+			}
+			verifiers[v] = vf
+		default:
+			return nil, fmt.Errorf("must contain either a public key or X.509 certificate")
+		}
+	}
+	return verifiers, nil
+}
+
+// verifyEnvelopeAndSupportedAlgs takes in verifiers, a map of key details to the signature verifier. Verifiers are used to
 // to verify the envelope's signatures. A map of signatures to their verifiers is returned, along with all
 // possible hash algorithms to use for hashing the payload.
-func verifyEnvelope(verifiers map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope, algorithmRegistry *signature.AlgorithmRegistryConfig) (map[string]*pb.Verifier, map[crypto.Hash]v1.HashAlgorithm, error) {
+func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope, algorithmRegistry *signature.AlgorithmRegistryConfig) (map[string]*pb.Verifier, map[crypto.Hash]v1.HashAlgorithm, error) {
 	env := FromProto(pbenv)
 	savs := make(map[string]*pb.Verifier, len(verifiers))
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
@@ -128,6 +151,7 @@ func verifyEnvelope(verifiers map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.
 		allSigs[sig.Sig] = struct{}{}
 	}
 
+	// map crypto.Hash to protobuf hash alg, used to determine payload hash later
 	dsseHashAlgSet := make(map[crypto.Hash]v1.HashAlgorithm)
 
 	for v, verifierKey := range verifiers {

@@ -144,6 +144,22 @@ func TestToLogEntry(t *testing.T) {
 			expectErr: fmt.Errorf("missing digest"),
 		},
 		{
+			name: "invalid verifier",
+			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+				Signature: &pb.Signature{
+					Content: []byte("sig"),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+					},
+				},
+				Digest: []byte("digest"),
+			},
+			expectErr: fmt.Errorf("invalid verifier"),
+		},
+		{
 			name: "invalid signature",
 			hashedrekord: &pb.HashedRekordRequestV0_0_2{
 				Signature: &pb.Signature{
