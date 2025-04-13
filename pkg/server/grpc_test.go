@@ -110,23 +110,43 @@ func testEndpoints(t *testing.T, client pb.RekorClient) {
 	})
 
 	t.Run("get tile", func(t *testing.T) {
-		body, err := client.GetTile(context.Background(), &pb.TileRequest{L: 1, N: 2})
-		checkGRPC(t, body, err, "test-tile:1,2")
+		body, err := client.GetTile(context.Background(), &pb.TileRequest{L: 1, N: "002"})
+		checkGRPC(t, body, err, "test-tile:1,2,0")
+	})
+
+	t.Run("get tile with larger index", func(t *testing.T) {
+		body, err := client.GetTile(context.Background(), &pb.TileRequest{L: 1, N: "x123/456"})
+		checkGRPC(t, body, err, "test-tile:1,123456,0")
 	})
 
 	t.Run("get partial tile", func(t *testing.T) {
-		body, err := client.GetPartialTile(context.Background(), &pb.PartialTileRequest{L: 1, N: "2.p", W: 3})
-		checkGRPC(t, body, err, "test-tile:1,2.p,3")
+		body, err := client.GetTile(context.Background(), &pb.TileRequest{L: 1, N: "123.p/45"})
+		checkGRPC(t, body, err, "test-tile:1,123,45")
+	})
+
+	t.Run("get tile with larger index and partial", func(t *testing.T) {
+		body, err := client.GetTile(context.Background(), &pb.TileRequest{L: 1, N: "x123/456.p/7"})
+		checkGRPC(t, body, err, "test-tile:1,123456,7")
 	})
 
 	t.Run("get entry bundle", func(t *testing.T) {
-		body, err := client.GetEntryBundle(context.Background(), &pb.EntryBundleRequest{N: 1})
-		checkGRPC(t, body, err, "test-entries:1")
+		body, err := client.GetEntryBundle(context.Background(), &pb.EntryBundleRequest{N: "001"})
+		checkGRPC(t, body, err, "test-entries:1,0")
+	})
+
+	t.Run("get entry bundle with larger index", func(t *testing.T) {
+		body, err := client.GetEntryBundle(context.Background(), &pb.EntryBundleRequest{N: "x123/456"})
+		checkGRPC(t, body, err, "test-entries:123456,0")
 	})
 
 	t.Run("get partial entry bundle", func(t *testing.T) {
-		body, err := client.GetPartialEntryBundle(context.Background(), &pb.PartialEntryBundleRequest{N: "1.p", W: 2})
-		checkGRPC(t, body, err, "test-entries:1.p,2")
+		body, err := client.GetEntryBundle(context.Background(), &pb.EntryBundleRequest{N: "123.p/45"})
+		checkGRPC(t, body, err, "test-entries:123,45")
+	})
+
+	t.Run("get entry bundle with larger index and partial", func(t *testing.T) {
+		body, err := client.GetEntryBundle(context.Background(), &pb.EntryBundleRequest{N: "x123/456.p/7"})
+		checkGRPC(t, body, err, "test-entries:123456,7")
 	})
 }
 func TestLoadTLSCredentials(t *testing.T) {

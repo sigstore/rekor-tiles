@@ -28,6 +28,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -37,6 +38,7 @@ import (
 	pbsc "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	"github.com/transparency-dev/trillian-tessera/api/layout"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/types/known/emptypb"
@@ -186,35 +188,31 @@ func (s *mockRekorServer) CreateEntry(_ context.Context, _ *pb.CreateEntryReques
 }
 
 func (s *mockRekorServer) GetTile(_ context.Context, in *pb.TileRequest) (*httpbody.HttpBody, error) {
+	// Verifies and parses level, index, and optional width for partial tile
+	l, i, w, err := layout.ParseTileLevelIndexPartial(strconv.FormatUint(uint64(in.L), 10), in.N)
+	if err != nil {
+		return nil, err
+	}
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
-		Data:        []byte(fmt.Sprintf("test-tile:%d,%d", in.L, in.N)),
-		Extensions:  nil,
-	}, nil
-}
-
-func (s *mockRekorServer) GetPartialTile(_ context.Context, in *pb.PartialTileRequest) (*httpbody.HttpBody, error) {
-	return &httpbody.HttpBody{
-		ContentType: "application/octet-stream",
-		Data:        []byte(fmt.Sprintf("test-tile:%d,%s,%d", in.L, in.N, in.W)),
+		Data:        []byte(fmt.Sprintf("test-tile:%d,%d,%d", l, i, w)),
 		Extensions:  nil,
 	}, nil
 }
 
 func (s *mockRekorServer) GetEntryBundle(_ context.Context, in *pb.EntryBundleRequest) (*httpbody.HttpBody, error) {
+	// Parses index, and optional width for partial tile
+	i, w, err := layout.ParseTileIndexPartial(in.N)
+	if err != nil {
+		return nil, err
+	}
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
-		Data:        []byte(fmt.Sprintf("test-entries:%d", in.N)),
+		Data:        []byte(fmt.Sprintf("test-entries:%d,%d", i, w)),
 		Extensions:  nil,
 	}, nil
 }
-func (s *mockRekorServer) GetPartialEntryBundle(_ context.Context, in *pb.PartialEntryBundleRequest) (*httpbody.HttpBody, error) {
-	return &httpbody.HttpBody{
-		ContentType: "application/octet-stream",
-		Data:        []byte(fmt.Sprintf("test-entries:%s,%d", in.N, in.W)),
-		Extensions:  nil,
-	}, nil
-}
+
 func (s *mockRekorServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*httpbody.HttpBody, error) {
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",

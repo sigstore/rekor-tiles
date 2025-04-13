@@ -35,10 +35,12 @@ var endpointTests = []struct {
 	expectedBody string
 }{
 	{"/api/v2/checkpoint", "test-checkpoint"},
-	{"/api/v2/tile/1/2", "test-tile:1,2"},
-	{"/api/v2/tile/1/2.p/3", "test-tile:1,2.p,3"},
-	{"/api/v2/tile/entries/1", "test-entries:1"},
-	{"/api/v2/tile/entries/1.p/2", "test-entries:1.p,2"},
+	{"/api/v2/tile/1/002", "test-tile:1,2,0"},
+	{"/api/v2/tile/1/x123/456", "test-tile:1,123456,0"},
+	{"/api/v2/tile/1/002.p/3", "test-tile:1,2,3"},
+	{"/api/v2/tile/entries/001", "test-entries:1,0"},
+	{"/api/v2/tile/entries/x123/456", "test-entries:123456,0"},
+	{"/api/v2/tile/entries/001.p/2", "test-entries:1,2"},
 	{"/healthz", `{"status":"SERVING"}` + "\n"},
 }
 

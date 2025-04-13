@@ -93,49 +93,11 @@
         "parameters": [
           {
             "name": "N",
+            "description": "N must be either an index encoded as zero-padded 3-digit path elements, e.g. \"x123/x456/789\",\nand may end with \".p/\u003cW\u003e\", where \"\u003cW\u003e\" is a uint8",
             "in": "path",
             "required": true,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "Rekor"
-        ]
-      }
-    },
-    "/api/v2/tile/entries/{N}/{W}": {
-      "get": {
-        "summary": "Get a partial entry bundle from the log",
-        "operationId": "Rekor_GetPartialEntryBundle",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/apiHttpBody"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "N",
-            "description": "must match \u003cint32\u003e.p",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "W",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
+            "type": "string",
+            "pattern": ".+"
           }
         ],
         "tags": [
@@ -167,60 +129,15 @@
             "in": "path",
             "required": true,
             "type": "integer",
-            "format": "int32"
+            "format": "int64"
           },
           {
             "name": "N",
+            "description": "N must be either an index encoded as zero-padded 3-digit path elements, e.g. \"x123/x456/789\",\nand may end with \".p/\u003cW\u003e\", where \"\u003cW\u003e\" is a uint8",
             "in": "path",
             "required": true,
-            "type": "integer",
-            "format": "int32"
-          }
-        ],
-        "tags": [
-          "Rekor"
-        ]
-      }
-    },
-    "/api/v2/tile/{L}/{N}/{W}": {
-      "get": {
-        "summary": "Get a partial tile from the log",
-        "operationId": "Rekor_GetPartialTile",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/apiHttpBody"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "L",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
-          },
-          {
-            "name": "N",
-            "description": "must match \u003cint32\u003e.p",
-            "in": "path",
-            "required": true,
-            "type": "string"
-          },
-          {
-            "name": "W",
-            "in": "path",
-            "required": true,
-            "type": "integer",
-            "format": "int32"
+            "type": "string",
+            "pattern": ".+"
           }
         ],
         "tags": [
