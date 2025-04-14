@@ -103,7 +103,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	handler := promhttp.InstrumentMetricHandler(metrics.reg, mux)
 	handler = promhttp.InstrumentHandlerDuration(metrics.httpLatency, handler)
 	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
-	handler = promhttp.InstrumentHandlerRequestSize(metrics.requestSize, handler)
+	handler = promhttp.InstrumentHandlerRequestSize(metrics.httpRequestSize, handler)
 	handler = http.MaxBytesHandler(handler, int64(config.maxRequestBodySize))
 
 	server := &http.Server{
