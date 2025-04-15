@@ -16,7 +16,6 @@ package dsse
 
 import (
 	"crypto/sha256"
-	"crypto/sha512"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
@@ -80,7 +79,6 @@ func TestToLogEntry(t *testing.T) {
 
 	var payload = []byte("payload")
 	var payloadHash = sha256.Sum256(payload)
-	var payloadHash384 = sha512.Sum384(payload)
 	var keySignature = b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=")
 	var certSignature = b64DecodeOrDie(t, "MEUCIQDoYuLoinEz/gM6B+hEn/0d47lmRDitQ3LfL9vH0sF/gQIgPqVgoBTRsMSPYMXYuJYYCIaTpnuppqQaTSTRn0ubwLI=")
 	var keySignatureP384 = b64DecodeOrDie(t, "MGYCMQDdKEzOCt71AzF+KKxrDQgCcPtsnfPZORmPlFZutXFqM8y/fi77sEAOjYkVdc4xxJwCMQC/4JuQ/bDWQV4QzPRA/u03pG49iTUDskoCFIrmabe0XyC9JkY1yyeuNS2LixMCaCI=")
@@ -368,8 +366,8 @@ func TestToLogEntry(t *testing.T) {
 			},
 			expectedEntry: &pb.DSSELogEntryV0_0_2{
 				PayloadHash: &v1.HashOutput{
-					Algorithm: v1.HashAlgorithm_SHA2_384,
-					Digest:    payloadHash384[:],
+					Algorithm: v1.HashAlgorithm_SHA2_256,
+					Digest:    payloadHash[:],
 				},
 				Signatures: []*pb.Signature{
 					{
@@ -437,8 +435,8 @@ func TestToLogEntry(t *testing.T) {
 			},
 			expectedEntry: &pb.DSSELogEntryV0_0_2{
 				PayloadHash: &v1.HashOutput{
-					Algorithm: v1.HashAlgorithm_SHA2_384,
-					Digest:    payloadHash384[:],
+					Algorithm: v1.HashAlgorithm_SHA2_256,
+					Digest:    payloadHash[:],
 				},
 				Signatures: []*pb.Signature{
 					{
