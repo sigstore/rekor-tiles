@@ -17,7 +17,7 @@ package dsse
 import (
 	"bytes"
 	"context"
-	"crypto"
+	"crypto/sha256"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -48,7 +48,7 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 		return nil, err
 	}
 
-	signerVerifiers, dsseHashAlgs, err := verifyEnvelopeAndSupportedAlgs(verifiers, ds.Envelope, algorithmRegistry)
+	signerVerifiers, err := verifyEnvelopeAndSupportedAlgs(verifiers, ds.Envelope, algorithmRegistry)
 	if err != nil {
 		return nil, err
 	}
@@ -65,25 +65,15 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 		canonicalizedSigs = append(canonicalizedSigs, &pb.Signature{Content: []byte(s), Verifier: signerVerifiers[s]})
 	}
 
-	// Pick the newest and strongest hash algorithm. Any hash algorithm is reasonable,
-	// and the client will be given the hash algorithm as part of the canonicalized body.
-	var algs []crypto.Hash
-	for k := range dsseHashAlgs {
-		algs = append(algs, k)
-	}
-	alg, err := algorithmregistry.SelectHashAlgorithm(algs)
-	if err != nil {
-		return nil, err
-	}
-
-	h := alg.New()
-	h.Write(ds.Envelope.Payload)
-	payloadHash := h.Sum(nil)
+	// Use a hardcoded SHA-256 hashing algorithm for the payload hash,
+	// since each signature digest algorithm might be different. Clients
+	// must not use the payload hash when verifying signatures.
+	payloadHash := sha256.Sum256(ds.Envelope.Payload)
 
 	return &pb.DSSELogEntryV0_0_2{
 		PayloadHash: &v1.HashOutput{
-			Algorithm: dsseHashAlgs[alg],
-			Digest:    payloadHash,
+			Algorithm: v1.HashAlgorithm_SHA2_256,
+			Digest:    payloadHash[:],
 		},
 		Signatures: canonicalizedSigs,
 	}, nil
@@ -140,9 +130,8 @@ func extractVerifiers(ds *pb.DSSERequestV0_0_2) (map[*pb.Verifier]verifier.Verif
 }
 
 // verifyEnvelopeAndSupportedAlgs takes in verifiers, a map of key details to the signature verifier. Verifiers are used to
-// to verify the envelope's signatures. A map of signatures to their verifiers is returned, along with all
-// possible hash algorithms to use for hashing the payload.
-func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope, algorithmRegistry *signature.AlgorithmRegistryConfig) (map[string]*pb.Verifier, map[crypto.Hash]v1.HashAlgorithm, error) {
+// to verify the envelope's signatures. Returns a map of signatures to their verifiers.
+func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope, algorithmRegistry *signature.AlgorithmRegistryConfig) (map[string]*pb.Verifier, error) {
 	env := FromProto(pbenv)
 	savs := make(map[string]*pb.Verifier, len(verifiers))
 	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
@@ -151,9 +140,6 @@ func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier
 		allSigs[sig.Sig] = struct{}{}
 	}
 
-	// map crypto.Hash to protobuf hash alg, used to determine payload hash later
-	dsseHashAlgSet := make(map[crypto.Hash]v1.HashAlgorithm)
-
 	for v, verifierKey := range verifiers {
 		if len(allSigs) == 0 {
 			break // if all signatures have been verified, do not attempt anymore
@@ -161,33 +147,32 @@ func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier
 
 		algDetails, err := signature.GetAlgorithmDetails(v.KeyDetails)
 		if err != nil {
-			return nil, nil, fmt.Errorf("getting key algorithm details: %w", err)
+			return nil, fmt.Errorf("getting key algorithm details: %w", err)
 		}
 		alg := algDetails.GetHashType()
-		dsseHashAlgSet[alg] = algDetails.GetProtoHashType()
 
 		// check if signing algorithm is supported by this Rekor instance
 		valid, err := algorithmregistry.CheckEntryAlgorithms(verifierKey.PublicKey(), alg, algorithmRegistry)
 		if err != nil {
-			return nil, nil, fmt.Errorf("checking entry algorithm: %w", err)
+			return nil, fmt.Errorf("checking entry algorithm: %w", err)
 		}
 		if !valid {
-			return nil, nil, fmt.Errorf("unsupported entry algorithm for key %s, digest %s", reflect.TypeOf(verifierKey.PublicKey()), alg.String())
+			return nil, fmt.Errorf("unsupported entry algorithm for key %s, digest %s", reflect.TypeOf(verifierKey.PublicKey()), alg.String())
 		}
 
 		vfr, err := signature.LoadVerifier(verifierKey.PublicKey(), alg)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not load verifier: %w", err)
+			return nil, fmt.Errorf("could not load verifier: %w", err)
 		}
 
 		dsseVfr, err := dsse.NewEnvelopeVerifier(&sigdsse.VerifierAdapter{SignatureVerifier: vfr})
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
+			return nil, fmt.Errorf("could not use public key as a dsse verifier: %w", err)
 		}
 
 		accepted, err := dsseVfr.Verify(context.Background(), env)
 		if err != nil {
-			return nil, nil, fmt.Errorf("could not verify envelope: %w", err)
+			return nil, fmt.Errorf("could not verify envelope: %w", err)
 		}
 
 		for _, accept := range accepted {
@@ -195,17 +180,17 @@ func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier
 			sigBytes, err := base64.StdEncoding.DecodeString(accept.Sig.Sig)
 			if err != nil {
 				// this should be unreachable
-				return nil, nil, fmt.Errorf("could not decode base64 signature: %w", err)
+				return nil, fmt.Errorf("could not decode base64 signature: %w", err)
 			}
 			savs[string(sigBytes)] = v
 		}
 	}
 
 	if len(allSigs) > 0 {
-		return nil, nil, errors.New("all signatures must have a key that verifies it")
+		return nil, errors.New("all signatures must have a key that verifies it")
 	}
 
-	return savs, dsseHashAlgSet, nil
+	return savs, nil
 }
 
 // FromProto converts a dsse proto message to a dsse struct

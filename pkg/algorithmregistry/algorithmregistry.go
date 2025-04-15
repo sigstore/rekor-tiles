@@ -17,8 +17,6 @@ package algorithmregistry
 import (
 	"crypto"
 	"fmt"
-	"slices"
-	"sort"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -27,8 +25,6 @@ import (
 var (
 	// AllowedClientSigningAlgorithms is the default set of supported signing
 	// algorithms for log entry signatures.
-	// When adding a new PublicKeyDetails, hashAlgorithmOrder must be updated
-	// if it uses a hash algorithm not specified in hashAlgorithmOrder.
 	AllowedClientSigningAlgorithms = []v1.PublicKeyDetails{
 		v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256,
 		v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_3072_SHA256,
@@ -39,10 +35,6 @@ var (
 		v1.PublicKeyDetails_PKIX_ED25519,
 		v1.PublicKeyDetails_PKIX_ED25519_PH,
 	}
-	// Opinionated ordering of hash algorithms from oldest and weakest to newest and strongest.
-	// Must be updated if AllowedClientSigningAlgorithms is updated with a new digest.
-	// Used to select payload hash algorithm for entry with multiple signatures.
-	hashAlgorithmOrder = []crypto.Hash{crypto.SHA256, crypto.SHA384, crypto.SHA512}
 )
 
 // AlgorithmRegistry accepts a list of algorithms as strings, parses and formats them into a registry.
@@ -87,23 +79,4 @@ func CheckEntryAlgorithms(pubKey crypto.PublicKey, alg crypto.Hash, algorithmReg
 		return false, nil
 	}
 	return true, nil
-}
-
-// SelectHashAlgorithm picks the newest and strongest hash algorithm.
-func SelectHashAlgorithm(algs []crypto.Hash) (crypto.Hash, error) {
-	if len(algs) == 0 {
-		return crypto.Hash(0), fmt.Errorf("hash algorithm slice is empty")
-	}
-	// sort from weakest to strongest
-	// unknown algorithms will be sorted first in the array
-	sort.Slice(algs, func(i, j int) bool {
-		return slices.Index(hashAlgorithmOrder, algs[i]) < slices.Index(hashAlgorithmOrder, algs[j])
-	})
-	// select the strongest algorithm. Check it's a known algorithm, in case only
-	// unknown algorithms were provided.
-	strongest := algs[len(algs)-1]
-	if slices.Index(hashAlgorithmOrder, strongest) == -1 {
-		return crypto.Hash(0), fmt.Errorf("no known hash algorithms provided")
-	}
-	return strongest, nil
 }
