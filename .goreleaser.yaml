@@ -28,15 +28,15 @@ sboms:
 
 builds:
   - id: rekor-server
-    binary: rekor-server-linux-{{ .Arch }}
+    binary: rekor-server-{{ .Os }}-{{ .Arch }}
     main: ./cmd/rekor-server
+    no_unique_dist_dir: true
     goos:
       - linux
+      - darwin
     goarch:
       - amd64
       - arm64
-    goarm:
-      - 7
     flags:
       - -trimpath
     mod_timestamp: '{{ .CommitTimestamp }}'
