@@ -38,13 +38,14 @@ type metrics struct {
 	reg           *prometheus.Registry
 	serverMetrics *grpc_prometheus.ServerMetrics
 	// metrics
-	newHashedRekordEntries prometheus.Counter
-	newDsseEntries         prometheus.Counter
-	httpLatency            *prometheus.HistogramVec
-	httpRequestsCount      *prometheus.CounterVec
-	httpRequestSize        *prometheus.HistogramVec
-	panicsTotal            prometheus.Counter
-	grpcRequestSize        *prometheus.HistogramVec
+	newHashedRekordEntries     prometheus.Counter
+	newDsseEntries             prometheus.Counter
+	httpLatency                *prometheus.HistogramVec
+	httpRequestsCount          *prometheus.CounterVec
+	httpRequestSize            *prometheus.HistogramVec
+	panicsTotal                prometheus.Counter
+	inclusionProofFailureCount prometheus.Counter
+	grpcRequestSize            *prometheus.HistogramVec
 }
 
 // Metrics provides the singleton metrics instance
@@ -96,6 +97,11 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 	m.panicsTotal = f.NewCounter(prometheus.CounterOpts{
 		Name: "grpc_req_panics_recovered_total",
 		Help: "Total number of gRPC requests recovered from internal panic.",
+	})
+
+	m.inclusionProofFailureCount = f.NewCounter(prometheus.CounterOpts{
+		Name: "rekor_inclusion_proof_failure_total",
+		Help: "Total number of inclusion proof verification failures, which should always be zero. Likely catastrophic failure if not zero.",
 	})
 
 	_ = f.NewGaugeFunc(
