@@ -50,6 +50,15 @@ func (e DuplicateError) Error() string {
 	return fmt.Sprintf("an equivalent entry already exists in the transparency log with index %d", e.index)
 }
 
+type InclusionProofVerificationError struct {
+	index uint64
+	err   error
+}
+
+func (e InclusionProofVerificationError) Error() string {
+	return fmt.Sprintf("verifying inclusion proof for index %d: %v", e.index, e.err)
+}
+
 // Storage provides the functions to add entries to a Tessera log.
 type Storage interface {
 	Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error)
@@ -182,9 +191,8 @@ func (s *storage) buildProof(ctx context.Context, idx *SafeInt64, signedCheckpoi
 	if err != nil {
 		return nil, fmt.Errorf("invalid tree size: %d", checkpoint.Size)
 	}
-	// TODO(#202): add metrics to detect when this inclusion proof ever fails as well as the overhead time for running this check.
 	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, idx.U(), safeCheckpointSize.U(), leafHash, inclusionProof, checkpoint.Hash); err != nil {
-		return nil, fmt.Errorf("failed to verify entry inclusion: %w", err)
+		return nil, InclusionProofVerificationError{idx.U(), err}
 	}
 	return &rekor_pb.InclusionProof{
 		LogIndex: idx.I(),
