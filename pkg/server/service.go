@@ -115,6 +115,9 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	if errors.As(err, &tessera.DuplicateError{}) {
 		return nil, status.Error(codes.AlreadyExists, err.Error())
 	}
+	if errors.As(err, &tessera.InclusionProofVerificationError{}) {
+		getMetrics().inclusionProofFailureCount.Inc()
+	}
 	if err != nil {
 		slog.Warn("failed to integrate entry", "error", err.Error())
 		return nil, status.Errorf(codes.Unknown, "failed to integrate entry")
