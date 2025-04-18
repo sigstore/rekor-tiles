@@ -40,8 +40,8 @@ func VerifyInclusionProof(entry *pbs.TransparencyLogEntry, cp *f_log.Checkpoint)
 }
 
 // VerifyCheckpoint verifies the signature on the entry's inclusion proof checkpoint
-func VerifyCheckpoint(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier) (*f_log.Checkpoint, error) { //nolint: revive
-	cp, _, _, err := f_log.ParseCheckpoint([]byte(entry.InclusionProof.GetCheckpoint().GetEnvelope()), verifier.Name(), verifier)
+func VerifyCheckpoint(unverifiedCp string, verifier sumdb_note.Verifier) (*f_log.Checkpoint, error) { //nolint: revive
+	cp, _, _, err := f_log.ParseCheckpoint([]byte(unverifiedCp), verifier.Name(), verifier)
 	if err != nil {
 		return nil, fmt.Errorf("unverified checkpoint signature: %v", err)
 	}
@@ -51,9 +51,29 @@ func VerifyCheckpoint(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verif
 // VerifyLogEntry verifies the log entry. This includes verifying the signature on the entry's
 // inclusion proof checkpoint and verifying the entry inclusion proof
 func VerifyLogEntry(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier) error { //nolint: revive
-	cp, err := VerifyCheckpoint(entry, verifier)
+	cp, err := VerifyCheckpoint(entry.GetInclusionProof().GetCheckpoint().GetEnvelope(), verifier)
 	if err != nil {
 		return err
 	}
 	return VerifyInclusionProof(entry, cp)
+}
+
+// VerifyConsistencyProof verifies the latest checkpoint signature and the consistency proof between a previous log size
+// and root hash and the latest checkpoint's size and root hash. This may be used by a C2SP witness.
+func VerifyConsistencyProof(consistencyProof [][]byte, oldSize uint64, oldRootHash []byte, newUnverifiedCp string, verifier sumdb_note.Verifier) error { //nolint: revive
+	newCp, err := VerifyCheckpoint(newUnverifiedCp, verifier)
+	if err != nil {
+		return err
+	}
+	return proof.VerifyConsistency(rfc6962.DefaultHasher, oldSize, newCp.Size, consistencyProof, oldRootHash, newCp.Hash)
+}
+
+// VerifyConsistencyProofWithCheckpoints verifies previous and latest checkpoint signatures and the consistency proof
+// between these checkpoints. This may be used by a monitor that persists checkpoints.
+func VerifyConsistencyProofWithCheckpoints(consistencyProof [][]byte, oldUnverifiedCp, newUnverifiedCp string, verifier sumdb_note.Verifier) error { //nolint: revive
+	oldCp, err := VerifyCheckpoint(oldUnverifiedCp, verifier)
+	if err != nil {
+		return err
+	}
+	return VerifyConsistencyProof(consistencyProof, oldCp.Size, oldCp.Hash, newUnverifiedCp, verifier)
 }
