@@ -30,6 +30,11 @@ env:
 
 permissions: {}
 
+# Prevent concurrent runs of this workflow, but do not cancel any in-progress
+concurrency:
+  group: "build-container"
+  cancel-in-progress: false
+
 # There is a single job in this workflow. It's configured to run on the latest available version of Ubuntu.
 jobs:
   build-and-push-image:
