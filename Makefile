@@ -15,7 +15,7 @@
 
 .PHONY: all test clean lint gosec ko-local tools ldflags
 
-all: rekor-server
+all: protos rekor-server
 
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
