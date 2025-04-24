@@ -62,11 +62,11 @@ func NewTinkSignerVerifierWithHandle(kek tink.AEAD, keysetPath string) (signatur
 	if err != nil {
 		return nil, err
 	}
-	signer, hash, err := tinkUtils.KeyHandleToSigner(kh)
+	signer, err := tinkUtils.KeyHandleToSigner(kh)
 	if err != nil {
 		return nil, err
 	}
-	return signature.LoadSignerVerifier(signer, hash)
+	return signature.LoadDefaultSignerVerifier(signer)
 }
 
 // getKeyEncryptionKey returns a Tink AEAD encryption key from KMS
