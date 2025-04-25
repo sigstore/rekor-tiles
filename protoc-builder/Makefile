@@ -50,6 +50,11 @@ protos: proto-image
 		--grpc-gateway_opt=module=${GO_MODULE} --grpc-gateway_opt=logtostderr=true --grpc-gateway_out=${MOUNT_POINT} \
 		--openapiv2_out=${MOUNT_POINT}/${OPENAPI_OUT} \
     ${PROTOS}
+	${DOCKER_RUN} -v ${PROJECT_DIR}:${MOUNT_POINT} ${PROTOC_REKOR_IMAGE} \
+		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
+		--python_out=${MOUNT_POINT} \
+    ${PROTOS}
+
 
 .PHONY: proto-image
 proto-image: Dockerfile

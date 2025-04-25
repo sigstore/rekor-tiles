@@ -1,0 +1,23 @@
+services:
+  rekor:
+    build:
+      target: "debug"
+    command: 
+      -  "dlv"
+      -  "exec"
+      -  "--listen=:2345"
+      -  "--headless=true"
+      -  "--log=true"
+      -  "--api-version=2"
+      -  "--"
+      - "/usr/local/bin/rekor-server"
+      - "serve"
+      - "--http-address=0.0.0.0"
+      - "--grpc-address=0.0.0.0"
+      - "--hostname=rekor-local"
+      - "--gcp-bucket=tiles"
+      - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
+      - "--signer-filepath=/pki/ed25519-priv-key.pem"
+      - "--checkpoint-interval=2s"
+    ports:
+      - 2345:2345
