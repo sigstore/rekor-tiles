@@ -40,7 +40,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 — test.origin AAAAAW5vb3AKMQpnYi9BbkVFc0JOcFRvYkRkdVUzT1NOYWlUcDZsaVlmMzFGb0U2QUIvczhvPQo=`), nil
 	}
 	s := storage{
-		awaiter: tessera.NewIntegrationAwaiter(ctx, readCheckpoint, 10*time.Millisecond),
+		awaiter: tessera.NewPublicationAwaiter(ctx, readCheckpoint, 10*time.Millisecond),
 		readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
 			return hex.DecodeString(tileHash)
 		},
