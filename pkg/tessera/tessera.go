@@ -67,7 +67,7 @@ type Storage interface {
 
 type storage struct {
 	origin     string
-	awaiter    *tessera.IntegrationAwaiter
+	awaiter    *tessera.PublicationAwaiter
 	addFn      tessera.AddFn
 	readTileFn client.TileFetcherFunc
 }
@@ -122,7 +122,7 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appen
 		return nil, nil, fmt.Errorf("getting tessera appender: %w", err)
 	}
 	slog.Info("starting Tessera sequencer")
-	awaiter := tessera.NewIntegrationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
+	awaiter := tessera.NewPublicationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
 	return &storage{
 		origin:     origin,
 		awaiter:    awaiter,
