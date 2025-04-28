@@ -12,11 +12,11 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
 	github.com/sigstore/protobuf-specs v0.4.1
-	github.com/sigstore/sigstore v1.9.3
-	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.3
-	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.3
-	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.3
-	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.3
+	github.com/sigstore/sigstore v1.9.4
+	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.4
+	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.4
+	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.4
+	github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.9.4
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/stretchr/testify v1.10.0
@@ -43,7 +43,7 @@ require (
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	cloud.google.com/go/iam v1.5.0 // indirect
-	cloud.google.com/go/kms v1.21.1 // indirect
+	cloud.google.com/go/kms v1.21.2 // indirect
 	cloud.google.com/go/longrunning v0.6.6 // indirect
 	cloud.google.com/go/monitoring v1.24.1 // indirect
 	cloud.google.com/go/spanner v1.79.0 // indirect
