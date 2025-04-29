@@ -52,8 +52,8 @@ type grpcServer struct {
 	serverEndpoint string
 }
 
-// newGRPCServer starts a new grpc server and registers the services.
-func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
+// newGRPCServer starts a new gRPC server and registers the services
+func newGRPCServer(config *GRPCConfig, server RekorServer) *grpcServer {
 	var opts []grpc.ServerOption
 
 	grpcPanicRecoveryHandler := func(p any) (err error) {

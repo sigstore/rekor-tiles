@@ -38,7 +38,7 @@ func TestServe_grpcSmoke(t *testing.T) {
 	server.Start(t)
 	defer server.Stop(t)
 
-	// check if we can hit grpc endpoints
+	// check if we can hit gRPC endpoints
 	conn, err := grpc.NewClient(
 		server.gc.GRPCTarget(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()))

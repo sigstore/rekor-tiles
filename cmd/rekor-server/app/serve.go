@@ -112,7 +112,12 @@ var serveCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		rekorServer := server.NewServer(tesseraStorage, readOnly, algorithmRegistry)
+		var rekorServer server.RekorServer
+		if viper.GetBool("serve-read-paths") {
+			rekorServer = server.NewReadServer(tesseraStorage, readOnly, algorithmRegistry)
+		} else {
+			rekorServer = server.NewServer(tesseraStorage, readOnly, algorithmRegistry)
+		}
 
 		server.Serve(
 			ctx,
@@ -147,6 +152,7 @@ func init() {
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
 	serveCmd.Flags().Duration("timeout", 60*time.Second, "timeout")
 	serveCmd.Flags().Int("max-request-body-size", 4*1024*1024, "maximum request body size in bytes")
+	serveCmd.Flags().Bool("serve-read-paths", false, "whether to serve the read paths /checkpoint and /tile from the filesystem, as an alternative to a standalone read traffic server")
 
 	// hostname
 	hostname, err := os.Hostname()
