@@ -21,7 +21,6 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"reflect"
 	"slices"
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
@@ -157,7 +156,7 @@ func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier
 			return nil, fmt.Errorf("checking entry algorithm: %w", err)
 		}
 		if !valid {
-			return nil, fmt.Errorf("unsupported entry algorithm for key %s, digest %s", reflect.TypeOf(verifierKey.PublicKey()), alg.String())
+			return nil, &algorithmregistry.UnsupportedAlgorithm{Pub: verifierKey.PublicKey(), Alg: alg}
 		}
 
 		vfr, err := signature.LoadVerifier(verifierKey.PublicKey(), alg)

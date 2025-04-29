@@ -18,7 +18,6 @@ import (
 	"bytes"
 	"crypto"
 	"fmt"
-	"reflect"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
@@ -104,7 +103,7 @@ func verifySupportedAlgorithm(keyDetails v1.PublicKeyDetails, v verifier.Verifie
 		return signature.AlgorithmDetails{}, fmt.Errorf("checking entry algorithm: %w", err)
 	}
 	if !valid {
-		return signature.AlgorithmDetails{}, fmt.Errorf("unsupported entry algorithm for key %s, digest %s", reflect.TypeOf(v.PublicKey()), alg.String())
+		return signature.AlgorithmDetails{}, &algorithmregistry.UnsupportedAlgorithm{Pub: v.PublicKey(), Alg: alg}
 	}
 	return algDetails, nil
 }
