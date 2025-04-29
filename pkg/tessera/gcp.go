@@ -21,6 +21,7 @@ import (
 
 	tessera "github.com/transparency-dev/trillian-tessera"
 	"github.com/transparency-dev/trillian-tessera/storage/gcp"
+	antispam "github.com/transparency-dev/trillian-tessera/storage/gcp/antispam"
 )
 
 // NewGCPDriver returns a GCP Tessera Driver for the given bucket and spanner URI.
@@ -34,4 +35,14 @@ func NewGCPDriver(ctx context.Context, bucket, spanner string) (tessera.Driver, 
 		return nil, fmt.Errorf("getting tessera GCP driver: %w", err)
 	}
 	return driver, nil
+}
+
+// NewGCPAntispam initializes a Spanner database to store recent entries
+func NewGCPAntispam(ctx context.Context, spannerDb string, maxBatchSize, pushbackThreshold uint) (tessera.Antispam, error) {
+	asOpts := antispam.AntispamOpts{
+		MaxBatchSize:      maxBatchSize,
+		PushbackThreshold: pushbackThreshold,
+	}
+	dbName := fmt.Sprintf("%s-antispam", spannerDb)
+	return antispam.NewAntispam(ctx, dbName, asOpts)
 }
