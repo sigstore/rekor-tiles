@@ -44,7 +44,7 @@ func TestNewTinkCA(t *testing.T) {
 	if err != nil {
 		t.Fatalf("error creating ECDSA key handle: %v", err)
 	}
-	khsigner, _, err := tinkUtils.KeyHandleToSigner(kh)
+	khsigner, err := tinkUtils.KeyHandleToSigner(kh)
 	if err != nil {
 		t.Fatalf("error converting ECDSA key handle to signer: %v", err)
 	}
