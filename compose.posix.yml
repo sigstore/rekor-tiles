@@ -1,0 +1,47 @@
+#
+# Copyright 2025 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+services:
+  rekor:
+    build:
+      context: .
+      target: deploy
+    command:
+    - "rekor-server"
+    - "serve"
+    - "--http-address=0.0.0.0"
+    - "--grpc-address=0.0.0.0"
+    - "--hostname=rekor-local"
+    - "--posix-storage-dir=/tmp/posixlog"
+    - "--serve-read-paths=true"
+    - "--persistent-antispam=true"
+    - "--signer-filepath=/pki/ed25519-priv-key.pem"
+    - "--checkpoint-interval=2s"
+    ports:
+    - "3003:3000" # http port
+    - "3001:3001" # grpc port
+    - "2114:2112" # metrics port
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl http://localhost:3000/healthz | grep '{"status":"SERVING"}'
+      timeout: 30s
+      retries: 10
+      interval: 3s
+    volumes:
+    - ./tests/testdata/pki:/pki
+    - antispam:/tmp/posixlog
+volumes:
+  antispam: {}

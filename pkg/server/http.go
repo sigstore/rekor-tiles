@@ -46,6 +46,7 @@ import (
 const (
 	httpStatusCodeHeader   = "x-http-code"
 	httpErrorMessageHeader = "x-http-error-message"
+	httpCacheControlHeader = "x-cache-control"
 )
 
 type httpProxy struct {
@@ -195,6 +196,12 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Me
 		if strings.HasPrefix(header, "Grpc-") {
 			delete(w.Header(), header)
 		}
+	}
+
+	// set cache control
+	if vals := md.HeaderMD.Get(httpCacheControlHeader); len(vals) > 0 {
+		delete(md.HeaderMD, httpCacheControlHeader)
+		w.Header().Set("Cache-Control", vals[0])
 	}
 
 	// set http status code

@@ -159,6 +159,4 @@ func TestAppendOptions(t *testing.T) {
 	assert.Equal(t, 42*time.Millisecond, ao.BatchMaxAge())
 	assert.Equal(t, 42*time.Second, ao.CheckpointInterval())
 	assert.Equal(t, uint(42), ao.PushbackMaxOutstanding())
-	_, err = WithAntispamOptions(context.Background(), ao, false, 100, 1000, "spannerdb")
-	assert.NoError(t, err)
 }

@@ -116,6 +116,26 @@ jobs:
       - name: Run e2e tests
         run: go test -v -tags=e2e ./tests/
 
+  e2e-posix-tests:
+    name: Run E2E POSIX tests
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Run docker compose
+        run: docker compose -f compose.posix.yml up -d --build --wait --wait-timeout 60
+      - name: Run e2e tests
+        run: go test -v -tags=e2e,posix -run TestPOSIXReadWrite ./tests/
+      - name: docker compose down (persist volume)
+        run: docker compose down
+      - name: docker compose up for persistent antispam
+        run: docker compose -f compose.posix.yml up -d --build --wait --wait-timeout 60
+      - name: Run persistent antispam test
+        run: go test -v -tags=e2e,posix -run TestPOSIXPersistentAnitspam ./tests/
+
   sharding:
     name: Run freeze log tests
     permissions:
