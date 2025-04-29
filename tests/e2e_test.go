@@ -26,6 +26,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"reflect"
 	"testing"
 
 	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
@@ -49,6 +50,7 @@ const (
 	defaultRekorURL        = "http://localhost:3003"
 	defaultRekorHostname   = "rekor-local"
 	defaultGCSURL          = "http://localhost:7080/tiles"
+	defaultRekorReadURL    = "http://localhost:3003/api/v2"
 	defaultServerPublicKey = "./testdata/pki/ed25519-pub-key.pem"
 )
 
@@ -65,8 +67,12 @@ func TestReadWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// reader client
-	reader, err := read.NewReader(defaultGCSURL, defaultRekorHostname, verifier)
+	// reader clients
+	readerBucket, err := read.NewReader(defaultGCSURL, defaultRekorHostname, verifier)
+	if err != nil {
+		t.Fatal(err)
+	}
+	readerServer, err := read.NewReader(defaultRekorReadURL, defaultRekorHostname, verifier)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +84,7 @@ func TestReadWrite(t *testing.T) {
 	}
 
 	// Get the current checkpoint
-	checkpoint, note, err := reader.ReadCheckpoint(ctx)
+	checkpoint, note, err := readerBucket.ReadCheckpoint(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, checkpoint)
 	assert.NotNil(t, note)
@@ -119,7 +125,7 @@ func TestReadWrite(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check the checkpoint again
-	checkpoint, note, err = reader.ReadCheckpoint(ctx)
+	checkpoint, note, err = readerBucket.ReadCheckpoint(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, checkpoint)
 	assert.NotNil(t, note)
@@ -130,10 +136,10 @@ func TestReadWrite(t *testing.T) {
 	tileLevel := uint64(0)
 	tileIndex := uint64(0)
 	tilePart := uint8(0)
-	firstTileBytes, err := reader.ReadTile(ctx, tileLevel, tileIndex, tilePart)
+	firstTileBytes, err := readerBucket.ReadTile(ctx, tileLevel, tileIndex, tilePart)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, firstTileBytes)
-	entryBundle, err := reader.ReadEntryBundle(ctx, tileIndex, tilePart)
+	entryBundle, err := readerBucket.ReadEntryBundle(ctx, tileIndex, tilePart)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, entryBundle)
 
@@ -141,11 +147,11 @@ func TestReadWrite(t *testing.T) {
 	tileIndex = latestTreeSize / layout.TileWidth
 	assert.GreaterOrEqual(t, tileIndex, uint64(1))
 	tilePart = layout.PartialTileSize(tileLevel, latestTreeSize-1, latestTreeSize)
-	lastTileBytes, err := reader.ReadTile(ctx, tileLevel, tileIndex, tilePart)
+	lastTileBytes, err := readerBucket.ReadTile(ctx, tileLevel, tileIndex, tilePart)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, lastTileBytes)
 	assert.NotEqual(t, firstTileBytes, lastTileBytes)
-	entryBundle, err = reader.ReadEntryBundle(ctx, tileIndex, tilePart)
+	entryBundle, err = readerBucket.ReadEntryBundle(ctx, tileIndex, tilePart)
 	assert.NoError(t, err)
 	assert.Contains(t, string(entryBundle), base64.StdEncoding.EncodeToString(artifactDigest(numNewEntries)))
 
@@ -164,11 +170,31 @@ func TestReadWrite(t *testing.T) {
 	latestTreeSize = safeLogSize.U()
 	tileIndex = latestTreeSize / layout.TileWidth
 	tilePart = layout.PartialTileSize(tileLevel, latestTreeSize-1, latestTreeSize)
-	entryBundle, err = reader.ReadEntryBundle(ctx, tileIndex, tilePart)
+	entryBundle, err = readerBucket.ReadEntryBundle(ctx, tileIndex, tilePart)
 	assert.NoError(t, err)
 	expectedPayloadHash := sha256.Sum256([]byte("payload"))
 	expectedB64PayloadHash := base64.StdEncoding.EncodeToString(expectedPayloadHash[:])
 	assert.Contains(t, string(entryBundle), expectedB64PayloadHash)
+
+	// Verify read paths served by the server return the same data as GCS
+	checkpoint, note, err = readerBucket.ReadCheckpoint(ctx)
+	assert.NoError(t, err)
+	checkpointServer, noteServer, err := readerServer.ReadCheckpoint(ctx)
+	assert.NoError(t, err)
+	assert.True(t, reflect.DeepEqual(checkpoint, checkpointServer))
+	assert.True(t, reflect.DeepEqual(note, noteServer))
+
+	tileBytes, err := readerBucket.ReadTile(ctx, tileLevel, tileIndex, tilePart)
+	assert.NoError(t, err)
+	tileBytesServer, err := readerServer.ReadTile(ctx, tileLevel, tileIndex, tilePart)
+	assert.NoError(t, err)
+	assert.True(t, reflect.DeepEqual(tileBytes, tileBytesServer))
+
+	entryBundle, err = readerBucket.ReadEntryBundle(ctx, tileIndex, tilePart)
+	assert.NoError(t, err)
+	entryBundleServer, err := readerServer.ReadEntryBundle(ctx, tileIndex, tilePart)
+	assert.NoError(t, err)
+	assert.True(t, reflect.DeepEqual(entryBundle, entryBundleServer))
 
 	// Add a second identical entries immediately to check for deduplication
 	// TODO(#158): add more advanced deduplication checking when the Spanner emulator supports the "batch write" operation

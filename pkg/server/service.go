@@ -39,12 +39,13 @@ import (
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
-// rekorServer is the collection of methods that our grpc server must implement.
-type rekorServer interface {
+// RekorServer is the collection of methods that the gRPC server must implement
+type RekorServer interface {
 	pb.RekorServer
 	grpc_health_v1.HealthServer
 }
 
+// Server implements the write path and default healthcheck for all storage backends
 type Server struct {
 	pb.UnimplementedRekorServer
 	grpc_health_v1.UnimplementedHealthServer

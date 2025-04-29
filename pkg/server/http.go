@@ -46,6 +46,7 @@ import (
 const (
 	httpStatusCodeHeader   = "x-http-code"
 	httpErrorMessageHeader = "x-http-error-message"
+	httpCacheControlHeader = "x-cache-control"
 )
 
 type httpProxy struct {
@@ -53,7 +54,7 @@ type httpProxy struct {
 	serverEndpoint string
 }
 
-// newHTTProxy creates a mux for each of the service grpc methods, including the grpc heatlhcheck.
+// newHTTProxy creates a mux for each of the service grpc methods, including the gRPC heatlhcheck.
 func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServer) *httpProxy {
 	// configure a custom marshaler to fail on unknown fields
 	strictMarshaler := runtime.HTTPBodyMarshaler{
@@ -197,7 +198,13 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Me
 		}
 	}
 
-	// set http status code
+	// set cache control
+	if vals := md.HeaderMD.Get(httpCacheControlHeader); len(vals) > 0 {
+		delete(md.HeaderMD, httpCacheControlHeader)
+		w.Header().Set("Cache-Control", vals[0])
+	}
+
+	// set HTTP status code
 	if vals := md.HeaderMD.Get(httpStatusCodeHeader); len(vals) > 0 {
 		code, err := strconv.Atoi(vals[0])
 		if err != nil {
