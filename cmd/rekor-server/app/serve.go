@@ -49,12 +49,6 @@ var serveCmd = &cobra.Command{
 		}
 		slog.Info("starting rekor-server", "version", versionInfoStr)
 
-		// currently only the GCP driver is supported for rekor-tiles.
-		tesseraDriver, err := tessera.NewGCPDriver(ctx, viper.GetString("gcp-bucket"), viper.GetString("gcp-spanner"))
-		if err != nil {
-			slog.Error(fmt.Sprintf("failed to initialize GCP driver: %v", err.Error()))
-			os.Exit(1)
-		}
 		var signerOpts []signerverifier.Option
 		switch {
 		case viper.GetString("signer-filepath") != "":
@@ -88,8 +82,20 @@ var serveCmd = &cobra.Command{
 		shutdownFn := func(_ context.Context) error { return nil }
 		// if in read-only mode, don't start the appender, because we don't want new checkpoints being published.
 		if !readOnly {
+			driverConfig := tessera.DriverConfiguration{
+				GCPBucket:           viper.GetString("gcp-bucket"),
+				GCPSpannerDB:        viper.GetString("gcp-spanner"),
+				PersistentAntispam:  viper.GetBool("persistent-antispam"),
+				ASMaxBatchSize:      viper.GetUint("antispam-max-batch-size"),
+				ASPushbackThreshold: viper.GetUint("antispam-pushback-threshold"),
+			}
+			tesseraDriver, persistentAntispam, err := tessera.NewDriver(ctx, driverConfig)
+			if err != nil {
+				slog.Error(fmt.Sprintf("failed to initialize driver: %v", err))
+				os.Exit(1)
+			}
 			appendOptions = tessera.WithLifecycleOptions(appendOptions, viper.GetUint("batch-max-size"), viper.GetDuration("batch-max-age"), viper.GetDuration("checkpoint-interval"), viper.GetUint("pushback-max-outstanding"))
-			appendOptions, err = tessera.WithAntispamOptions(ctx, appendOptions, viper.GetBool("persistent-antispam"), viper.GetUint("antispam-max-batch-size"), viper.GetUint("antispam-pushback-threshold"), viper.GetString("gcp-spanner"))
+			appendOptions = tessera.WithAntispamOptions(appendOptions, persistentAntispam)
 			if err != nil {
 				slog.Error(fmt.Sprintf("failed to configure antispam append options: %v", err))
 				os.Exit(1)
@@ -169,8 +175,8 @@ func init() {
 
 	// antispam configs
 	serveCmd.Flags().Bool("persistent-antispam", false, "whether to enable persistent antispam measures; only available for GCP storage backend and not supported by the Spanner storage emulator")
-	serveCmd.Flags().Uint("antispam-max-batch-size", tessera.DefaultAntispamMaxBatchSize, "maximum batch size for deduplication operations; recommend around 1500 for Spanner instances with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
-	serveCmd.Flags().Uint("antispam-pushback-threshold", tessera.DefaultAntispamPushbackThreshold, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back")
+	serveCmd.Flags().Uint("antispam-max-batch-size", 0, "maximum batch size for deduplication operations; will default to Tessera recommendation if unset; for Spanner, recommend around 1500 with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
+	serveCmd.Flags().Uint("antispam-pushback-threshold", 0, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back; will default to Tessera recommendation if unset")
 
 	// allowed entry signing algorithms
 	keyAlgorithmTypes, err := defaultKeyAlgorithms()
