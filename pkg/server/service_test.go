@@ -209,6 +209,14 @@ func (s *mockStorage) ReadTile(_ context.Context, _, _ uint64, _ uint8) ([]byte,
 	return nil, nil
 }
 
+func (s *mockStorage) ReadEntryBundle(_ context.Context, _ uint64, _ uint8) ([]byte, error) {
+	return nil, nil
+}
+
+func (s *mockStorage) ReadCheckpoint(_ context.Context) ([]byte, error) {
+	return nil, nil
+}
+
 func hexDecodeOrDie(t *testing.T, hash string) []byte {
 	decoded, err := hex.DecodeString(hash)
 	if err != nil {

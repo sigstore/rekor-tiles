@@ -21,8 +21,8 @@ import (
 	"sync"
 )
 
-// Serve starts the grpc server and its http proxy.
-func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s rekorServer, tesseraShutdownFn func(context.Context) error) {
+// Serve starts the gRPC server and HTTP proxy
+func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s RekorServer, tesseraShutdownFn func(context.Context) error) {
 	var wg sync.WaitGroup
 
 	if hc.port == 0 || gc.port == 0 {

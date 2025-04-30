@@ -16,6 +16,7 @@
 services:
   spanner:
     image: gcr.io/cloud-spanner-emulator/emulator:1.5.33@sha256:b211c813058e95bbdabfcb5dc78de0deb2d8a51e071532b2e90485fc6ec3a877
+    platform: linux/amd64
   gcs:
     image: fsouza/fake-gcs-server:1.52.2@sha256:d47b4cf8b87006cab8fbbecfa5f06a2a3c5722e464abddc0d107729663d40ec4
     volumes:
@@ -62,6 +63,7 @@ services:
     - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
     - "--signer-filepath=/pki/ed25519-priv-key.pem"
     - "--checkpoint-interval=2s"
+    - "--serve-read-paths=true"
     ports:
     - "3003:3000" # http port
     - "3001:3001" # grpc port
