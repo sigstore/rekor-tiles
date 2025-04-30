@@ -21,8 +21,10 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"strings"
 	"testing"
 
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -180,5 +182,39 @@ func TestUnsupportedAlgorithm_Error(t *testing.T) {
 				t.Errorf("Error() mismatch:\ngot = %q\nwant= %q", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestUnsupportedAlgorithmForAllAllowedAlgs(t *testing.T) {
+	for _, a := range AllowedClientSigningAlgorithms {
+		details, err := signature.GetAlgorithmDetails(a)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var pub crypto.PublicKey
+		switch details.GetKeyType() {
+		case signature.RSA:
+			priv, err := rsa.GenerateKey(rand.Reader, 2048) // bit size doesn't matter for error
+			if err != nil {
+				t.Fatal(err)
+			}
+			pub = priv.Public()
+		case signature.ECDSA:
+			priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader) // curve doesn't matter for error
+			if err != nil {
+				t.Fatal(err)
+			}
+			pub = priv.Public()
+		case signature.ED25519:
+			pub, _, err = ed25519.GenerateKey(rand.Reader)
+			if err != nil {
+				t.Fatal(err)
+			}
+		}
+		hash := details.GetHashType()
+		uaErr := UnsupportedAlgorithm{Pub: pub, Alg: hash}
+		if strings.Contains(uaErr.Error(), "unsupported key type") {
+			t.Errorf("%v unexpected unsupported", a)
+		}
 	}
 }
