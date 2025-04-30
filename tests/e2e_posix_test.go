@@ -12,49 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build e2e
+//go:build e2e && posix
 
 package main
 
 import (
 	"context"
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/base64"
 	"fmt"
-	"reflect"
 	"testing"
 
-	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
-	dsset "github.com/sigstore/rekor-tiles/pkg/types/dsse"
-
-	"github.com/secure-systems-lab/go-securesystemslib/dsse"
-	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor-tiles/pkg/client/read"
 	"github.com/sigstore/rekor-tiles/pkg/client/write"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
 	"github.com/sigstore/sigstore/pkg/signature"
-	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
+	"github.com/transparency-dev/trillian-tessera/api"
 	"github.com/transparency-dev/trillian-tessera/api/layout"
 	"go.step.sm/crypto/pemutil"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const (
-	defaultRekorURL        = "http://localhost:3003"
-	defaultRekorHostname   = "rekor-local"
-	defaultGCSURL          = "http://localhost:7080/tiles"
-	defaultRekorReadURL    = "http://localhost:3003/api/v2"
-	defaultServerPublicKey = "./testdata/pki/ed25519-pub-key.pem"
-)
-
-func TestReadWrite(t *testing.T) {
+func TestPOSIXReadWrite(t *testing.T) {
 	ctx := context.Background()
 
 	// get verifier needed for both read and write
@@ -67,12 +49,8 @@ func TestReadWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// reader clients
-	readerBucket, err := read.NewReader(defaultGCSURL, defaultRekorHostname, verifier)
-	if err != nil {
-		t.Fatal(err)
-	}
-	readerServer, err := read.NewReader(defaultRekorReadURL, defaultRekorHostname, verifier)
+	// reader client
+	reader, err := read.NewReader(defaultRekorReadURL, defaultRekorHostname, verifier)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,7 +62,7 @@ func TestReadWrite(t *testing.T) {
 	}
 
 	// Get the current checkpoint
-	checkpoint, note, err := readerBucket.ReadCheckpoint(ctx)
+	checkpoint, note, err := reader.ReadCheckpoint(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, checkpoint)
 	assert.NotNil(t, note)
@@ -125,7 +103,7 @@ func TestReadWrite(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Check the checkpoint again
-	checkpoint, note, err = readerBucket.ReadCheckpoint(ctx)
+	checkpoint, note, err = reader.ReadCheckpoint(ctx)
 	assert.NoError(t, err)
 	assert.NotNil(t, checkpoint)
 	assert.NotNil(t, note)
@@ -136,10 +114,10 @@ func TestReadWrite(t *testing.T) {
 	tileLevel := uint64(0)
 	tileIndex := uint64(0)
 	tilePart := uint8(0)
-	firstTileBytes, err := readerBucket.ReadTile(ctx, tileLevel, tileIndex, tilePart)
+	firstTileBytes, err := reader.ReadTile(ctx, tileLevel, tileIndex, tilePart)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, firstTileBytes)
-	entryBundle, err := readerBucket.ReadEntryBundle(ctx, tileIndex, tilePart)
+	entryBundle, err := reader.ReadEntryBundle(ctx, tileIndex, tilePart)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, entryBundle)
 
@@ -147,11 +125,11 @@ func TestReadWrite(t *testing.T) {
 	tileIndex = latestTreeSize / layout.TileWidth
 	assert.GreaterOrEqual(t, tileIndex, uint64(1))
 	tilePart = layout.PartialTileSize(tileLevel, latestTreeSize-1, latestTreeSize)
-	lastTileBytes, err := readerBucket.ReadTile(ctx, tileLevel, tileIndex, tilePart)
+	lastTileBytes, err := reader.ReadTile(ctx, tileLevel, tileIndex, tilePart)
 	assert.NoError(t, err)
 	assert.NotEmpty(t, lastTileBytes)
 	assert.NotEqual(t, firstTileBytes, lastTileBytes)
-	entryBundle, err = readerBucket.ReadEntryBundle(ctx, tileIndex, tilePart)
+	entryBundle, err = reader.ReadEntryBundle(ctx, tileIndex, tilePart)
 	assert.NoError(t, err)
 	assert.Contains(t, string(entryBundle), base64.StdEncoding.EncodeToString(artifactDigest(numNewEntries)))
 
@@ -170,35 +148,13 @@ func TestReadWrite(t *testing.T) {
 	latestTreeSize = safeLogSize.U()
 	tileIndex = latestTreeSize / layout.TileWidth
 	tilePart = layout.PartialTileSize(tileLevel, latestTreeSize-1, latestTreeSize)
-	entryBundle, err = readerBucket.ReadEntryBundle(ctx, tileIndex, tilePart)
+	entryBundle, err = reader.ReadEntryBundle(ctx, tileIndex, tilePart)
 	assert.NoError(t, err)
 	expectedPayloadHash := sha256.Sum256([]byte("payload"))
 	expectedB64PayloadHash := base64.StdEncoding.EncodeToString(expectedPayloadHash[:])
 	assert.Contains(t, string(entryBundle), expectedB64PayloadHash)
 
-	// Verify read paths served by the server return the same data as GCS
-	checkpoint, note, err = readerBucket.ReadCheckpoint(ctx)
-	assert.NoError(t, err)
-	checkpointServer, noteServer, err := readerServer.ReadCheckpoint(ctx)
-	assert.NoError(t, err)
-	assert.True(t, reflect.DeepEqual(checkpoint, checkpointServer))
-	assert.True(t, reflect.DeepEqual(note, noteServer))
-
-	tileBytes, err := readerBucket.ReadTile(ctx, tileLevel, tileIndex, tilePart)
-	assert.NoError(t, err)
-	tileBytesServer, err := readerServer.ReadTile(ctx, tileLevel, tileIndex, tilePart)
-	assert.NoError(t, err)
-	assert.True(t, reflect.DeepEqual(tileBytes, tileBytesServer))
-
-	entryBundle, err = readerBucket.ReadEntryBundle(ctx, tileIndex, tilePart)
-	assert.NoError(t, err)
-	entryBundleServer, err := readerServer.ReadEntryBundle(ctx, tileIndex, tilePart)
-	assert.NoError(t, err)
-	assert.True(t, reflect.DeepEqual(entryBundle, entryBundleServer))
-
-	// Add a second identical entries immediately to check for deduplication
-	// TODO(#158): add more advanced deduplication checking when the Spanner emulator supports the "batch write" operation
-	// (https://cloud.google.com/spanner/docs/batch-write) (https://github.com/GoogleCloudPlatform/cloud-spanner-emulator/issues/172).
+	// Add a second identical entry immediately to check for deduplication
 	oldIndex := tle.LogIndex
 	_, err = writer.Add(ctx, dr)
 	assert.Error(t, err)
@@ -206,83 +162,49 @@ func TestReadWrite(t *testing.T) {
 	assert.ErrorContains(t, err, fmt.Sprintf("an equivalent entry already exists in the transparency log with index %d", oldIndex))
 }
 
-func artifactDigest(idx uint64) []byte {
-	baseArtifact := "testartifact"
-	artifact := []byte(fmt.Sprintf("%s%d", baseArtifact, idx))
-	digest := sha256.Sum256(artifact)
-	return digest[:]
-}
+// Must only be run after TestPOSIXReadWrite with a persistent volume mounted to the container
+func TestPOSIXPersistentAnitspam(t *testing.T) {
+	ctx := context.Background()
 
-func genKeys() (*ecdsa.PrivateKey, []byte, error) {
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	// initialize verifier for reader
+	serverPubKey, err := pemutil.Read(defaultServerPublicKey)
 	if err != nil {
-		return nil, nil, err
+		t.Fatal(err)
 	}
-	pubKey, err := x509.MarshalPKIXPublicKey(privKey.Public())
+	verifier, err := signature.LoadDefaultVerifier(serverPubKey)
 	if err != nil {
-		return nil, nil, err
+		t.Fatal(err)
 	}
-	return privKey, pubKey, nil
-}
 
-func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64) (*pb.HashedRekordRequestV0_0_2, error) {
-	digest := artifactDigest(idx)
-	sig, err := ecdsa.SignASN1(rand.Reader, privKey, digest)
+	// write and read clients
+	writer, err := write.NewWriter(defaultRekorURL, defaultRekorHostname, verifier)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	return &pb.HashedRekordRequestV0_0_2{
-		Signature: &pb.Signature{
-			Content: sig,
-			Verifier: &pb.Verifier{
-				Verifier: &pb.Verifier_PublicKey{
-					PublicKey: &pb.PublicKey{
-						RawBytes: pubKey,
-					},
-				},
-				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-			},
-		},
-		Digest: digest,
-	}, nil
-}
+	reader, err := read.NewReader(defaultRekorReadURL, defaultRekorHostname, verifier)
+	if err != nil {
+		t.Fatal(err)
+	}
 
-func newDSSEEnvelope(privKey *ecdsa.PrivateKey) (*pbdsse.Envelope, error) {
-	ecdsaSigner, err := signature.LoadECDSASigner(privKey, crypto.SHA256)
+	// fetch and parse an entry bundle
+	entryBundle, err := reader.ReadEntryBundle(ctx, 0, 0)
 	if err != nil {
-		return nil, err
+		t.Fatal(err)
 	}
-	envelopeSigner, err := dsse.NewEnvelopeSigner(&sigdsse.SignerAdapter{
-		SignatureSigner: ecdsaSigner,
-	})
-	if err != nil {
-		return nil, err
-	}
-	payload := "payload"
-	payloadType := "application/vnd.in-toto+json"
-	envelope, err := envelopeSigner.SignPayload(context.Background(), payloadType, []byte(payload))
-	if err != nil {
-		return nil, err
-	}
-	return dsset.ToProto(envelope)
-}
+	bundle := api.EntryBundle{}
+	err = bundle.UnmarshalText(entryBundle)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, bundle.Entries)
 
-func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV0_0_2, error) {
-	envelope, err := newDSSEEnvelope(privKey)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.DSSERequestV0_0_2{
-		Envelope: envelope,
-		Verifiers: []*pb.Verifier{
-			{
-				Verifier: &pb.Verifier_PublicKey{
-					PublicKey: &pb.PublicKey{
-						RawBytes: pubKey,
-					},
-				},
-				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-			},
-		},
-	}, nil
+	// transform existing entry to request to upload again
+	hr := &pb.HashedRekordLogEntryV0_0_2{}
+	err = protojson.Unmarshal(bundle.Entries[0], hr)
+	assert.NoError(t, err)
+	hrRequest := &pb.HashedRekordRequestV0_0_2{}
+	hrRequest.Digest = hr.Data.Digest
+	hrRequest.Signature = hr.Signature
+
+	_, err = writer.Add(ctx, hrRequest)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "unexpected response: 409")
 }

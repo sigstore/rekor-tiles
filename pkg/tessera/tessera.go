@@ -30,16 +30,13 @@ import (
 	"github.com/transparency-dev/merkle/rfc6962"
 	tessera "github.com/transparency-dev/trillian-tessera"
 	"github.com/transparency-dev/trillian-tessera/client"
-	antispam "github.com/transparency-dev/trillian-tessera/storage/gcp/antispam"
 )
 
 const (
-	DefaultBatchMaxSize              = tessera.DefaultBatchMaxSize
-	DefaultBatchMaxAge               = tessera.DefaultBatchMaxAge
-	DefaultCheckpointInterval        = tessera.DefaultCheckpointInterval
-	DefaultPushbackMaxOutstanding    = tessera.DefaultPushbackMaxOutstanding
-	DefaultAntispamMaxBatchSize      = antispam.DefaultMaxBatchSize
-	DefaultAntispamPushbackThreshold = antispam.DefaultPushbackThreshold
+	DefaultBatchMaxSize           = tessera.DefaultBatchMaxSize
+	DefaultBatchMaxAge            = tessera.DefaultBatchMaxAge
+	DefaultCheckpointInterval     = tessera.DefaultCheckpointInterval
+	DefaultPushbackMaxOutstanding = tessera.DefaultPushbackMaxOutstanding
 )
 
 type DuplicateError struct {
@@ -63,13 +60,17 @@ func (e InclusionProofVerificationError) Error() string {
 type Storage interface {
 	Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error)
 	ReadTile(ctx context.Context, level, index uint64, p uint8) ([]byte, error)
+	ReadEntryBundle(ctx context.Context, index uint64, p uint8) ([]byte, error)
+	ReadCheckpoint(ctx context.Context) ([]byte, error)
 }
 
 type storage struct {
-	origin     string
-	awaiter    *tessera.PublicationAwaiter
-	addFn      tessera.AddFn
-	readTileFn client.TileFetcherFunc
+	origin            string
+	awaiter           *tessera.PublicationAwaiter
+	addFn             tessera.AddFn
+	readTileFn        client.TileFetcherFunc
+	readEntryBundleFn client.EntryBundleFetcherFunc
+	readCheckpointFn  client.CheckpointFetcherFunc
 }
 
 // NewAppendOptions initializes the Tessera append options with a checkpoint signer, which is the only non-optional append option.
@@ -93,25 +94,12 @@ func WithLifecycleOptions(opts *tessera.AppendOptions, batchMaxSize uint, baxMax
 }
 
 // WithAntispamOptions accepts an initialized AppendOptions and adds antispam options to it.
-// Set persistent=true to set up configuration for the persistent antispam Spanner database.
-// It returns the mutated options object for readability.
-func WithAntispamOptions(ctx context.Context, opts *tessera.AppendOptions, persistent bool, maxBatchSize, pushbackThreshold uint, spannerDB string) (*tessera.AppendOptions, error) {
+// Accepts an optional persistent antispam provider. If nil, antispam does not persist between
+// server restarts. Returns the mutated options object for readability.
+func WithAntispamOptions(opts *tessera.AppendOptions, as tessera.Antispam) *tessera.AppendOptions {
 	inMemoryLRUSize := uint(256) // There's no documentation providing guidance on this cache size. Use a hard-coded value for now and consider exposing it as a configuration option later.
-	if !persistent {
-		opts = opts.WithAntispam(inMemoryLRUSize, nil)
-		return opts, nil
-	}
-	asOpts := antispam.AntispamOpts{
-		MaxBatchSize:      maxBatchSize,
-		PushbackThreshold: pushbackThreshold,
-	}
-	dbName := fmt.Sprintf("%s-antispam", spannerDB)
-	as, err := antispam.NewAntispam(ctx, dbName, asOpts)
-	if err != nil {
-		return nil, fmt.Errorf("getting antispam storage: %w", err)
-	}
 	opts = opts.WithAntispam(inMemoryLRUSize, as)
-	return opts, nil
+	return opts
 }
 
 // NewStorage creates a Tessera storage object for the provided driver and signer.
@@ -124,10 +112,12 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appen
 	slog.Info("starting Tessera sequencer")
 	awaiter := tessera.NewPublicationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
 	return &storage{
-		origin:     origin,
-		awaiter:    awaiter,
-		addFn:      appender.Add,
-		readTileFn: reader.ReadTile,
+		origin:            origin,
+		awaiter:           awaiter,
+		addFn:             appender.Add,
+		readTileFn:        reader.ReadTile,
+		readEntryBundleFn: reader.ReadEntryBundle,
+		readCheckpointFn:  reader.ReadCheckpoint,
 	}, shutdown, nil
 }
 
@@ -160,6 +150,26 @@ func (s *storage) ReadTile(ctx context.Context, level, index uint64, p uint8) ([
 		return nil, fmt.Errorf("reading tile level %d index %d p %d: %w", level, index, p, err)
 	}
 	return tile, nil
+}
+
+// ReadEntryBundle looks up an entry bundle at the given index and optional width, and returns
+// the raw bytes of the entry bundle.
+func (s *storage) ReadEntryBundle(ctx context.Context, index uint64, p uint8) ([]byte, error) {
+	entry, err := s.readEntryBundleFn(ctx, index, p)
+	if err != nil {
+		return nil, fmt.Errorf("reading entry bundle index %d p %d: %w", index, p, err)
+	}
+	return entry, nil
+}
+
+// ReadCheckpoint returns the raw bytes of a checkpoint. An error is returned if
+// no checkpoint exists.
+func (s *storage) ReadCheckpoint(ctx context.Context) ([]byte, error) {
+	checkpoint, err := s.readCheckpointFn(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("reading checkpoint: %v", err)
+	}
+	return checkpoint, nil
 }
 
 func (s *storage) addEntry(ctx context.Context, entry *tessera.Entry) (*SafeInt64, bool, []byte, error) {

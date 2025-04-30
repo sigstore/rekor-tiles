@@ -1,4 +1,3 @@
-//
 // Copyright 2025 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,31 +17,27 @@ package tessera
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	tessera "github.com/transparency-dev/trillian-tessera"
-	"github.com/transparency-dev/trillian-tessera/storage/gcp"
-	antispam "github.com/transparency-dev/trillian-tessera/storage/gcp/antispam"
+	"github.com/transparency-dev/trillian-tessera/storage/posix"
+	badger_as "github.com/transparency-dev/trillian-tessera/storage/posix/antispam"
 )
 
-// NewGCPDriver returns a GCP Tessera Driver for the given bucket and spanner URI.
-func NewGCPDriver(ctx context.Context, bucket, spanner string) (tessera.Driver, error) {
-	cfg := gcp.Config{
-		Bucket:  bucket,
-		Spanner: spanner,
-	}
-	driver, err := gcp.New(ctx, cfg)
+// NewPOSIXDriver returns a POSIX Tessera Driver for the given storage directory.
+func NewPOSIXDriver(ctx context.Context, storageDir string) (tessera.Driver, error) {
+	driver, err := posix.New(ctx, storageDir)
 	if err != nil {
-		return nil, fmt.Errorf("getting tessera GCP driver: %w", err)
+		return nil, fmt.Errorf("creating Tessera POSIX driver: %w", err)
 	}
 	return driver, nil
 }
 
-// NewGCPAntispam initializes a Spanner database to store recent entries
-func NewGCPAntispam(ctx context.Context, spannerDb string, maxBatchSize, pushbackThreshold uint) (tessera.Antispam, error) {
-	asOpts := antispam.AntispamOpts{
+// Antispam initializes a key-value database to store recent entries
+func NewPOSIXAntispam(ctx context.Context, storageDir string, maxBatchSize, pushbackThreshold uint) (tessera.Antispam, error) {
+	asOpts := badger_as.AntispamOpts{
 		MaxBatchSize:      maxBatchSize,
 		PushbackThreshold: pushbackThreshold,
 	}
-	dbName := fmt.Sprintf("%s-antispam", spannerDb)
-	return antispam.NewAntispam(ctx, dbName, asOpts)
+	return badger_as.NewAntispam(ctx, filepath.Join(storageDir, ".state", "antispam"), asOpts)
 }
