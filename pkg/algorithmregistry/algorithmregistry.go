@@ -16,7 +16,11 @@ package algorithmregistry
 
 import (
 	"crypto"
+	"crypto/ecdsa"
+	"crypto/ed25519"
+	"crypto/rsa"
 	"fmt"
+	"reflect"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -36,6 +40,28 @@ var (
 		v1.PublicKeyDetails_PKIX_ED25519_PH,
 	}
 )
+
+type UnsupportedAlgorithm struct {
+	Pub crypto.PublicKey
+	Alg crypto.Hash
+}
+
+func (e *UnsupportedAlgorithm) Error() string {
+	hash := e.Alg.String()
+
+	switch v := e.Pub.(type) {
+	case *rsa.PublicKey:
+		bits := v.Size() * 8
+		return fmt.Sprintf("unsupported entry algorithm for RSA key, size %d, digest %s", bits, hash)
+	case *ecdsa.PublicKey:
+		name := v.Curve.Params().Name
+		return fmt.Sprintf("unsupported entry algorithm for ECDSA key, curve %s, digest %s", name, hash)
+	case ed25519.PublicKey:
+		return fmt.Sprintf("unsupported entry algorithm for Ed25519 key, digest %s", hash)
+	default:
+		return fmt.Sprintf("unsupported key type %s, digest %s", reflect.TypeOf(v), hash)
+	}
+}
 
 // AlgorithmRegistry accepts a list of algorithms as strings, parses and formats them into a registry.
 func AlgorithmRegistry(algorithmOptions []string) (*signature.AlgorithmRegistryConfig, error) {
