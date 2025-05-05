@@ -30,16 +30,13 @@ import (
 	"github.com/transparency-dev/merkle/rfc6962"
 	tessera "github.com/transparency-dev/trillian-tessera"
 	"github.com/transparency-dev/trillian-tessera/client"
-	antispam "github.com/transparency-dev/trillian-tessera/storage/gcp/antispam"
 )
 
 const (
-	DefaultBatchMaxSize              = tessera.DefaultBatchMaxSize
-	DefaultBatchMaxAge               = tessera.DefaultBatchMaxAge
-	DefaultCheckpointInterval        = tessera.DefaultCheckpointInterval
-	DefaultPushbackMaxOutstanding    = tessera.DefaultPushbackMaxOutstanding
-	DefaultAntispamMaxBatchSize      = antispam.DefaultMaxBatchSize
-	DefaultAntispamPushbackThreshold = antispam.DefaultPushbackThreshold
+	DefaultBatchMaxSize           = tessera.DefaultBatchMaxSize
+	DefaultBatchMaxAge            = tessera.DefaultBatchMaxAge
+	DefaultCheckpointInterval     = tessera.DefaultCheckpointInterval
+	DefaultPushbackMaxOutstanding = tessera.DefaultPushbackMaxOutstanding
 )
 
 type DuplicateError struct {
@@ -67,7 +64,7 @@ type Storage interface {
 
 type storage struct {
 	origin     string
-	awaiter    *tessera.IntegrationAwaiter
+	awaiter    *tessera.PublicationAwaiter
 	addFn      tessera.AddFn
 	readTileFn client.TileFetcherFunc
 }
@@ -93,25 +90,46 @@ func WithLifecycleOptions(opts *tessera.AppendOptions, batchMaxSize uint, baxMax
 }
 
 // WithAntispamOptions accepts an initialized AppendOptions and adds antispam options to it.
-// Set persistent=true to set up configuration for the persistent antispam Spanner database.
-// It returns the mutated options object for readability.
-func WithAntispamOptions(ctx context.Context, opts *tessera.AppendOptions, persistent bool, maxBatchSize, pushbackThreshold uint, spannerDB string) (*tessera.AppendOptions, error) {
+// Accepts an optional persistent antispam provider. If nil, antispam does not persist between
+// server restarts. Returns the mutated options object for readability.
+func WithAntispamOptions(opts *tessera.AppendOptions, as tessera.Antispam) *tessera.AppendOptions {
 	inMemoryLRUSize := uint(256) // There's no documentation providing guidance on this cache size. Use a hard-coded value for now and consider exposing it as a configuration option later.
-	if !persistent {
-		opts = opts.WithAntispam(inMemoryLRUSize, nil)
-		return opts, nil
-	}
-	asOpts := antispam.AntispamOpts{
-		MaxBatchSize:      maxBatchSize,
-		PushbackThreshold: pushbackThreshold,
-	}
-	dbName := fmt.Sprintf("%s-antispam", spannerDB)
-	as, err := antispam.NewAntispam(ctx, dbName, asOpts)
-	if err != nil {
-		return nil, fmt.Errorf("getting antispam storage: %w", err)
-	}
 	opts = opts.WithAntispam(inMemoryLRUSize, as)
-	return opts, nil
+	return opts
+}
+
+// DriverConfiguration contains storage-specific configuration for each supported storage backend.
+type DriverConfiguration struct {
+	// GCP configuration
+	GCPBucket    string
+	GCPSpannerDB string
+
+	// Antispam configuration
+	PersistentAntispam  bool
+	ASMaxBatchSize      uint
+	ASPushbackThreshold uint
+}
+
+// NewDriver creates a Tessera driver and optional persistent antispam for a given storage backend.
+func NewDriver(ctx context.Context, config DriverConfiguration) (tessera.Driver, tessera.Antispam, error) {
+	switch {
+	case config.GCPBucket != "" && config.GCPSpannerDB != "":
+		driver, err := NewGCPDriver(ctx, config.GCPBucket, config.GCPSpannerDB)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize GCP driver: %v", err.Error())
+		}
+		var persistentAntispam tessera.Antispam
+		if config.PersistentAntispam {
+			as, err := NewGCPAntispam(ctx, config.GCPSpannerDB, config.ASMaxBatchSize, config.ASPushbackThreshold)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to initialize GCP antispam: %v", err.Error())
+			}
+			persistentAntispam = as
+		}
+		return driver, persistentAntispam, nil
+	default:
+		return nil, nil, fmt.Errorf("no flags provided to initialize Tessera driver")
+	}
 }
 
 // NewStorage creates a Tessera storage object for the provided driver and signer.
@@ -122,7 +140,7 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appen
 		return nil, nil, fmt.Errorf("getting tessera appender: %w", err)
 	}
 	slog.Info("starting Tessera sequencer")
-	awaiter := tessera.NewIntegrationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
+	awaiter := tessera.NewPublicationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
 	return &storage{
 		origin:     origin,
 		awaiter:    awaiter,

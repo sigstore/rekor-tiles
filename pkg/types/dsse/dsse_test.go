@@ -326,7 +326,7 @@ func TestToLogEntry(t *testing.T) {
 				},
 			},
 			allowedAlgorithms: []v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_4096_SHA256, v1.PublicKeyDetails_PKIX_ED25519_PH},
-			expectErr:         fmt.Errorf("unsupported entry algorithm for key *ecdsa.PublicKey, digest SHA-256"),
+			expectErr:         fmt.Errorf("unsupported entry algorithm for ECDSA key, curve P-256, digest SHA-256"),
 		},
 		{
 			name: "valid DSSE with multiple signatures, different algorithm",

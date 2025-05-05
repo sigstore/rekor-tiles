@@ -40,7 +40,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 — test.origin AAAAAW5vb3AKMQpnYi9BbkVFc0JOcFRvYkRkdVUzT1NOYWlUcDZsaVlmMzFGb0U2QUIvczhvPQo=`), nil
 	}
 	s := storage{
-		awaiter: tessera.NewIntegrationAwaiter(ctx, readCheckpoint, 10*time.Millisecond),
+		awaiter: tessera.NewPublicationAwaiter(ctx, readCheckpoint, 10*time.Millisecond),
 		readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
 			return hex.DecodeString(tileHash)
 		},
@@ -159,6 +159,5 @@ func TestAppendOptions(t *testing.T) {
 	assert.Equal(t, 42*time.Millisecond, ao.BatchMaxAge())
 	assert.Equal(t, 42*time.Second, ao.CheckpointInterval())
 	assert.Equal(t, uint(42), ao.PushbackMaxOutstanding())
-	_, err = WithAntispamOptions(context.Background(), ao, false, 100, 1000, "spannerdb")
-	assert.NoError(t, err)
+	_ = WithAntispamOptions(ao, nil) // initializes non-persistent antispam
 }
