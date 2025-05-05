@@ -13,6 +13,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Launches the dlv debugger already in the Dockerfile.
+# Invoke with `docker compose -f compose.yml -f compose.debug.yml up`.
+
 # If using VSCode, add this debugger launch configuration
 # {
 #     "version": "0.2.0",
