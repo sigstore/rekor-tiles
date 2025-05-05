@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"log/slog"
 	"os"
 	"testing"
 
@@ -33,7 +32,7 @@ import (
 
 func TestServe_grpcSmoke(t *testing.T) {
 	// To debug set slog to output to stdout
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	// slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	server := MockServer{}
 
 	server.Start(t)

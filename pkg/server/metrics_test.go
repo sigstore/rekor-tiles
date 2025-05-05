@@ -17,16 +17,14 @@ package server
 import (
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
-	"os"
 	"strings"
 	"testing"
 )
 
 func TestServe_httpMetricsSmoke(t *testing.T) {
 	// To debug set slog to output to stdout
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	// slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	server := MockServer{}
 	server.Start(t)
 	defer server.Stop(t)

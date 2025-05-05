@@ -20,7 +20,6 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -47,7 +46,7 @@ var endpointTests = []struct {
 
 func TestServe_httpSmoke(t *testing.T) {
 	// To debug set slog to output to stdout
-	slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
+	// slog.SetDefault(slog.New(slog.NewTextHandler(os.Stdout, nil)))
 	server := MockServer{}
 	server.Start(t)
 	defer server.Stop(t)
