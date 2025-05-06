@@ -14,7 +14,9 @@
 # limitations under the License.
 
 # Debian 12 (Bookworm) image to build binary for distroless/static-debian12
-FROM golang:1.24.2-bookworm@sha256:79390b5e5af9ee6e7b1173ee3eac7fadf6751a545297672916b59bfa0ecf6f71 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.3-bookworm@sha256:89a04cc2e2fbafef82d4a45523d4d4ae4ecaf11a197689036df35fef3bde444a AS builder
+ARG TARGETOS
+ARG TARGETARCH
 ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
@@ -28,7 +30,7 @@ ADD ./pkg/ $APP_ROOT/src/pkg/
 
 ARG SERVER_LDFLAGS
 # Build server for deployment. Build without cgo since distroless/static-debian12 doesn't include lib/cgo
-RUN CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
 
 # Multi-stage deployment build
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:c0f429e16b13e583da7e5a6ec20dd656d325d88e6819cafe0adb0828976529dc AS deploy
