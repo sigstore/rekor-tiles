@@ -25,6 +25,7 @@ import (
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
+	"github.com/sigstore/rekor-tiles/pkg/types"
 	"github.com/sigstore/rekor-tiles/pkg/types/dsse"
 	"github.com/sigstore/rekor-tiles/pkg/types/hashedrekord"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -122,6 +123,12 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		slog.Warn("failed to integrate entry", "error", err.Error())
 		return nil, status.Errorf(codes.Unknown, "failed to integrate entry")
 	}
+	kv, err := types.GetKindVersion(req)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid type, must be either hashedrekord or dsse")
+	}
+	tle.KindVersion = kv
+
 	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "201"))
 	metricsCounter.Inc()
 	return tle, nil
