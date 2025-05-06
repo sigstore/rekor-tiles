@@ -88,7 +88,7 @@ func TestToLogEntry(t *testing.T) {
 		dsse              *pb.DSSERequestV0_0_2
 		allowedAlgorithms []v1.PublicKeyDetails
 		expectErr         error
-		expectedEntry     *pb.DSSELogEntryV0_0_2
+		expectedEntry     *pb.Entry
 	}{
 		{
 			name: "valid dsse",
@@ -114,21 +114,29 @@ func TestToLogEntry(t *testing.T) {
 					},
 				},
 			},
-			expectedEntry: &pb.DSSELogEntryV0_0_2{
-				PayloadHash: &v1.HashOutput{
-					Algorithm: v1.HashAlgorithm_SHA2_256,
-					Digest:    payloadHash[:],
-				},
-				Signatures: []*pb.Signature{
-					{
-						Content: keySignature,
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte(publicKey),
+			expectedEntry: &pb.Entry{
+				Kind:       "dsse",
+				ApiVersion: "0.0.2",
+				Spec: &pb.Spec{
+					Spec: &pb.Spec_DsseV0_0_2{
+						DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+							PayloadHash: &v1.HashOutput{
+								Algorithm: v1.HashAlgorithm_SHA2_256,
+								Digest:    payloadHash[:],
+							},
+							Signatures: []*pb.Signature{
+								{
+									Content: keySignature,
+									Verifier: &pb.Verifier{
+										Verifier: &pb.Verifier_PublicKey{
+											PublicKey: &pb.PublicKey{
+												RawBytes: []byte(publicKey),
+											},
+										},
+										KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+									},
 								},
 							},
-							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 						},
 					},
 				},
@@ -281,21 +289,29 @@ func TestToLogEntry(t *testing.T) {
 					},
 				},
 			},
-			expectedEntry: &pb.DSSELogEntryV0_0_2{
-				PayloadHash: &v1.HashOutput{
-					Algorithm: v1.HashAlgorithm_SHA2_256,
-					Digest:    payloadHash[:],
-				},
-				Signatures: []*pb.Signature{
-					{
-						Content: certSignature,
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_X509Certificate{
-								X509Certificate: &v1.X509Certificate{
-									RawBytes: []byte(x509Cert),
+			expectedEntry: &pb.Entry{
+				Kind:       "dsse",
+				ApiVersion: "0.0.2",
+				Spec: &pb.Spec{
+					Spec: &pb.Spec_DsseV0_0_2{
+						DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+							PayloadHash: &v1.HashOutput{
+								Algorithm: v1.HashAlgorithm_SHA2_256,
+								Digest:    payloadHash[:],
+							},
+							Signatures: []*pb.Signature{
+								{
+									Content: certSignature,
+									Verifier: &pb.Verifier{
+										Verifier: &pb.Verifier_X509Certificate{
+											X509Certificate: &v1.X509Certificate{
+												RawBytes: []byte(x509Cert),
+											},
+										},
+										KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+									},
 								},
 							},
-							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 						},
 					},
 				},
@@ -364,32 +380,40 @@ func TestToLogEntry(t *testing.T) {
 					},
 				},
 			},
-			expectedEntry: &pb.DSSELogEntryV0_0_2{
-				PayloadHash: &v1.HashOutput{
-					Algorithm: v1.HashAlgorithm_SHA2_256,
-					Digest:    payloadHash[:],
-				},
-				Signatures: []*pb.Signature{
-					{
-						Content: keySignature,
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte(publicKey),
+			expectedEntry: &pb.Entry{
+				Kind:       "dsse",
+				ApiVersion: "0.0.2",
+				Spec: &pb.Spec{
+					Spec: &pb.Spec_DsseV0_0_2{
+						DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+							PayloadHash: &v1.HashOutput{
+								Algorithm: v1.HashAlgorithm_SHA2_256,
+								Digest:    payloadHash[:],
+							},
+							Signatures: []*pb.Signature{
+								{
+									Content: keySignature,
+									Verifier: &pb.Verifier{
+										Verifier: &pb.Verifier_PublicKey{
+											PublicKey: &pb.PublicKey{
+												RawBytes: []byte(publicKey),
+											},
+										},
+										KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+									},
+								},
+								{
+									Content: keySignatureP384,
+									Verifier: &pb.Verifier{
+										Verifier: &pb.Verifier_PublicKey{
+											PublicKey: &pb.PublicKey{
+												RawBytes: []byte(publicKeyP384),
+											},
+										},
+										KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+									},
 								},
 							},
-							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-						},
-					},
-					{
-						Content: keySignatureP384,
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte(publicKeyP384),
-								},
-							},
-							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
 						},
 					},
 				},
@@ -433,32 +457,40 @@ func TestToLogEntry(t *testing.T) {
 					},
 				},
 			},
-			expectedEntry: &pb.DSSELogEntryV0_0_2{
-				PayloadHash: &v1.HashOutput{
-					Algorithm: v1.HashAlgorithm_SHA2_256,
-					Digest:    payloadHash[:],
-				},
-				Signatures: []*pb.Signature{
-					{
-						Content: keySignature,
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte(publicKey),
+			expectedEntry: &pb.Entry{
+				Kind:       "dsse",
+				ApiVersion: "0.0.2",
+				Spec: &pb.Spec{
+					Spec: &pb.Spec_DsseV0_0_2{
+						DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+							PayloadHash: &v1.HashOutput{
+								Algorithm: v1.HashAlgorithm_SHA2_256,
+								Digest:    payloadHash[:],
+							},
+							Signatures: []*pb.Signature{
+								{
+									Content: keySignature,
+									Verifier: &pb.Verifier{
+										Verifier: &pb.Verifier_PublicKey{
+											PublicKey: &pb.PublicKey{
+												RawBytes: []byte(publicKey),
+											},
+										},
+										KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+									},
+								},
+								{
+									Content: keySignatureP384,
+									Verifier: &pb.Verifier{
+										Verifier: &pb.Verifier_PublicKey{
+											PublicKey: &pb.PublicKey{
+												RawBytes: []byte(publicKeyP384),
+											},
+										},
+										KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+									},
 								},
 							},
-							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-						},
-					},
-					{
-						Content: keySignatureP384,
-						Verifier: &pb.Verifier{
-							Verifier: &pb.Verifier_PublicKey{
-								PublicKey: &pb.PublicKey{
-									RawBytes: []byte(publicKeyP384),
-								},
-							},
-							KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
 						},
 					},
 				},
