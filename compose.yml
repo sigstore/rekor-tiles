@@ -81,5 +81,74 @@ services:
     depends_on:
       rekor_init:
         condition: service_completed_successfully
+
+# Launch with `docker compose up rekor-debug`
+# or  `docker compose up rekor-debug --watch`.
+# This service runs with the dlv debugger already in the Dockerfile.
+# If using VSCode, add this debugger launch configuration
+# {
+#     "version": "0.2.0",
+#     "configurations": [
+#         {
+#             "name": "Attach to Process",
+#             "type": "go",
+#             "request": "attach",
+#             "mode": "remote",
+#             "port": 2345
+#         },
+#     ]
+# }
+  rekor-debug:
+    profiles:
+    - debug
+    develop:
+      watch:
+        - path: ./
+          action: rebuild
+    build:
+      context: .
+      target: debug
+    environment:
+    - SPANNER_EMULATOR_HOST=spanner:9010
+    - STORAGE_EMULATOR_HOST=gcs:7080
+    command:
+      -  "dlv"
+      -  "exec"
+      -  "--continue" # launch rekor-server without waiting for the dubbger client to connect.
+      -  "--accept-multiclient"
+      -  "--listen=:2345"
+      -  "--headless=true"
+      -  "--log=true"
+      -  "--api-version=2"
+      -  "--"
+      - "/usr/local/bin/rekor-server"
+      - "serve"
+      - "--http-address=0.0.0.0"
+      - "--grpc-address=0.0.0.0"
+      - "--hostname=rekor-local"
+      - "--gcp-bucket=tiles"
+      - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
+      - "--signer-filepath=/pki/ed25519-priv-key.pem"
+      - "--checkpoint-interval=2s"
+    ports:
+    - 2345:2345
+    - "3003:3000" # http port
+    - "3001:3001" # grpc port
+    - "2114:2112" # metrics port
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl http://localhost:3000/healthz | grep '{"status":"SERVING"}'
+      timeout: 30s
+      retries: 10
+      interval: 3s
+      # requires docker engine >= v25
+      # start_period: 5s
+      # start_interval: 1s
+    volumes:
+    - ./tests/testdata/pki:/pki
+    depends_on:
+      rekor_init:
+        condition: service_completed_successfully
 volumes:
   bucket: {}
