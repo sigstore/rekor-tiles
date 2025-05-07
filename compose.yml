@@ -112,24 +112,24 @@ services:
     - SPANNER_EMULATOR_HOST=spanner:9010
     - STORAGE_EMULATOR_HOST=gcs:7080
     command:
-      -  "dlv"
-      -  "exec"
-      -  "--continue" # launch rekor-server without waiting for the dubbger client to connect.
-      -  "--accept-multiclient"
-      -  "--listen=:2345"
-      -  "--headless=true"
-      -  "--log=true"
-      -  "--api-version=2"
-      -  "--"
-      - "/usr/local/bin/rekor-server"
-      - "serve"
-      - "--http-address=0.0.0.0"
-      - "--grpc-address=0.0.0.0"
-      - "--hostname=rekor-local"
-      - "--gcp-bucket=tiles"
-      - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
-      - "--signer-filepath=/pki/ed25519-priv-key.pem"
-      - "--checkpoint-interval=2s"
+    -  "dlv"
+    -  "exec"
+    -  "--continue" # launch rekor-server without waiting for the dubbger client to connect.
+    -  "--accept-multiclient"
+    -  "--listen=:2345"
+    -  "--headless=true"
+    -  "--log=true"
+    -  "--api-version=2"
+    -  "--"
+    - "/usr/local/bin/rekor-server"
+    - "serve"
+    - "--http-address=0.0.0.0"
+    - "--grpc-address=0.0.0.0"
+    - "--hostname=rekor-local"
+    - "--gcp-bucket=tiles"
+    - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
+    - "--signer-filepath=/pki/ed25519-priv-key.pem"
+    - "--checkpoint-interval=2s"
     ports:
     - 2345:2345
     - "3003:3000" # http port
