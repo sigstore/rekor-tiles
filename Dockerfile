@@ -40,9 +40,16 @@ COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 # Set the binary as the entrypoint of the container
 CMD ["rekor-server", "serve"]
 
+# Cross-compile dlv for the debug stage
+FROM builder AS dlvbuilder
+ARG TARGETOS
+ARG TARGETARCH
+# dlv v1.24.2
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go install github.com/go-delve/delve/cmd/dlv@f0cc62bfcaa18b9f2cd01cebd818fad537ee93ec
+
 # Multi-stage debugger build
 FROM deploy AS debug
-# dlv v1.24.2
-RUN go install github.com/go-delve/delve/cmd/dlv@f0cc62bfcaa18b9f2cd01cebd818fad537ee93ec
+# Copy dlv binary
+COPY --from=dlvbuilder /opt/app-root/bin/dlv /usr/local/bin/dlv
 # Overwrite server binary
 COPY --from=builder /opt/app-root/src/rekor-server_debug /usr/local/bin/rekor-server
