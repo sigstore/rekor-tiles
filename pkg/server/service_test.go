@@ -37,7 +37,7 @@ func TestNewServer(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	server := NewServer(storage, false, algReg)
+	server := NewServer(storage, false, algReg, []byte{1})
 	assert.NoError(t, err)
 	assert.NotNil(t, server.storage)
 	assert.NotNil(t, server.algorithmRegistry)
@@ -185,12 +185,14 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 			if err != nil {
 				t.Fatal(err)
 			}
-			server := NewServer(storage, false, algReg)
+			server := NewServer(storage, false, algReg, []byte{1})
 			gotTle, gotErr := server.CreateEntry(context.Background(), test.req)
 			if test.expectError == nil {
 				assert.NoError(t, gotErr)
 				assert.NotNil(t, gotTle)
+				// Check that the fields set by the service are populated
 				assert.NotNil(t, gotTle.KindVersion)
+				assert.NotNil(t, gotTle.LogId)
 			} else {
 				assert.ErrorContains(t, gotErr, test.expectError.Error())
 			}
