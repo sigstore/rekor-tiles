@@ -1,0 +1,46 @@
+// Copyright 2025 The Sigstore Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dev.sigstore.rekor.v2;
+
+import "dsse.proto";
+import "hashedrekord.proto";
+import "google/api/field_behavior.proto";
+
+option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
+
+// The entry wrapper for types written to the log. This format is meant to
+// be compliant with rekor v1 entries in that the apiVersion and kind can be
+// parsed before parsing the spec. Consumers of entries are expected to 
+// understand and handle the differences in the contents of spec between 
+// rekor v1 (a polymorphic openapi defintion) and v2 (typed proto defintion)
+message Entry {
+    string kind = 1 [(google.api.field_behavior) = REQUIRED];
+    string apiVersion = 2 [(google.api.field_behavior) = REQUIRED];
+    Spec spec = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+message Spec {
+    oneof spec {
+        HashedRekordLogEntryV0_0_2 hashed_rekord_v0_0_2 = 1 [
+            (google.api.field_behavior) = REQUIRED,
+            json_name = "hashedRekordV0_0_2"
+        ];
+        DSSELogEntryV0_0_2 dsse_v0_0_2 = 2 [ 
+            (google.api.field_behavior) = REQUIRED,
+            json_name = "dsseV0_0_2"
+        ];
+    }
+}

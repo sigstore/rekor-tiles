@@ -84,7 +84,16 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 			slog.Warn("failed validating hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
 		}
-		serialized, err = protojson.Marshal(entry)
+		hrEntry := &pb.Entry{
+			Kind:       "hashedrekord",
+			ApiVersion: "0.0.2",
+			Spec: &pb.Spec{
+				Spec: &pb.Spec_HashedRekordV0_0_2{
+					HashedRekordV0_0_2: entry,
+				},
+			},
+		}
+		serialized, err = protojson.Marshal(hrEntry)
 		if err != nil {
 			slog.Warn("failed marshaling hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
@@ -97,7 +106,16 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 			slog.Warn("failed validating dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")
 		}
-		serialized, err = protojson.Marshal(entry)
+		dsseEntry := &pb.Entry{
+			Kind:       "dsse",
+			ApiVersion: "0.0.2",
+			Spec: &pb.Spec{
+				Spec: &pb.Spec_DsseV0_0_2{
+					DsseV0_0_2: entry,
+				},
+			},
+		}
+		serialized, err = protojson.Marshal(dsseEntry)
 		if err != nil {
 			slog.Warn("failed marshaling dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")

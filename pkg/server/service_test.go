@@ -21,6 +21,8 @@ import (
 	"fmt"
 	"testing"
 
+	"google.golang.org/protobuf/encoding/protojson"
+
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -187,6 +189,8 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 			}
 			server := NewServer(storage, false, algReg)
 			gotTle, gotErr := server.CreateEntry(context.Background(), test.req)
+			s, _ := protojson.Marshal(gotTle)
+			println(string(s))
 			if test.expectError == nil {
 				assert.NoError(t, gotErr)
 				assert.NotNil(t, gotTle)

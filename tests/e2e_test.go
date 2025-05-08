@@ -28,6 +28,9 @@ import (
 	"fmt"
 	"testing"
 
+	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
+	"google.golang.org/protobuf/encoding/protojson"
+
 	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	dsset "github.com/sigstore/rekor-tiles/pkg/types/dsse"
 
@@ -101,8 +104,9 @@ func TestReadWrite(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			_, err = writer.Add(ctx, hr) // We don't need to check the TLE here, the client verifies the inclusion proof for us
+			tle, err := writer.Add(ctx, hr) // We don't verify the TLE here, the client verifies the inclusion proof
 			assert.NoError(t, err)
+			assertResponseIsHashedRekord(t, tle)
 			return nil
 		})
 	}
@@ -115,8 +119,9 @@ func TestReadWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = writer.Add(ctx, hr)
+	tle, err := writer.Add(ctx, hr)
 	assert.NoError(t, err)
+	assertResponseIsHashedRekord(t, tle)
 
 	// Check the checkpoint again
 	checkpoint, note, err = reader.ReadCheckpoint(ctx)
@@ -154,8 +159,9 @@ func TestReadWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	tle, err := writer.Add(ctx, dr)
+	tle, err = writer.Add(ctx, dr)
 	assert.NoError(t, err)
+	assertResponseIsDsse(t, tle)
 
 	safeLogSize, err := tessera.NewSafeInt64(tle.InclusionProof.TreeSize)
 	if err != nil {
@@ -259,4 +265,24 @@ func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV0
 			},
 		},
 	}, nil
+}
+
+func assertResponseIsHashedRekord(t *testing.T, tle *pbs.TransparencyLogEntry) {
+	entry := &pb.Entry{}
+	err := protojson.Unmarshal(tle.CanonicalizedBody, entry)
+	assert.NoError(t, err)
+	assert.Equal(t, "0.0.2", entry.ApiVersion)
+	assert.Equal(t, "hashedrekord", entry.Kind)
+	assert.NotEmpty(t, entry.Spec.GetHashedRekordV0_0_2())
+	assert.Empty(t, entry.Spec.GetDsseV0_0_2())
+}
+
+func assertResponseIsDsse(t *testing.T, tle *pbs.TransparencyLogEntry) {
+	entry := &pb.Entry{}
+	err := protojson.Unmarshal(tle.CanonicalizedBody, entry)
+	assert.NoError(t, err)
+	assert.Equal(t, "0.0.2", entry.ApiVersion)
+	assert.Equal(t, "dsse", entry.Kind)
+	assert.Empty(t, entry.Spec.GetHashedRekordV0_0_2())
+	assert.NotEmpty(t, entry.Spec.GetDsseV0_0_2())
 }
