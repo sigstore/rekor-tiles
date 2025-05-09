@@ -140,13 +140,19 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	return tle, nil
 }
 
-func (s *Server) GetTile(context.Context, *pb.TileRequest) (*httpbody.HttpBody, error) {
+func (s *Server) GetTile(ctx context.Context, _ *pb.TileRequest) (*httpbody.HttpBody, error) {
+	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "405"))
+	_ = grpc.SetHeader(ctx, metadata.Pairs(httpErrorMessageHeader, "method GetTile not implemented"))
 	return nil, status.Errorf(codes.Unimplemented, "method GetTile not implemented")
 }
-func (s *Server) GetEntryBundle(context.Context, *pb.EntryBundleRequest) (*httpbody.HttpBody, error) {
+func (s *Server) GetEntryBundle(ctx context.Context, _ *pb.EntryBundleRequest) (*httpbody.HttpBody, error) {
+	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "405"))
+	_ = grpc.SetHeader(ctx, metadata.Pairs(httpErrorMessageHeader, "method GetEntryBundle not implemented"))
 	return nil, status.Errorf(codes.Unimplemented, "method GetEntryBundle not implemented")
 }
-func (s *Server) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpBody, error) {
+func (s *Server) GetCheckpoint(ctx context.Context, _ *emptypb.Empty) (*httpbody.HttpBody, error) {
+	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "405"))
+	_ = grpc.SetHeader(ctx, metadata.Pairs(httpErrorMessageHeader, "method GetCheckpoint not implemented"))
 	return nil, status.Errorf(codes.Unimplemented, "method GetCheckpoint not implemented")
 }
 

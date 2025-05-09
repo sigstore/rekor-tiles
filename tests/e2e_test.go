@@ -209,6 +209,30 @@ func TestReadWrite(t *testing.T) {
 	assert.ErrorContains(t, err, fmt.Sprintf("an equivalent entry already exists in the transparency log with index %d", oldIndex))
 }
 
+func TestUnimplementedReadMethods(t *testing.T) {
+	ctx := context.Background()
+
+	serverPubKey, err := pemutil.Read(defaultServerPublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	verifier, err := signature.LoadDefaultVerifier(serverPubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader, err := read.NewReader(defaultRekorURL+"/api/v2", defaultRekorHostname, verifier)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, _, err = reader.ReadCheckpoint(ctx)
+	assert.ErrorContains(t, err, "405") // the reader client drops the request body, hence why we only check the status code
+	_, err = reader.ReadTile(ctx, 0, 0, 0)
+	assert.ErrorContains(t, err, "405")
+	_, err = reader.ReadEntryBundle(ctx, 0, 0)
+	assert.ErrorContains(t, err, "405")
+}
+
 func artifactDigest(idx uint64) []byte {
 	baseArtifact := "testartifact"
 	artifact := []byte(fmt.Sprintf("%s%d", baseArtifact, idx))
