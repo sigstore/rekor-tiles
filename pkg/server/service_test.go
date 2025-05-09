@@ -190,6 +190,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 			if test.expectError == nil {
 				assert.NoError(t, gotErr)
 				assert.NotNil(t, gotTle)
+				assert.NotNil(t, gotTle.KindVersion)
 			} else {
 				assert.ErrorContains(t, gotErr, test.expectError.Error())
 			}

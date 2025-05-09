@@ -25,7 +25,6 @@ import (
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
-	"github.com/sigstore/rekor-tiles/pkg/types"
 	"github.com/sigstore/rekor-tiles/pkg/types/dsse"
 	"github.com/sigstore/rekor-tiles/pkg/types/hashedrekord"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -76,6 +75,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	var serialized []byte
 	var err error
 	var metricsCounter prometheus.Counter
+	var kv *pbs.KindVersion
 	switch req.GetSpec().(type) {
 	case *pb.CreateEntryRequest_HashedRekordRequestV0_0_2:
 		hr := req.GetHashedRekordRequestV0_0_2()
@@ -83,6 +83,10 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		if err != nil {
 			slog.Warn("failed validating hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
+		}
+		kv = &pbs.KindVersion{
+			Kind:    entry.Kind,
+			Version: entry.ApiVersion,
 		}
 		serialized, err = protojson.Marshal(entry)
 		if err != nil {
@@ -96,6 +100,10 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		if err != nil {
 			slog.Warn("failed validating dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")
+		}
+		kv = &pbs.KindVersion{
+			Kind:    entry.Kind,
+			Version: entry.ApiVersion,
 		}
 		serialized, err = protojson.Marshal(entry)
 		if err != nil {
@@ -123,10 +131,8 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		slog.Warn("failed to integrate entry", "error", err.Error())
 		return nil, status.Errorf(codes.Unknown, "failed to integrate entry")
 	}
-	kv, err := types.GetKindVersion(req)
-	if err != nil {
-		return nil, status.Errorf(codes.InvalidArgument, "invalid type, must be either hashedrekord or dsse")
-	}
+	// Set bundle's kind and version, which clients that do not persist the
+	// canonicalized body will use to reconstruct the entry leaf hash
 	tle.KindVersion = kv
 
 	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "201"))

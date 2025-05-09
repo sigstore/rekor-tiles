@@ -30,6 +30,7 @@ import (
 
 	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	dsset "github.com/sigstore/rekor-tiles/pkg/types/dsse"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -40,6 +41,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
+	"github.com/transparency-dev/trillian-tessera/api"
 	"github.com/transparency-dev/trillian-tessera/api/layout"
 	"go.step.sm/crypto/pemutil"
 	"golang.org/x/sync/errgroup"
@@ -149,6 +151,19 @@ func TestReadWrite(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, string(entryBundle), base64.StdEncoding.EncodeToString(artifactDigest(numNewEntries)))
 
+	// Parse a HashedRekord entry from the latest entry bundle
+	bundle := api.EntryBundle{}
+	err = bundle.UnmarshalText(entryBundle)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, bundle.Entries)
+	e := &pb.Entry{}
+	err = protojson.Unmarshal(bundle.Entries[0], e)
+	assert.NoError(t, err)
+	assert.Equal(t, "hashedrekord", e.Kind)
+	assert.Equal(t, "0.0.2", e.ApiVersion)
+	hrEntry := e.Spec.GetHashedRekordV0_0_2()
+	assert.NotNil(t, hrEntry)
+
 	// Add a DSSE entry
 	dr, err := newDSSERequest(clientPrivKey, clientPubKey)
 	if err != nil {
@@ -169,6 +184,20 @@ func TestReadWrite(t *testing.T) {
 	expectedPayloadHash := sha256.Sum256([]byte("payload"))
 	expectedB64PayloadHash := base64.StdEncoding.EncodeToString(expectedPayloadHash[:])
 	assert.Contains(t, string(entryBundle), expectedB64PayloadHash)
+
+	// Parse a DSSE entry from the latest entry bundle
+	bundle = api.EntryBundle{}
+	err = bundle.UnmarshalText(entryBundle)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, bundle.Entries)
+	e = &pb.Entry{}
+	// last entry in the bundle should be a DSSE entry
+	err = protojson.Unmarshal(bundle.Entries[len(bundle.Entries)-1], e)
+	assert.NoError(t, err)
+	assert.Equal(t, "dsse", e.Kind)
+	assert.Equal(t, "0.0.2", e.ApiVersion)
+	dsseEntry := e.Spec.GetDsseV0_0_2()
+	assert.NotNil(t, dsseEntry)
 
 	// Add a second identical entries immediately to check for deduplication
 	// TODO(#158): add more advanced deduplication checking when the Spanner emulator supports the "batch write" operation

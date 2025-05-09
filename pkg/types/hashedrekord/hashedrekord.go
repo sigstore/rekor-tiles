@@ -31,7 +31,7 @@ import (
 )
 
 // ToLogEntry validates a request, verifies its signature, and converts it to a log entry type for inclusion in the log
-func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.HashedRekordLogEntryV0_0_2, error) {
+func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.Entry, error) {
 	if err := validate(hr); err != nil {
 		return nil, err
 	}
@@ -50,9 +50,17 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.A
 		return nil, err
 	}
 
-	return &pb.HashedRekordLogEntryV0_0_2{
-		Signature: hr.Signature,
-		Data:      &v1.HashOutput{Digest: hr.Digest, Algorithm: algDetails.GetProtoHashType()},
+	return &pb.Entry{
+		Kind:       "hashedrekord",
+		ApiVersion: "0.0.2",
+		Spec: &pb.Spec{
+			Spec: &pb.Spec_HashedRekordV0_0_2{
+				HashedRekordV0_0_2: &pb.HashedRekordLogEntryV0_0_2{
+					Signature: hr.Signature,
+					Data:      &v1.HashOutput{Digest: hr.Digest, Algorithm: algDetails.GetProtoHashType()},
+				},
+			},
+		},
 	}, nil
 }
 

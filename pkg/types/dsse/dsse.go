@@ -37,7 +37,7 @@ import (
 )
 
 // ToLogEntry validates a request, verifies all envelope signatures, and converts it to a log entry type for inclusion in the log
-func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.DSSELogEntryV0_0_2, error) {
+func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.Entry, error) {
 	if err := validate(ds); err != nil {
 		return nil, err
 	}
@@ -69,12 +69,20 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 	// must not use the payload hash when verifying signatures.
 	payloadHash := sha256.Sum256(ds.Envelope.Payload)
 
-	return &pb.DSSELogEntryV0_0_2{
-		PayloadHash: &v1.HashOutput{
-			Algorithm: v1.HashAlgorithm_SHA2_256,
-			Digest:    payloadHash[:],
+	return &pb.Entry{
+		Kind:       "dsse",
+		ApiVersion: "0.0.2",
+		Spec: &pb.Spec{
+			Spec: &pb.Spec_DsseV0_0_2{
+				DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+					PayloadHash: &v1.HashOutput{
+						Algorithm: v1.HashAlgorithm_SHA2_256,
+						Digest:    payloadHash[:],
+					},
+					Signatures: canonicalizedSigs,
+				},
+			},
 		},
-		Signatures: canonicalizedSigs,
 	}, nil
 }
 

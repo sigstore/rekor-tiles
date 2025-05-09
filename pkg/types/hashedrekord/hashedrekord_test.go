@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/go-test/deep"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -81,6 +82,7 @@ func TestToLogEntry(t *testing.T) {
 		hashedrekord      *pb.HashedRekordRequestV0_0_2
 		allowedAlgorithms []v1.PublicKeyDetails
 		expectErr         error
+		expectedEntry     *pb.Entry
 	}{
 		{
 			name: "valid hashedrekord",
@@ -97,6 +99,31 @@ func TestToLogEntry(t *testing.T) {
 					},
 				},
 				Digest: hexDecodeOrDie(t, hexEncodedDigest),
+			},
+			expectedEntry: &pb.Entry{
+				Kind:       "hashedrekord",
+				ApiVersion: "0.0.2",
+				Spec: &pb.Spec{
+					Spec: &pb.Spec_HashedRekordV0_0_2{
+						HashedRekordV0_0_2: &pb.HashedRekordLogEntryV0_0_2{
+							Data: &v1.HashOutput{
+								Digest:    hexDecodeOrDie(t, hexEncodedDigest),
+								Algorithm: v1.HashAlgorithm_SHA2_256,
+							},
+							Signature: &pb.Signature{
+								Content: b64DecodeOrDie(t, b64EncodedSignature),
+								Verifier: &pb.Verifier{
+									Verifier: &pb.Verifier_PublicKey{
+										PublicKey: &pb.PublicKey{
+											RawBytes: []byte(publicKey),
+										},
+									},
+									KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+								},
+							},
+						},
+					},
+				},
 			},
 		},
 		{
@@ -193,6 +220,31 @@ func TestToLogEntry(t *testing.T) {
 				},
 				Digest: hexDecodeOrDie(t, hexEncodedDigest),
 			},
+			expectedEntry: &pb.Entry{
+				Kind:       "hashedrekord",
+				ApiVersion: "0.0.2",
+				Spec: &pb.Spec{
+					Spec: &pb.Spec_HashedRekordV0_0_2{
+						HashedRekordV0_0_2: &pb.HashedRekordLogEntryV0_0_2{
+							Data: &v1.HashOutput{
+								Digest:    hexDecodeOrDie(t, hexEncodedDigest),
+								Algorithm: v1.HashAlgorithm_SHA2_256,
+							},
+							Signature: &pb.Signature{
+								Content: b64DecodeOrDie(t, b64EncodedSignature),
+								Verifier: &pb.Verifier{
+									Verifier: &pb.Verifier_X509Certificate{
+										X509Certificate: &v1.X509Certificate{
+											RawBytes: []byte(x509Cert),
+										},
+									},
+									KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 		{
 			name: "mismatched key algorithm",
@@ -229,6 +281,31 @@ func TestToLogEntry(t *testing.T) {
 				},
 				Digest: hexDecodeOrDie(t, hexEncodedDigest384),
 			},
+			expectedEntry: &pb.Entry{
+				Kind:       "hashedrekord",
+				ApiVersion: "0.0.2",
+				Spec: &pb.Spec{
+					Spec: &pb.Spec_HashedRekordV0_0_2{
+						HashedRekordV0_0_2: &pb.HashedRekordLogEntryV0_0_2{
+							Data: &v1.HashOutput{
+								Digest:    hexDecodeOrDie(t, hexEncodedDigest384),
+								Algorithm: v1.HashAlgorithm_SHA2_384,
+							},
+							Signature: &pb.Signature{
+								Content: b64DecodeOrDie(t, b64EncodedSignatureP384),
+								Verifier: &pb.Verifier{
+									Verifier: &pb.Verifier_PublicKey{
+										PublicKey: &pb.PublicKey{
+											RawBytes: []byte(publicKeyP384),
+										},
+									},
+									KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+								},
+							},
+						},
+					},
+				},
+			},
 		},
 	}
 	for _, test := range tests {
@@ -241,9 +318,12 @@ func TestToLogEntry(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			_, gotErr := ToLogEntry(test.hashedrekord, algReg)
+			entry, gotErr := ToLogEntry(test.hashedrekord, algReg)
 			if test.expectErr == nil {
 				assert.NoError(t, gotErr)
+				if diff := deep.Equal(test.expectedEntry, entry); diff != nil {
+					t.Errorf("ToLogEntry() mismatch (-want +got):\n%s", diff)
+				}
 			} else {
 				assert.ErrorContains(t, gotErr, test.expectErr.Error())
 			}
