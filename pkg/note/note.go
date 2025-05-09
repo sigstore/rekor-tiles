@@ -93,67 +93,70 @@ func isValidName(name string) bool {
 }
 
 // genConformantKeyHash generates a 4-byte key ID for typical (non-ECDSA) keys.
-func genConformantKeyHash(name string, sigType, key []byte) uint32 {
+func genConformantKeyHash(name string, sigType, key []byte) (uint32, []byte) {
 	hash := sha256.New()
 	hash.Write([]byte(name))
 	hash.Write([]byte("\n"))
 	hash.Write(sigType)
 	hash.Write(key)
 	sum := hash.Sum(nil)
-	return binary.BigEndian.Uint32(sum)
+	return binary.BigEndian.Uint32(sum), sum
 }
 
 // ed25519KeyHash generates the 4-byte key ID for an Ed25519 public key.
 // Ed25519 keys are the only key type compatible with witnessing.
-func ed25519KeyHash(name string, key []byte) uint32 {
+func ed25519KeyHash(name string, key []byte) (uint32, []byte) {
 	return genConformantKeyHash(name, []byte{algEd25519}, key)
 }
 
 // ecdsaKeyHash generates the 4-byte key ID for an ECDSA public key.
 // ECDSA key IDs do not conform to the note standard for other key type
 // (see https://github.com/C2SP/C2SP/blob/8991f70ddf8a11de3a68d5a081e7be27e59d87c8/signed-note.md#signature-types).
-func ecdsaKeyHash(key *ecdsa.PublicKey) (uint32, error) {
+func ecdsaKeyHash(key *ecdsa.PublicKey) (uint32, []byte, error) {
 	marshaled, err := x509.MarshalPKIXPublicKey(key)
 	if err != nil {
-		return 0, fmt.Errorf("marshaling public key: %w", err)
+		return 0, nil, fmt.Errorf("marshaling public key: %w", err)
 	}
 	hash := sha256.Sum256(marshaled)
-	return binary.BigEndian.Uint32(hash[:]), nil
+	return binary.BigEndian.Uint32(hash[:]), hash[:], nil
 }
 
 // rsaKeyhash generates the 4-byte key ID for an RSA public key.
-func rsaKeyHash(name string, key *rsa.PublicKey) (uint32, error) {
+func rsaKeyHash(name string, key *rsa.PublicKey) (uint32, []byte, error) {
 	marshaled, err := x509.MarshalPKIXPublicKey(key)
 	if err != nil {
-		return 0, fmt.Errorf("marshaling public key: %w", err)
+		return 0, nil, fmt.Errorf("marshaling public key: %w", err)
 	}
 	rsaAlg := append([]byte{algUndef}, []byte(rsaID)...)
-	return genConformantKeyHash(name, rsaAlg, marshaled), nil
+	id, hash := genConformantKeyHash(name, rsaAlg, marshaled)
+	return id, hash, nil
 }
 
-// keyHash generates a 4-byte identifier for a public key/origin
-func keyHash(origin string, key crypto.PublicKey) (uint32, error) {
+// KeyHash generates a truncated and non-truncated 4-byte identifier for a
+// public key/origin
+func KeyHash(origin string, key crypto.PublicKey) (uint32, []byte, error) {
 	var keyID uint32
+	var logID []byte
 	var err error
 
 	switch pk := key.(type) {
 	case *ecdsa.PublicKey:
-		keyID, err = ecdsaKeyHash(pk)
+		keyID, logID, err = ecdsaKeyHash(pk)
 		if err != nil {
-			return 0, fmt.Errorf("getting ECDSA key hash: %w", err)
+			return 0, nil, fmt.Errorf("getting ECDSA key hash: %w", err)
 		}
 	case ed25519.PublicKey:
-		keyID = ed25519KeyHash(origin, pk)
+		keyID, logID = ed25519KeyHash(origin, pk)
 	case *rsa.PublicKey:
-		keyID, err = rsaKeyHash(origin, pk)
+		keyID, logID, err = rsaKeyHash(origin, pk)
 		if err != nil {
-			return 0, fmt.Errorf("getting RSA key hash: %w", err)
+			return 0, nil, fmt.Errorf("getting RSA key hash: %w", err)
 		}
 	default:
-		return 0, fmt.Errorf("unsupported key type: %T", key)
+		return 0, nil, fmt.Errorf("unsupported key type: %T", key)
 	}
 
-	return keyID, nil
+	return keyID, logID, nil
 }
 
 // NewNoteSigner converts a sigstore/sigstore/pkg/signature.Signer into a note.Signer.
@@ -167,7 +170,7 @@ func NewNoteSigner(ctx context.Context, origin string, signer signature.Signer) 
 		return nil, fmt.Errorf("getting public key: %w", err)
 	}
 
-	keyID, err := keyHash(origin, pubKey)
+	keyID, _, err := KeyHash(origin, pubKey)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +196,7 @@ func NewNoteVerifier(origin string, verifier signature.Verifier) (note.Verifier,
 		return nil, fmt.Errorf("getting public key: %w", err)
 	}
 
-	keyID, err := keyHash(origin, pubKey)
+	keyID, _, err := KeyHash(origin, pubKey)
 	if err != nil {
 		return nil, err
 	}

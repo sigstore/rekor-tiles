@@ -30,10 +30,12 @@ import (
 	"sigs.k8s.io/release-utils/version"
 
 	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
+	"github.com/sigstore/rekor-tiles/pkg/note"
 	"github.com/sigstore/rekor-tiles/pkg/server"
 	"github.com/sigstore/rekor-tiles/pkg/signerverifier"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
 var serveCmd = &cobra.Command{
@@ -77,6 +79,20 @@ var serveCmd = &cobra.Command{
 			slog.Error(fmt.Sprintf("failed to initialize append options: %v", err))
 			os.Exit(1)
 		}
+		// Compute log ID for TransparencyLogEntry, to be used by clients to look up
+		// the correct instance in a trust root. Log ID is equivalent to the non-truncated
+		// hash of the public key and origin per the signed-note C2SP spec.
+		pubKey, err := signer.PublicKey(options.WithContext(ctx))
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to get public key: %v", err))
+			os.Exit(1)
+		}
+		_, logID, err := note.KeyHash(viper.GetString("hostname"), pubKey)
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to get log ID: %v", err))
+			os.Exit(1)
+		}
+
 		readOnly := viper.GetBool("read-only")
 		var tesseraStorage tessera.Storage
 		shutdownFn := func(_ context.Context) error { return nil }
@@ -112,7 +128,7 @@ var serveCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		rekorServer := server.NewServer(tesseraStorage, readOnly, algorithmRegistry)
+		rekorServer := server.NewServer(tesseraStorage, readOnly, algorithmRegistry, logID)
 
 		server.Serve(
 			ctx,

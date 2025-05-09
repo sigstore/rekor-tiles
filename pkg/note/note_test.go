@@ -18,6 +18,7 @@ package note
 
 import (
 	"context"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -79,24 +80,28 @@ fycQ0e/nw1JkypGoL1j4cwM=
 func TestKeyHash(t *testing.T) {
 	origin := "testkey"
 	tests := []struct {
-		name          string
-		key           []byte
-		expectedKeyID uint32
+		name             string
+		key              []byte
+		expectedKeyID    uint32
+		expectedLogIDHex string
 	}{
 		{
-			name:          "ed25519",
-			key:           ed25519PrivKey,
-			expectedKeyID: 3839787747, // echo $((0x$(printf "%s%b%b%s" "testkey" "\x0A" "\x01" "$(openssl pkey -in ed25519-priv-key.pem -pubout -out - | openssl pkey -pubin -in /dev/stdin -outform DER -out - | tail -c32)" | sha256sum | cut -d ' ' -f 1 | head -c 8)))
+			name:             "ed25519",
+			key:              ed25519PrivKey,
+			expectedKeyID:    3839787747,                                                         // echo $((0x$(printf "%s%b%b%s" "testkey" "\x0A" "\x01" "$(openssl pkey -in ed25519-priv-key.pem -pubout -out - | openssl pkey -pubin -in /dev/stdin -outform DER -out - | tail -c32)" | sha256sum | cut -d ' ' -f 1 | head -c 8)))
+			expectedLogIDHex: "e4de82e34c8c270d87612a3d6a1e297e2cd0ed9cb89ea7aeec8ce4d0b54e6775", // echo $(printf "%s%b%b%s" "testkey" "\x0A" "\x01" "$(openssl pkey -in ed25519-priv-key.pem -pubout -out - | openssl pkey -pubin -in /dev/stdin -outform DER -out - | tail -c32)" | sha256sum | cut -d ' ' -f 1)
 		},
 		{
-			name:          "ecdsa",
-			key:           ecdsaPrivKey,
-			expectedKeyID: 2408765216, // echo $((0x$(openssl ec -in ec-secp256r1-priv-key.pem -pubout - | openssl ec -pubin -in /dev/stdin -outform DER -out - | sha256sum | cut -d ' ' -f 1 | head -c 8)))
+			name:             "ecdsa",
+			key:              ecdsaPrivKey,
+			expectedKeyID:    2408765216,                                                         // echo $((0x$(openssl ec -in ec-secp256r1-priv-key.pem -pubout - | openssl ec -pubin -in /dev/stdin -outform DER -out - | sha256sum | cut -d ' ' -f 1 | head -c 8)))
+			expectedLogIDHex: "8f92d720f56c219e34895a76a636a3353ddbf7813f9fa317e19982eafa945328", // echo $(openssl ec -in ec-secp256r1-priv-key.pem -pubout - | openssl ec -pubin -in /dev/stdin -outform DER -out - | sha256sum | cut -d ' ' -f 1)
 		},
 		{
-			name:          "rsa",
-			key:           rsaPrivKey,
-			expectedKeyID: 2918460683, // echo $((0x$({ printf "%s%b%b%s" "testkey" "\x0A" "\xFF" 'PKIX-RSA-PKCS#1v1.5' ; openssl rsa -in rsa-priv-key.pem -pubout -out - | openssl rsa -in /dev/stdin -pubin -outform DER -out - ;  } | sha256sum | cut -d ' ' -f 1 | head -c8)))
+			name:             "rsa",
+			key:              rsaPrivKey,
+			expectedKeyID:    2918460683,                                                         // echo $((0x$({ printf "%s%b%b%s" "testkey" "\x0A" "\xFF" 'PKIX-RSA-PKCS#1v1.5' ; openssl rsa -in rsa-priv-key.pem -pubout -out - | openssl rsa -in /dev/stdin -pubin -outform DER -out - ;  } | sha256sum | cut -d ' ' -f 1 | head -c8)))
+			expectedLogIDHex: "adf42d0b4478f2d07e5c8c3e63640a7e41b440c19dc47010c3a4936af75d85b6", // echo $({ printf "%s%b%b%s" "testkey" "\x0A" "\xFF" 'PKIX-RSA-PKCS#1v1.5' ; openssl rsa -in rsa-priv-key.pem -pubout -out - | openssl rsa -in /dev/stdin -pubin -outform DER -out - ;  } | sha256sum | cut -d ' ' -f 1)
 		},
 	}
 	for _, test := range tests {
@@ -116,7 +121,21 @@ func TestKeyHash(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			pubKey, err := signer.PublicKey()
+			if err != nil {
+				t.Fatal(err)
+			}
+			keyID, logID, err := KeyHash(origin, pubKey)
+			if err != nil {
+				t.Fatal(err)
+			}
 			assert.Equal(t, test.expectedKeyID, noteSigner.KeyHash())
+			assert.Equal(t, test.expectedKeyID, keyID)
+			expectedLogID, err := hex.DecodeString(test.expectedLogIDHex)
+			if err != nil {
+				t.Fatal(err)
+			}
+			assert.Equal(t, expectedLogID, logID)
 		})
 	}
 }

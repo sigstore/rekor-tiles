@@ -28,16 +28,16 @@ import (
 	"fmt"
 	"testing"
 
-	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
-	dsset "github.com/sigstore/rekor-tiles/pkg/types/dsse"
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
+	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/pkg/client/read"
 	"github.com/sigstore/rekor-tiles/pkg/client/write"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	"github.com/sigstore/rekor-tiles/pkg/note"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
+	dsset "github.com/sigstore/rekor-tiles/pkg/types/dsse"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
@@ -45,6 +45,7 @@ import (
 	"github.com/transparency-dev/trillian-tessera/api/layout"
 	"go.step.sm/crypto/pemutil"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -79,6 +80,12 @@ func TestReadWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// log ID
+	_, logID, err := note.KeyHash(defaultRekorHostname, serverPubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
 	// Get the current checkpoint
 	checkpoint, note, err := reader.ReadCheckpoint(ctx)
 	assert.NoError(t, err)
@@ -103,8 +110,9 @@ func TestReadWrite(t *testing.T) {
 			if err != nil {
 				return err
 			}
-			_, err = writer.Add(ctx, hr) // We don't need to check the TLE here, the client verifies the inclusion proof for us
+			tle, err := writer.Add(ctx, hr)
 			assert.NoError(t, err)
+			assertHashedRekordTLE(t, tle, numNewEntries, logID, hr)
 			return nil
 		})
 	}
@@ -117,8 +125,9 @@ func TestReadWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = writer.Add(ctx, hr)
+	tle, err := writer.Add(ctx, hr)
 	assert.NoError(t, err)
+	assertHashedRekordTLE(t, tle, numNewEntries, logID, hr)
 
 	// Check the checkpoint again
 	checkpoint, note, err = reader.ReadCheckpoint(ctx)
@@ -165,12 +174,14 @@ func TestReadWrite(t *testing.T) {
 	assert.NotNil(t, hrEntry)
 
 	// Add a DSSE entry
+	numNewEntries++
 	dr, err := newDSSERequest(clientPrivKey, clientPubKey)
 	if err != nil {
 		t.Fatal(err)
 	}
-	tle, err := writer.Add(ctx, dr)
+	tle, err = writer.Add(ctx, dr)
 	assert.NoError(t, err)
+	assertDSSETLE(t, tle, numNewEntries-1, logID, dr)
 
 	safeLogSize, err := tessera.NewSafeInt64(tle.InclusionProof.TreeSize)
 	if err != nil {
@@ -288,4 +299,71 @@ func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV0
 			},
 		},
 	}, nil
+}
+
+func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, numNewEntries uint64, logID []byte, hr *pb.HashedRekordRequestV0_0_2) {
+	assert.NotNil(t, tle)
+
+	// Check server does not set deprecated fields
+	assert.Zero(t, tle.IntegratedTime)
+	assert.Nil(t, tle.InclusionPromise)
+
+	// Check populated fields
+	// Assert log index is [0, numNewEntries). We can't know the precise index since
+	// entry upload is done in parallel.
+	assert.GreaterOrEqual(t, tle.LogIndex, int64(0))
+	assert.Less(t, tle.LogIndex, int64(numNewEntries))
+	// Assert log IDs are equivalent
+	assert.Equal(t, tle.LogId.KeyId, logID)
+	// Assert kind and version match expected values
+	assert.Equal(t, tle.KindVersion.Kind, "hashedrekord")
+	assert.Equal(t, tle.KindVersion.Version, "0.0.2")
+	assert.NotNil(t, tle.InclusionProof) // server verifies inclusion proof before returning response
+	// Parse canonicalized body and assert entry matches request
+	e := &pb.Entry{}
+	assert.NotNil(t, tle.CanonicalizedBody)
+	err := protojson.Unmarshal(tle.CanonicalizedBody, e)
+	assert.NoError(t, err)
+	assert.Equal(t, "hashedrekord", e.Kind)
+	assert.Equal(t, "0.0.2", e.ApiVersion)
+	hrEntry := e.Spec.GetHashedRekordV0_0_2()
+	assert.NotNil(t, hrEntry)
+	assert.Equal(t, hrEntry.Signature, hr.Signature)
+	assert.Equal(t, hrEntry.Data.Algorithm, v1.HashAlgorithm_SHA2_256)
+	assert.Equal(t, hrEntry.Data.Digest, hr.Digest)
+}
+
+func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, logID []byte, dr *pb.DSSERequestV0_0_2) {
+	assert.NotNil(t, tle)
+
+	// Check server does not set deprecated fields
+	assert.Zero(t, tle.IntegratedTime)
+	assert.Nil(t, tle.InclusionPromise)
+
+	// Check populated fields
+	// Assert log index. There is a single DSSE upload so the exact index is known
+	assert.Equal(t, tle.LogIndex, int64(index))
+	// Assert log IDs are equivalent
+	assert.Equal(t, tle.LogId.KeyId, logID)
+	// Assert kind and version match expected values
+	assert.Equal(t, tle.KindVersion.Kind, "dsse")
+	assert.Equal(t, tle.KindVersion.Version, "0.0.2")
+	assert.NotNil(t, tle.InclusionProof) // server verifies inclusion proof before returning response
+	// Parse canonicalized body and assert entry matches request
+	e := &pb.Entry{}
+	assert.NotNil(t, tle.CanonicalizedBody)
+	err := protojson.Unmarshal(tle.CanonicalizedBody, e)
+	assert.NoError(t, err)
+	assert.Equal(t, "dsse", e.Kind)
+	assert.Equal(t, "0.0.2", e.ApiVersion)
+	dsseEntry := e.Spec.GetDsseV0_0_2()
+	assert.NotNil(t, dsseEntry)
+	// Assert payload hash is as expected
+	assert.Equal(t, dsseEntry.PayloadHash.Algorithm, v1.HashAlgorithm_SHA2_256)
+	expectedPayloadHash := sha256.Sum256(dr.Envelope.Payload)
+	assert.Equal(t, dsseEntry.PayloadHash.Digest, expectedPayloadHash[:])
+	// Assert signature matches envelope's signature
+	assert.Len(t, dsseEntry.Signatures, 1)
+	assert.Equal(t, dsseEntry.Signatures[0].Content, dr.Envelope.Signatures[0].Sig)
+	assert.Equal(t, dsseEntry.Signatures[0].Verifier, dr.Verifiers[0])
 }
