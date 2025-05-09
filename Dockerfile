@@ -44,12 +44,20 @@ CMD ["rekor-server", "serve"]
 FROM builder AS dlvbuilder
 ARG TARGETOS
 ARG TARGETARCH
+ENV APP_ROOT=/opt/app-root
+ENV GOPATH=$APP_ROOT
+# Create a directory where 'go install' may install the cross-compiled binary,
+# if the build and target platform differ.
+RUN mkdir -p /opt/app-root/bin/${TARGETOS}_${TARGETARCH}
 # dlv v1.24.2
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go install github.com/go-delve/delve/cmd/dlv@f0cc62bfcaa18b9f2cd01cebd818fad537ee93ec
 
 # Multi-stage debugger build
 FROM deploy AS debug
-# Copy dlv binary
-COPY --from=dlvbuilder /opt/app-root/bin/dlv /usr/local/bin/dlv
+ARG TARGETOS
+ARG TARGETARCH
+# Copy dlv binary, either from bin/ when the build and target platform are the same, or
+# from bin/TARGETOS_TARGETARCH when the platforms are different.
+COPY --from=dlvbuilder /opt/app-root/bin/dlv* /opt/app-root/bin/${TARGETOS}_${TARGETARCH}/dlv* /usr/local/bin/
 # Overwrite server binary
 COPY --from=builder /opt/app-root/src/rekor-server_debug /usr/local/bin/rekor-server
