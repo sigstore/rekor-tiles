@@ -27,10 +27,14 @@ import (
 	tessera "github.com/transparency-dev/trillian-tessera"
 )
 
-var tileHash = "81bfc09c412c04da53a1b0ddb94dce48d6a24e9ea58987f7d45a04e8007fb3ca"
+var tileHashHex = "81bfc09c412c04da53a1b0ddb94dce48d6a24e9ea58987f7d45a04e8007fb3ca"
 
 func TestAdd(t *testing.T) {
 	ctx := context.Background()
+	tileHash, err := hex.DecodeString(tileHashHex)
+	if err != nil {
+		t.Fatal(err)
+	}
 	readCheckpoint := func(_ context.Context) ([]byte, error) {
 		<-time.After(5 * time.Millisecond)
 		return []byte(`test.origin
@@ -42,7 +46,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 	s := storage{
 		awaiter: tessera.NewPublicationAwaiter(ctx, readCheckpoint, 10*time.Millisecond),
 		readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
-			return hex.DecodeString(tileHash)
+			return tileHash, nil
 		},
 	}
 	entry := tessera.NewEntry([]byte("stuff"))
@@ -62,7 +66,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 			},
 			expectLogIndex: int64(0),
 			expectTreeSize: int64(1),
-			expectHash:     []byte(tileHash),
+			expectHash:     tileHash,
 			expectBody:     []byte("stuff"),
 		},
 		{
@@ -99,7 +103,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 
 func TestReadTile(t *testing.T) {
 	ctx := context.Background()
-	decodedTileHash, err := hex.DecodeString(tileHash)
+	tileHash, err := hex.DecodeString(tileHashHex)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -108,7 +112,7 @@ func TestReadTile(t *testing.T) {
 			if level != 0 && index != 1 {
 				return nil, fmt.Errorf("not found")
 			}
-			return decodedTileHash, nil
+			return tileHash, nil
 		},
 	}
 	tests := []struct {
@@ -124,7 +128,7 @@ func TestReadTile(t *testing.T) {
 			level:      0,
 			index:      1,
 			p:          0,
-			expectHash: decodedTileHash,
+			expectHash: tileHash,
 		},
 		{
 			name:      "tile doesn't exist",
