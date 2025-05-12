@@ -17,7 +17,6 @@ package tessera
 
 import (
 	"context"
-	"encoding/hex"
 	"fmt"
 	"log/slog"
 	"time"
@@ -214,7 +213,7 @@ func (s *storage) buildProof(ctx context.Context, idx *SafeInt64, signedCheckpoi
 	}
 	return &rekor_pb.InclusionProof{
 		LogIndex: idx.I(),
-		RootHash: []byte(hex.EncodeToString(checkpoint.Hash)),
+		RootHash: checkpoint.Hash,
 		TreeSize: safeCheckpointSize.I(),
 		Hashes:   inclusionProof,
 		Checkpoint: &rekor_pb.Checkpoint{
