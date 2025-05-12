@@ -35,11 +35,9 @@ import (
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
-	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -88,7 +86,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	}
 	mux := runtime.NewServeMux(
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
-		runtime.WithErrorHandler(methodNotAllowedHandler),
+		runtime.WithErrorHandler(customHTTPErrorHandler),
 		runtime.WithForwardResponseOption(httpResponseModifier),
 		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)), // localhost:[port]/healthz
 	)
@@ -221,15 +219,16 @@ func httpResponseModifier(ctx context.Context, w http.ResponseWriter, _ proto.Me
 	return nil
 }
 
-// methodNotAllowedHandler remaps the gRPC Unimplemented code to an HTTP 405 Method Not Allowed code.
-// Without this, the proxy defaults to converting the gRPC code to an HTTP 501 Not Implemented.
-func methodNotAllowedHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
-	status, ok := status.FromError(err)
+// customHTTPErrorHandler remaps gRPC errors codes to HTTP status codes provided in an internal header.
+// This is needed to remap a gRPC code, such as Unimplemented, in certain instances to a more precise
+// HTTP status code.
+func customHTTPErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshaler runtime.Marshaler, w http.ResponseWriter, r *http.Request, err error) {
+	md, ok := runtime.ServerMetadataFromContext(ctx)
 	if !ok {
 		runtime.DefaultHTTPErrorHandler(ctx, mux, marshaler, w, r, err)
 		return
 	}
-	if status.Code() != codes.Unimplemented {
+	if vals := md.HeaderMD.Get(httpStatusCodeHeader); len(vals) == 0 {
 		runtime.DefaultHTTPErrorHandler(ctx, mux, marshaler, w, r, err)
 		return
 	}
