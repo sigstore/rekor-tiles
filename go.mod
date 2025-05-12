@@ -29,7 +29,7 @@ require (
 	go.step.sm/crypto v0.63.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	golang.org/x/mod v0.24.0
-	golang.org/x/sync v0.13.0
+	golang.org/x/sync v0.14.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250425173222-7b384671a197
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6
