@@ -29,9 +29,11 @@ import (
 	"sync"
 	"syscall"
 
+	clog "github.com/chainguard-dev/clog/gcp"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
@@ -77,6 +79,8 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
+	opts = append(opts, grpc.WithChainUnaryInterceptor(logging.UnaryClientInterceptor(interceptorLogger(slog.Default()), loggingOpts...)))
+
 	// GRPC client connection so the http mux's healthz endpoint can reach the grpc healthcheck service.
 	// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/#adding-healthz-endpoint-to-runtimeservemux.
 	cc, err := grpc.NewClient(grpcServer.serverEndpoint, opts...)
@@ -102,6 +106,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	handler = promhttp.InstrumentHandlerDuration(metrics.httpLatency, handler)
 	handler = promhttp.InstrumentHandlerCounter(metrics.httpRequestsCount, handler)
 	handler = promhttp.InstrumentHandlerRequestSize(metrics.httpRequestSize, handler)
+	handler = clog.WithCloudTraceContext(handler)
 	handler = http.MaxBytesHandler(handler, int64(config.maxRequestBodySize))
 
 	server := &http.Server{

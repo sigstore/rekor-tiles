@@ -27,6 +27,9 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/chainguard-dev/clog/gcp/init"
+	"k8s.io/klog/v2"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
@@ -46,12 +49,11 @@ var serveCmd = &cobra.Command{
 	Long:  "start the Rekor server",
 	Run: func(cmd *cobra.Command, _ []string) {
 		ctx := cmd.Context()
-		versionInfo := version.GetVersionInfo()
-		versionInfoStr, err := versionInfo.JSONString()
-		if err != nil {
-			versionInfoStr = versionInfo.String()
-		}
-		slog.Info("starting rekor-server", "version", versionInfoStr)
+
+		// tessera uses klog so pipe all klog messages to be written through slog
+		klog.SetSlogLogger(slog.Default())
+
+		slog.Info("starting rekor-server", "version", version.GetVersionInfo())
 
 		var signerOpts []signerverifier.Option
 		switch {
