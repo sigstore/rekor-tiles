@@ -27,14 +27,9 @@ import (
 	tessera "github.com/transparency-dev/trillian-tessera"
 )
 
-var tileHashHex = "81bfc09c412c04da53a1b0ddb94dce48d6a24e9ea58987f7d45a04e8007fb3ca"
-
 func TestAdd(t *testing.T) {
 	ctx := context.Background()
-	tileHash, err := hex.DecodeString(tileHashHex)
-	if err != nil {
-		t.Fatal(err)
-	}
+	tileHash := hexDecodeOrDie(t, "81bfc09c412c04da53a1b0ddb94dce48d6a24e9ea58987f7d45a04e8007fb3ca")
 	readCheckpoint := func(_ context.Context) ([]byte, error) {
 		<-time.After(5 * time.Millisecond)
 		return []byte(`test.origin
@@ -103,10 +98,7 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 
 func TestReadTile(t *testing.T) {
 	ctx := context.Background()
-	tileHash, err := hex.DecodeString(tileHashHex)
-	if err != nil {
-		t.Fatal(err)
-	}
+	tileHash := hexDecodeOrDie(t, "81bfc09c412c04da53a1b0ddb94dce48d6a24e9ea58987f7d45a04e8007fb3ca")
 	s := storage{
 		readTileFn: func(_ context.Context, level, index uint64, _ uint8) ([]byte, error) {
 			if level != 0 && index != 1 {
@@ -164,4 +156,12 @@ func TestAppendOptions(t *testing.T) {
 	assert.Equal(t, 42*time.Second, ao.CheckpointInterval())
 	assert.Equal(t, uint(42), ao.PushbackMaxOutstanding())
 	_ = WithAntispamOptions(ao, nil) // initializes non-persistent antispam
+}
+
+func hexDecodeOrDie(t *testing.T, text string) []byte {
+	decoded, err := hex.DecodeString(text)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return decoded
 }

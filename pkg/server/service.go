@@ -22,6 +22,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/pkg/tessera"
@@ -51,17 +52,20 @@ type Server struct {
 	storage           tessera.Storage
 	readOnly          bool
 	algorithmRegistry *signature.AlgorithmRegistryConfig
+	logID             []byte // Non-truncated digest of C2SP signed-note key ID
 }
 
-func NewServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig) *Server {
+func NewServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig, logID []byte) *Server {
 	if readOnly {
 		return &Server{
 			readOnly: readOnly,
+			logID:    logID,
 		}
 	}
 	return &Server{
 		storage:           storage,
 		algorithmRegistry: algorithmRegistry,
+		logID:             logID,
 	}
 }
 
@@ -134,6 +138,10 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	// Set bundle's kind and version, which clients that do not persist the
 	// canonicalized body will use to reconstruct the entry leaf hash
 	tle.KindVersion = kv
+	// Set log ID, to be used by clients to look up the corresponding instance
+	// in a trust root. Will be removed in the future, as clients should use
+	// the checkpoint's key ID as a unique log identifier.
+	tle.LogId = &v1.LogId{KeyId: s.logID}
 
 	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "201"))
 	metricsCounter.Inc()
