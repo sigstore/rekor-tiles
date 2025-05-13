@@ -67,7 +67,7 @@ func NewServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signat
 
 func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*pbs.TransparencyLogEntry, error) {
 	if s.readOnly {
-		slog.Warn("rekor is in read-only mode, cannot create new entry")
+		slog.WarnContext(ctx, "rekor is in read-only mode, cannot create new entry")
 		_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "405"))
 		_ = grpc.SetHeader(ctx, metadata.Pairs(httpErrorMessageHeader, "This log has been frozen, please switch to the latest log."))
 		return nil, status.Errorf(codes.Unimplemented, "log frozen")
@@ -81,7 +81,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		hr := req.GetHashedRekordRequestV0_0_2()
 		entry, err := hashedrekord.ToLogEntry(hr, s.algorithmRegistry)
 		if err != nil {
-			slog.Warn("failed validating hashedrekord request", "error", err.Error())
+			slog.WarnContext(ctx, "failed validating hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
 		}
 		kv = &pbs.KindVersion{
@@ -90,7 +90,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		}
 		serialized, err = protojson.Marshal(entry)
 		if err != nil {
-			slog.Warn("failed marshaling hashedrekord request", "error", err.Error())
+			slog.WarnContext(ctx, "failed marshaling hashedrekord request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
 		}
 		metricsCounter = getMetrics().newHashedRekordEntries
@@ -98,7 +98,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		ds := req.GetDsseRequestV0_0_2()
 		entry, err := dsse.ToLogEntry(ds, s.algorithmRegistry)
 		if err != nil {
-			slog.Warn("failed validating dsse request", "error", err.Error())
+			slog.WarnContext(ctx, "failed validating dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")
 		}
 		kv = &pbs.KindVersion{
@@ -107,7 +107,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		}
 		serialized, err = protojson.Marshal(entry)
 		if err != nil {
-			slog.Warn("failed marshaling dsse request", "error", err.Error())
+			slog.WarnContext(ctx, "failed marshaling dsse request", "error", err.Error())
 			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")
 		}
 		metricsCounter = getMetrics().newDsseEntries
@@ -116,7 +116,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	}
 	canonicalized, err := jsoncanonicalizer.Transform(serialized)
 	if err != nil {
-		slog.Warn("failed canonicalizing request", "error", err.Error())
+		slog.WarnContext(ctx, "failed canonicalizing request", "error", err.Error())
 		return nil, status.Errorf(codes.InvalidArgument, "invalid entry")
 	}
 	entry := ttessera.NewEntry(canonicalized)
@@ -128,7 +128,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		getMetrics().inclusionProofFailureCount.Inc()
 	}
 	if err != nil {
-		slog.Warn("failed to integrate entry", "error", err.Error())
+		slog.WarnContext(ctx, "failed to integrate entry", "error", err.Error())
 		return nil, status.Errorf(codes.Unknown, "failed to integrate entry")
 	}
 	// Set bundle's kind and version, which clients that do not persist the
