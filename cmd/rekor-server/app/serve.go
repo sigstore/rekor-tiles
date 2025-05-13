@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/chainguard-dev/clog/gcp/init"
+	_ "github.com/chainguard-dev/clog/gcp/init" // initialize logging
 	"k8s.io/klog/v2"
 
 	"github.com/spf13/cobra"
