@@ -66,7 +66,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 
 	opts = append(opts,
 		grpc.ChainUnaryInterceptor(
-			logging.UnaryServerInterceptor(interceptorLogger(slog.Default()), loggingOpts...),
+			logging.UnaryServerInterceptor(interceptorLogger(slog.Default()), loggingOpts(config.logLevel, config.requestResponseLogging)...),
 			getMetrics().serverMetrics.UnaryServerInterceptor(),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)), // panic handler should be last
 		),

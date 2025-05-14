@@ -15,6 +15,7 @@
 package server
 
 import (
+	"log/slog"
 	"strconv"
 	"time"
 )
@@ -28,22 +29,26 @@ const (
 
 // GRPCConfig contains options for the GRPC server from the CLI.
 type GRPCConfig struct {
-	port           int
-	host           string
-	timeout        time.Duration
-	maxMessageSize int
-	certFile       string
-	keyFile        string
+	port                   int
+	host                   string
+	timeout                time.Duration
+	maxMessageSize         int
+	certFile               string
+	keyFile                string
+	logLevel               slog.Level
+	requestResponseLogging bool
 }
 type GRPCOption func(config *GRPCConfig)
 
 // NewGRPCConfig creates a new GRPCConfig with some default options.
 func NewGRPCConfig(options ...func(config *GRPCConfig)) *GRPCConfig {
 	config := &GRPCConfig{
-		port:           8081,
-		host:           "localhost",
-		timeout:        defaultTimeout,
-		maxMessageSize: defaultMaxSize,
+		port:                   8081,
+		host:                   "localhost",
+		timeout:                defaultTimeout,
+		maxMessageSize:         defaultMaxSize,
+		logLevel:               slog.LevelInfo,
+		requestResponseLogging: false,
 	}
 	for _, opt := range options {
 		opt(config)
@@ -91,5 +96,12 @@ func WithTLSCredentials(certFile, keyFile string) GRPCOption {
 	return func(config *GRPCConfig) {
 		config.certFile = certFile
 		config.keyFile = keyFile
+	}
+}
+
+func WithGRPCLogLevel(logLevel slog.Level, requestResponseLogging bool) GRPCOption {
+	return func(config *GRPCConfig) {
+		config.logLevel = logLevel
+		config.requestResponseLogging = requestResponseLogging
 	}
 }

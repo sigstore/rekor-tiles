@@ -23,11 +23,28 @@ import (
 
 func interceptorLogger(l *slog.Logger) logging.Logger {
 	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
+		switch msg {
+		case "request received", "request sent", "response received", "response sent", "finished call":
+			for i := range len(fields) - 1 {
+				if key, ok := fields[i].(string); ok && key == "grpc.service" {
+					if value, ok := fields[i+1].(string); ok && value == "grpc.health.v1.Health" {
+						// skip logging anything for health check
+						return
+					}
+				}
+			}
+		}
 		l.Log(ctx, slog.Level(lvl), msg, fields...)
 	})
 }
 
-var loggingOpts = []logging.Option{
-	// TODO: add debug flag to add logging.StartCall, logging.FinishedCall, logging.PayloadReceived and/or logging.PayloadSent
-	logging.WithLogOnEvents(),
+func loggingOpts(level slog.Level, requestResponseLogging bool) []logging.Option {
+	events := []logging.LoggableEvent{}
+	if level == slog.LevelDebug {
+		events = append(events, logging.FinishCall)
+		if requestResponseLogging {
+			events = append(events, logging.PayloadReceived, logging.PayloadSent)
+		}
+	}
+	return []logging.Option{logging.WithLogOnEvents(events...)}
 }
