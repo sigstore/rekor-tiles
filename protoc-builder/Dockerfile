@@ -13,7 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# syntax=docker/dockerfile-upstream:master
+# syntax=docker/dockerfile:1
+
 # This container grabs the protoc compiler and the googleapi includes
 # /protobuf will contain the extracted protoc
 # /googleapis will contain the various googleapis proto imports one might need
@@ -38,10 +39,9 @@ USER myuser
 # Download specific release of protoc
 # TODO(#66): add dependabot-like feature to check for release updates
 ARG PROTOC_VERSION
-ARG PROTOC_VERSION_TAG
 ARG PROTOC_CHECKSUM
 
-ADD --chown=myuser https://github.com/protocolbuffers/protobuf/releases/download/${PROTOC_VERSION_TAG}/protoc-${PROTOC_VERSION}-linux-x86_64.zip /tmp/protoc.zip
+ADD --chown=myuser --checksum=${PROTOC_CHECKSUM} https://github.com/protocolbuffers/protobuf/releases/download/${PROTOC_VERSION}/protoc-${PROTOC_VERSION#v}-linux-x86_64.zip /tmp/protoc.zip
 RUN unzip -d /protobuf /tmp/protoc.zip
 RUN chmod 755 /protobuf/bin/protoc
 
