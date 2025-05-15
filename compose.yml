@@ -15,7 +15,7 @@
 
 services:
   spanner:
-    image: gcr.io/cloud-spanner-emulator/emulator:1.5.34@sha256:5504c859f3b761a3ebdf99d0abd0b455ed72b52fb07cbfb61584319d8ba88ed3
+    image: gcr.io/cloud-spanner-emulator/emulator:1.5.34@sha256:f98725ceb484500d858d17916ea4a04e2a83184b5a080a87113770e82c177744
   gcs:
     image: fsouza/fake-gcs-server:1.52.2@sha256:d47b4cf8b87006cab8fbbecfa5f06a2a3c5722e464abddc0d107729663d40ec4
     volumes:
