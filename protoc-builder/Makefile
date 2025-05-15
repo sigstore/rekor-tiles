@@ -16,6 +16,7 @@
 # TODO(#66): replace this whole build with https://github.com/sigstore/protobuf-specs/issues/542
 
 PROTOC_REKOR_IMAGE = protoc-rekor
+PROTOC_PYTHON_IMAGE = protoc-rekor-python
 
 PLATFORM ?= linux/amd64
 UID ?= $(shell id -u)
@@ -23,11 +24,10 @@ GID ?= $(shell id -g)
 DOCKER_BUILD = docker build --platform ${PLATFORM} --build-arg UID=${UID}
 DOCKER_RUN = docker run --platform ${PLATFORM} --user ${UID}:${GID}
 
-PROTOC_VERSION_TAG = v29.3
-PROTOC_VERSION = 29.3
+PROTOC_VERSION = v29.3
 PROTOC_CHECKSUM = sha256:3e866620c5be27664f3d2fa2d656b5f3e09b5152b42f1bedbf427b333e90021a
 GOOGLEAPIS_COMMIT = dd1210af5bee414c9e606f5637e0eb0fd9d894e8
-PROTOBUF_SPECS_COMMIT = 68cc7d273f0a2ade2f8c9c56c0da094f481eabd5 #v0.4.0
+PROTOBUF_SPECS_COMMIT = 95810107164a2b4c76bcdad51439f61031663078 #v0.4.1
 
 GO_MODULE = github.com/sigstore/rekor-tiles
 PROJECT_DIR = $(shell cd ..; pwd)
@@ -35,11 +35,14 @@ PROTOS = $(shell cd ..; find api/proto/ -iname "*.proto" | sed 's|^|/project_dir
 PROTO_OUT = pkg/generated/protobuf
 OPENAPI_OUT = docs/openapi
 MOUNT_POINT = /project_dir
+CLIENTS_OUT = clients
 
 all: protos
 
+clients: python
+
 # generate Go protobuf code
-protos: proto-image
+protos: protoc-image
 	@echo "Generating go protobuf files"
 	@mkdir -p ${PROJECT_DIR}/${OPENAPI_OUT}
 	${DOCKER_RUN} -v ${PROJECT_DIR}:${MOUNT_POINT} ${PROTOC_REKOR_IMAGE} \
@@ -51,13 +54,27 @@ protos: proto-image
 		--openapiv2_out=${MOUNT_POINT}/${OPENAPI_OUT} \
     ${PROTOS}
 
-.PHONY: proto-image
-proto-image: Dockerfile
+python: Dockerfile.python protoc-python-image
+	@echo "Generating python protos"
+	@mkdir -p ${PROJECT_DIR}/${CLIENTS_OUT}/python
+	${DOCKER_RUN} -v ${PROJECT_DIR}:${MOUNT_POINT} ${PROTOC_PYTHON_IMAGE} \
+		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
+    --python_betterproto_opt=pydantic_dataclass \
+	  --python_betterproto_out=${MOUNT_POINT}/${CLIENTS_OUT}/python \
+    ${PROTOS}
+
+.PHONY: protoc-python-image
+protoc-python-image: Dockerfile.python protoc-image
+	@echo "Generating python proto Docker image"
+	${DOCKER_BUILD} -t ${PROTOC_PYTHON_IMAGE} -f Dockerfile.python \
+    --build-arg PROTOC_BASE=${PROTOC_REKOR_IMAGE} \
+    .
+
+.PHONY: protoc-image
+protoc-image: Dockerfile
 	@echo "Generating go proto Docker image"
 	${DOCKER_BUILD} -t ${PROTOC_REKOR_IMAGE} -f Dockerfile \
-    --build-arg BUILDKIT_SYNTAX=docker/dockerfile:1 \
 	  --build-arg PROTOC_VERSION=${PROTOC_VERSION} \
-	  --build-arg PROTOC_VERSION_TAG=${PROTOC_VERSION_TAG} \
 	  --build-arg PROTOC_CHECKSUM=${PROTOC_CHECKSUM} \
 	  --build-arg GOOGLEAPIS_COMMIT=${GOOGLEAPIS_COMMIT} \
     --build-arg PROTOBUF_SPECS_COMMIT=${PROTOBUF_SPECS_COMMIT} \
@@ -71,8 +88,9 @@ proto-no-cache:
 	@echo "Building development docker images with disabled cache"
 	@DOCKER_CACHE="--no-cache" make proto
 
-# clean up generated files (not working? try sudo make clean)
+# clean up generated files
 clean:
-	docker rmi -f ${PROTOC_REKOR_IMAGE}
+	docker rmi -f ${PROTOC_REKOR_IMAGE} ${PROTOC_PYTHON_IMAGE}
 	rm -rf ${PROJECT_DIR}/docs/openapi/*
 	rm -rf ${PROJECT_DIR}/pkg/generated/protobuf/*
+	rm -rf ${PROJECT_DIR}/clients/*

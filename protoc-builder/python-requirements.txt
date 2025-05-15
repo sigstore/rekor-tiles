@@ -1,0 +1,2 @@
+betterproto[compiler]==2.0.0b7
+mypy-protobuf==3.6.0

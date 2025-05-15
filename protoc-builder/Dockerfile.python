@@ -1,0 +1,35 @@
+#
+# Copyright 2025 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# syntax=docker/dockerfile:1
+
+ARG PROTOC_BASE
+FROM ${PROTOC_BASE} as protoc-base
+
+FROM python:3.13.3-alpine@sha256:18159b2be11db91f84b8f8f655cd860f805dbd9e49a583ddaac8ab39bf4fe1a7
+
+RUN pip3 install --upgrade --quiet pip
+
+# the specific versions of python protobuf tools are in python-requirements.txt so that Dependabot can bump them for updates
+ADD python-requirements.txt .
+
+RUN pip3 install -r python-requirements.txt
+
+COPY --from=protoc-base /usr/local/bin/ /usr/local/bin/
+COPY --from=protoc-base /opt/include/google /opt/include/google
+COPY --from=protoc-base /googleapis /googleapis
+COPY --from=protoc-base /protobuf-specs /protobuf-specs
+
+ENTRYPOINT ["/usr/local/bin/protoc"]
