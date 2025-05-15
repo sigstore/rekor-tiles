@@ -37,6 +37,7 @@ import (
 	"sync"
 	"syscall"
 
+	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"google.golang.org/grpc"
@@ -65,6 +66,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 
 	opts = append(opts,
 		grpc.ChainUnaryInterceptor(
+			logging.UnaryServerInterceptor(interceptorLogger(slog.Default()), loggingOpts(config.logLevel, config.requestResponseLogging)...),
 			getMetrics().serverMetrics.UnaryServerInterceptor(),
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)), // panic handler should be last
 		),
