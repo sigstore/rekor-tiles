@@ -59,8 +59,9 @@ python: Dockerfile.python protoc-python-image
 	@mkdir -p ${PROJECT_DIR}/${CLIENTS_OUT}/python
 	${DOCKER_RUN} -v ${PROJECT_DIR}:${MOUNT_POINT} ${PROTOC_PYTHON_IMAGE} \
 		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
-    --python_betterproto_opt=pydantic_dataclasses \
-	  --python_betterproto_out=${MOUNT_POINT}/${CLIENTS_OUT}/python \
+		--python_betterproto_opt=pydantic_dataclasses \
+		--python_betterproto_opt=typing.310 \
+		--python_betterproto_out=${MOUNT_POINT}/${CLIENTS_OUT}/python \
     ${PROTOS}
 
 .PHONY: protoc-python-image
