@@ -18,6 +18,8 @@ package app
 import (
 	"context"
 	"crypto"
+	"crypto/x509"
+	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"os"
@@ -74,6 +76,18 @@ var serveCmd = &cobra.Command{
 			slog.Error(fmt.Sprintf("failed to initialize signer: %v", err.Error()))
 			os.Exit(1)
 		}
+		pubkey, err := signer.PublicKey()
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to get public key from signing key: %v", err.Error()))
+			os.Exit(1)
+		}
+		der, err := x509.MarshalPKIXPublicKey(pubkey)
+		if err != nil {
+			slog.Error(fmt.Sprintf("failed to marshal public key to DER: %v", err.Error()))
+			os.Exit(1)
+		}
+		slog.Info("Loaded signing key", "pubkey in base64 DER", base64.StdEncoding.EncodeToString(der))
+
 		appendOptions, err := tessera.NewAppendOptions(ctx, viper.GetString("hostname"), signer)
 		if err != nil {
 			slog.Error(fmt.Sprintf("failed to initialize append options: %v", err))
