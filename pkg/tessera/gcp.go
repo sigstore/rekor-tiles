@@ -19,9 +19,9 @@ import (
 	"context"
 	"fmt"
 
-	tessera "github.com/transparency-dev/trillian-tessera"
-	"github.com/transparency-dev/trillian-tessera/storage/gcp"
-	antispam "github.com/transparency-dev/trillian-tessera/storage/gcp/antispam"
+	"github.com/transparency-dev/tessera"
+	"github.com/transparency-dev/tessera/storage/gcp"
+	antispam "github.com/transparency-dev/tessera/storage/gcp/antispam"
 )
 
 // NewGCPDriver returns a GCP Tessera Driver for the given bucket and spanner URI.
