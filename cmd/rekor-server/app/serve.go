@@ -86,7 +86,7 @@ var serveCmd = &cobra.Command{
 			slog.Error(fmt.Sprintf("failed to marshal public key to DER: %v", err.Error()))
 			os.Exit(1)
 		}
-		slog.Info("Loaded signing key", "pub key PEM", base64.StdEncoding.EncodeToString(der))
+		slog.Info("Loaded signing key", "pubkey in base64 DER", base64.StdEncoding.EncodeToString(der))
 
 		appendOptions, err := tessera.NewAppendOptions(ctx, viper.GetString("hostname"), signer)
 		if err != nil {
