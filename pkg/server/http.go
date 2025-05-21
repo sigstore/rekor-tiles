@@ -68,17 +68,13 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 
 	var opts []grpc.DialOption
 	if config.HasGRPCTLS() {
-		creds, err := credentials.NewClientTLSFromFile(config.grpcCertFile, "")
-		if err != nil {
-			slog.Error("failed to create gRPC TLS credentials", "errors", err)
-			os.Exit(1)
-		}
-		opts = []grpc.DialOption{grpc.WithTransportCredentials(creds)}
+		// InsecureSkipVerify is only used for the HTTP server to call the TLS-enabled local gRPC endpoint.
+		opts = []grpc.DialOption{grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{InsecureSkipVerify: true}))} // #nosec G402
 	} else {
 		opts = []grpc.DialOption{grpc.WithTransportCredentials(insecure.NewCredentials())}
 	}
 
-	// GRPC client connection so the http mux's healthz endpoint can reach the grpc healthcheck service.
+	// gRPC client connection so the HTTP mux's healthz endpoint can reach the gRPC healthcheck service.
 	// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/#adding-healthz-endpoint-to-runtimeservemux.
 	cc, err := grpc.NewClient(grpcServer.serverEndpoint, opts...)
 	if err != nil {

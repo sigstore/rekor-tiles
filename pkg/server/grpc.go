@@ -141,8 +141,10 @@ func loadTLSCredentials(certFile, keyFile string) (credentials.TransportCredenti
 	}
 
 	tlsConfig := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		MinVersion:   tls.VersionTLS13,
+		GetCertificate: func(_ *tls.ClientHelloInfo) (*tls.Certificate, error) {
+			return &cert, nil
+		},
+		MinVersion: tls.VersionTLS13,
 	}
 
 	return credentials.NewTLS(tlsConfig), nil
