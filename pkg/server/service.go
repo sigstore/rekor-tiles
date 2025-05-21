@@ -29,7 +29,7 @@ import (
 	"github.com/sigstore/rekor-tiles/pkg/types/dsse"
 	"github.com/sigstore/rekor-tiles/pkg/types/hashedrekord"
 	"github.com/sigstore/sigstore/pkg/signature"
-	ttessera "github.com/transparency-dev/trillian-tessera"
+	ttessera "github.com/transparency-dev/tessera"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

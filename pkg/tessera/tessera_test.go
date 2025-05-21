@@ -24,7 +24,7 @@ import (
 
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
-	tessera "github.com/transparency-dev/trillian-tessera"
+	"github.com/transparency-dev/tessera"
 )
 
 func TestAdd(t *testing.T) {

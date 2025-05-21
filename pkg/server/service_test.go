@@ -28,7 +28,7 @@ import (
 	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/stretchr/testify/assert"
-	ttessera "github.com/transparency-dev/trillian-tessera"
+	ttessera "github.com/transparency-dev/tessera"
 )
 
 func TestNewServer(t *testing.T) {

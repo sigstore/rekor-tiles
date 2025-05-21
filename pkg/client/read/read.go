@@ -25,7 +25,7 @@ import (
 	rekornote "github.com/sigstore/rekor-tiles/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/transparency-dev/formats/log"
-	tclient "github.com/transparency-dev/trillian-tessera/client"
+	tclient "github.com/transparency-dev/tessera/client"
 	"golang.org/x/mod/sumdb/note"
 )
 

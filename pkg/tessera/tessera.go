@@ -27,8 +27,8 @@ import (
 	logformat "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
-	tessera "github.com/transparency-dev/trillian-tessera"
-	"github.com/transparency-dev/trillian-tessera/client"
+	"github.com/transparency-dev/tessera"
+	"github.com/transparency-dev/tessera/client"
 )
 
 const (
@@ -196,7 +196,7 @@ func (s *storage) buildProof(ctx context.Context, idx *SafeInt64, signedCheckpoi
 	if err != nil {
 		return nil, fmt.Errorf("unmarshalling checkpoint: %w", err)
 	}
-	proofBuilder, err := client.NewProofBuilder(ctx, checkpoint, s.ReadTile)
+	proofBuilder, err := client.NewProofBuilder(ctx, checkpoint.Size, s.ReadTile)
 	if err != nil {
 		return nil, fmt.Errorf("new proof builder: %w", err)
 	}
