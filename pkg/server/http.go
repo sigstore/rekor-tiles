@@ -67,10 +67,10 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	}
 
 	var opts []grpc.DialOption
-	if config.HasTLS() {
-		creds, err := credentials.NewClientTLSFromFile(config.certFile, "")
+	if config.HasGRPCTLS() {
+		creds, err := credentials.NewClientTLSFromFile(config.grpcCertFile, "")
 		if err != nil {
-			slog.Error("failed to create TLS credentials", "errors", err)
+			slog.Error("failed to create gRPC TLS credentials", "errors", err)
 			os.Exit(1)
 		}
 		opts = []grpc.DialOption{grpc.WithTransportCredentials(creds)}

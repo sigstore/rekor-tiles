@@ -27,6 +27,7 @@ type HTTPConfig struct {
 	maxRequestBodySize int
 	certFile           string
 	keyFile            string
+	grpcCertFile       string
 }
 type HTTPOption func(config *HTTPConfig)
 
@@ -90,5 +91,15 @@ func WithHTTPTLSCredentials(certFile, keyFile string) HTTPOption {
 	return func(config *HTTPConfig) {
 		config.certFile = certFile
 		config.keyFile = keyFile
+	}
+}
+
+func (hc HTTPConfig) HasGRPCTLS() bool {
+	return hc.grpcCertFile != ""
+}
+
+func WithGRPCTLSCredentials(certFile string) HTTPOption {
+	return func(config *HTTPConfig) {
+		config.grpcCertFile = certFile
 	}
 }
