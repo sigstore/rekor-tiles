@@ -27,6 +27,9 @@ import (
 	"strings"
 	"time"
 
+	clog "github.com/chainguard-dev/clog/gcp"
+	"k8s.io/klog/v2"
+
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
@@ -46,12 +49,18 @@ var serveCmd = &cobra.Command{
 	Long:  "start the Rekor server",
 	Run: func(cmd *cobra.Command, _ []string) {
 		ctx := cmd.Context()
-		versionInfo := version.GetVersionInfo()
-		versionInfoStr, err := versionInfo.JSONString()
-		if err != nil {
-			versionInfoStr = versionInfo.String()
+
+		logLevel := slog.LevelInfo
+		if err := logLevel.UnmarshalText([]byte(viper.GetString("log-level"))); err != nil {
+			slog.Error("invalid log-level specified; must be one of 'debug', 'info', 'error', or 'warn'")
+			os.Exit(1)
 		}
-		slog.Info("starting rekor-server", "version", versionInfoStr)
+		slog.SetDefault(slog.New(clog.NewHandler(logLevel)))
+
+		// tessera uses klog so pipe all klog messages to be written through slog
+		klog.SetSlogLogger(slog.Default())
+
+		slog.Info("starting rekor-server", "version", version.GetVersionInfo())
 
 		var signerOpts []signerverifier.Option
 		switch {
@@ -160,6 +169,7 @@ var serveCmd = &cobra.Command{
 				server.WithGRPCTimeout(viper.GetDuration("timeout")),
 				server.WithGRPCMaxMessageSize(viper.GetInt("max-request-body-size")),
 				server.WithTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+				server.WithGRPCLogLevel(logLevel, viper.GetBool("request-response-logging")),
 			),
 			rekorServer,
 			shutdownFn,
@@ -177,6 +187,8 @@ func init() {
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
 	serveCmd.Flags().Duration("timeout", 60*time.Second, "timeout")
 	serveCmd.Flags().Int("max-request-body-size", 4*1024*1024, "maximum request body size in bytes")
+	serveCmd.Flags().String("log-level", "info", "log level for the process. options are [debug, info, warn, error]")
+	serveCmd.Flags().Bool("request-response-logging", false, "enables logging of request and response content; log-level must be 'debug' for this to take effect")
 
 	// hostname
 	hostname, err := os.Hostname()
