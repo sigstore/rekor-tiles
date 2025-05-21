@@ -161,15 +161,16 @@ var serveCmd = &cobra.Command{
 				server.WithHTTPTimeout(viper.GetDuration("timeout")),
 				server.WithHTTPMaxRequestBodySize(viper.GetInt("max-request-body-size")),
 				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
-				server.WithHTTPTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
+				server.WithHTTPTLSCredentials(viper.GetString("http-tls-cert-file"), viper.GetString("http-tls-key-file")),
+				server.WithGRPCTLSCredentials(viper.GetString("grpc-tls-cert-file")),
 			),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address")),
 				server.WithGRPCTimeout(viper.GetDuration("timeout")),
 				server.WithGRPCMaxMessageSize(viper.GetInt("max-request-body-size")),
-				server.WithTLSCredentials(viper.GetString("tls-cert-file"), viper.GetString("tls-key-file")),
 				server.WithGRPCLogLevel(logLevel, viper.GetBool("request-response-logging")),
+				server.WithTLSCredentials(viper.GetString("grpc-tls-cert-file"), viper.GetString("grpc-tls-key-file")),
 			),
 			rekorServer,
 			shutdownFn,
@@ -189,6 +190,10 @@ func init() {
 	serveCmd.Flags().Int("max-request-body-size", 4*1024*1024, "maximum request body size in bytes")
 	serveCmd.Flags().String("log-level", "info", "log level for the process. options are [debug, info, warn, error]")
 	serveCmd.Flags().Bool("request-response-logging", false, "enables logging of request and response content; log-level must be 'debug' for this to take effect")
+	serveCmd.Flags().String("grpc-tls-cert-file", "", "optional TLS certificate for serving gRPC over TLS")
+	serveCmd.Flags().String("grpc-tls-key-file", "", "optional TLS private key for serving gRPC over TLS")
+	serveCmd.Flags().String("http-tls-cert-file", "", "optional TLS certificate for serving HTTP over TLS")
+	serveCmd.Flags().String("http-tls-key-file", "", "optional TLS private key for serving HTTP over TLS")
 
 	// hostname
 	hostname, err := os.Hostname()

@@ -107,6 +107,7 @@ func (ms *MockServer) StartTLS(t *testing.T) {
 		WithHTTPHost("localhost"),
 		WithHTTPPort(8080),
 		WithHTTPTLSCredentials(certFile, keyFile),
+		WithGRPCTLSCredentials(certFile),
 	)
 
 	s := &mockRekorServer{}
