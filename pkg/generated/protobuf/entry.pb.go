@@ -174,11 +174,11 @@ type isSpec_Spec interface {
 }
 
 type Spec_HashedRekordV0_0_2 struct {
-	HashedRekordV0_0_2 *HashedRekordLogEntryV0_0_2 `protobuf:"bytes,1,opt,name=hashed_rekord_v0_0_2,json=hashedRekordV0_0_2,proto3,oneof"`
+	HashedRekordV0_0_2 *HashedRekordLogEntryV0_0_2 `protobuf:"bytes,1,opt,name=hashed_rekord_v0_0_2,json=hashedRekordV002,proto3,oneof"`
 }
 
 type Spec_DsseV0_0_2 struct {
-	DsseV0_0_2 *DSSELogEntryV0_0_2 `protobuf:"bytes,2,opt,name=dsse_v0_0_2,json=dsseV0_0_2,proto3,oneof"`
+	DsseV0_0_2 *DSSELogEntryV0_0_2 `protobuf:"bytes,2,opt,name=dsse_v0_0_2,json=dsseV002,proto3,oneof"`
 }
 
 func (*Spec_HashedRekordV0_0_2) isSpec_Spec() {}
@@ -195,11 +195,10 @@ const file_entry_proto_rawDesc = "" +
 	"\x04kind\x18\x01 \x01(\tB\x03\xe0A\x02R\x04kind\x12$\n" +
 	"\vapi_version\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
 	"apiVersion\x124\n" +
-	"\x04spec\x18\x03 \x01(\v2\x1b.dev.sigstore.rekor.v2.SpecB\x03\xe0A\x02R\x04spec\"\xcd\x01\n" +
-	"\x04Spec\x12j\n" +
-	"\x14hashed_rekord_v0_0_2\x18\x01 \x01(\v21.dev.sigstore.rekor.v2.HashedRekordLogEntryV0_0_2B\x03\xe0A\x02H\x00R\x12hashedRekordV0_0_2\x12Q\n" +
-	"\vdsse_v0_0_2\x18\x02 \x01(\v2).dev.sigstore.rekor.v2.DSSELogEntryV0_0_2B\x03\xe0A\x02H\x00R\n" +
-	"dsseV0_0_2B\x06\n" +
+	"\x04spec\x18\x03 \x01(\v2\x1b.dev.sigstore.rekor.v2.SpecB\x03\xe0A\x02R\x04spec\"\xc9\x01\n" +
+	"\x04Spec\x12h\n" +
+	"\x14hashed_rekord_v0_0_2\x18\x01 \x01(\v21.dev.sigstore.rekor.v2.HashedRekordLogEntryV0_0_2B\x03\xe0A\x02H\x00R\x10hashedRekordV002\x12O\n" +
+	"\vdsse_v0_0_2\x18\x02 \x01(\v2).dev.sigstore.rekor.v2.DSSELogEntryV0_0_2B\x03\xe0A\x02H\x00R\bdsseV002B\x06\n" +
 	"\x04specB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
 
 var (
