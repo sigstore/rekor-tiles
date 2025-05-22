@@ -111,11 +111,11 @@ type isCreateEntryRequest_Spec interface {
 }
 
 type CreateEntryRequest_HashedRekordRequestV0_0_2 struct {
-	HashedRekordRequestV0_0_2 *HashedRekordRequestV0_0_2 `protobuf:"bytes,1,opt,name=hashed_rekord_request_v0_0_2,json=hashedRekordRequestV0_0_2,proto3,oneof"`
+	HashedRekordRequestV0_0_2 *HashedRekordRequestV0_0_2 `protobuf:"bytes,1,opt,name=hashed_rekord_request_v0_0_2,json=hashedRekordRequestV002,proto3,oneof"`
 }
 
 type CreateEntryRequest_DsseRequestV0_0_2 struct {
-	DsseRequestV0_0_2 *DSSERequestV0_0_2 `protobuf:"bytes,2,opt,name=dsse_request_v0_0_2,json=dsseRequestV0_0_2,proto3,oneof"`
+	DsseRequestV0_0_2 *DSSERequestV0_0_2 `protobuf:"bytes,2,opt,name=dsse_request_v0_0_2,json=dsseRequestV002,proto3,oneof"`
 }
 
 func (*CreateEntryRequest_HashedRekordRequestV0_0_2) isCreateEntryRequest_Spec() {}
@@ -229,10 +229,10 @@ var File_rekor_service_proto protoreflect.FileDescriptor
 const file_rekor_service_proto_rawDesc = "" +
 	"\n" +
 	"\x13rekor_service.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/httpbody.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x14sigstore_rekor.proto\x1a\x12hashedrekord.proto\x1a\n" +
-	"dsse.proto\"\xf7\x01\n" +
-	"\x12CreateEntryRequest\x12x\n" +
-	"\x1chashed_rekord_request_v0_0_2\x18\x01 \x01(\v20.dev.sigstore.rekor.v2.HashedRekordRequestV0_0_2B\x03\xe0A\x02H\x00R\x19hashedRekordRequestV0_0_2\x12_\n" +
-	"\x13dsse_request_v0_0_2\x18\x02 \x01(\v2(.dev.sigstore.rekor.v2.DSSERequestV0_0_2B\x03\xe0A\x02H\x00R\x11dsseRequestV0_0_2B\x06\n" +
+	"dsse.proto\"\xf3\x01\n" +
+	"\x12CreateEntryRequest\x12v\n" +
+	"\x1chashed_rekord_request_v0_0_2\x18\x01 \x01(\v20.dev.sigstore.rekor.v2.HashedRekordRequestV0_0_2B\x03\xe0A\x02H\x00R\x17hashedRekordRequestV002\x12]\n" +
+	"\x13dsse_request_v0_0_2\x18\x02 \x01(\v2(.dev.sigstore.rekor.v2.DSSERequestV0_0_2B\x03\xe0A\x02H\x00R\x0fdsseRequestV002B\x06\n" +
 	"\x04spec\")\n" +
 	"\vTileRequest\x12\f\n" +
 	"\x01L\x18\x01 \x01(\rR\x01L\x12\f\n" +

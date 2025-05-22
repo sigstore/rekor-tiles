@@ -30,23 +30,14 @@ option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 // and Rekor v2 (a typed proto defintion).
 message Entry {
     string kind = 1 [(google.api.field_behavior) = REQUIRED];
-    string api_version = 2 [
-        (google.api.field_behavior) = REQUIRED,
-        json_name = "apiVersion"
-    ];
+    string api_version = 2 [(google.api.field_behavior) = REQUIRED];
     Spec spec = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 // Spec contains one of the Rekor entry types.
 message Spec {
     oneof spec {
-        HashedRekordLogEntryV0_0_2 hashed_rekord_v0_0_2 = 1 [
-            (google.api.field_behavior) = REQUIRED,
-            json_name = "hashedRekordV0_0_2"
-        ];
-        DSSELogEntryV0_0_2 dsse_v0_0_2  = 2 [
-            (google.api.field_behavior) = REQUIRED,
-            json_name = "dsseV0_0_2"
-        ];
+        HashedRekordLogEntryV0_0_2 hashed_rekord_v0_0_2 = 1 [(google.api.field_behavior) = REQUIRED];
+        DSSELogEntryV0_0_2 dsse_v0_0_2  = 2 [(google.api.field_behavior) = REQUIRED];
     }
 }

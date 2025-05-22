@@ -453,17 +453,17 @@
     "v2CreateEntryRequest": {
       "type": "object",
       "properties": {
-        "hashedRekordRequestV0_0_2": {
+        "hashedRekordRequestV002": {
           "$ref": "#/definitions/v2HashedRekordRequestV0_0_2"
         },
-        "dsseRequestV0_0_2": {
+        "dsseRequestV002": {
           "$ref": "#/definitions/v2DSSERequestV0_0_2"
         }
       },
       "title": "Create a new HashedRekord or DSSE",
       "required": [
-        "hashedRekordRequestV0_0_2",
-        "dsseRequestV0_0_2"
+        "hashedRekordRequestV002",
+        "dsseRequestV002"
       ]
     },
     "v2DSSERequestV0_0_2": {
