@@ -27,7 +27,7 @@ require (
 	github.com/transparency-dev/formats v0.0.0-20250421220931-bb8ad4d07c26
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/transparency-dev/tessera v0.1.3-0.20250521140647-57fe74e9608c
-	go.step.sm/crypto v0.63.0
+	go.step.sm/crypto v0.64.0
 	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394
 	golang.org/x/mod v0.24.0
 	golang.org/x/sync v0.14.0
