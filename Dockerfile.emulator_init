@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM gcr.io/google.com/cloudsdktool/google-cloud-cli:522.0.0-stable@sha256:6440f5710c5effb864b8adc9d3bf0885a58c06a188cf58e4a9d85bd1a1fd94b0
+FROM gcr.io/google.com/cloudsdktool/google-cloud-cli:523.0.1-stable@sha256:04d6f73f9ae55fcf0e839cdbee923813b4ebadd2b609c3f512beaa267da9e40d
 
 ADD ./config/emulator_init.sh /root/
 RUN chmod +x /root/emulator_init.sh
