@@ -18,7 +18,7 @@
 # This container grabs the protoc compiler and the googleapi includes
 # /protobuf will contain the extracted protoc
 # /googleapis will contain the various googleapis proto imports one might need
-FROM debian:bullseye-slim@sha256:fdd75562fdcde1039c2480a1ea1cd2cf03b18b6e4cb551cabb03bde66ade8a5d AS protoc-builder
+FROM debian:bullseye-slim@sha256:2f2307d7c75315ca7561e17a4e3aa95d58837f326954af08514044e8286e6d65 AS protoc-builder
 
 # Create output directories
 RUN mkdir /protobuf /googleapis /protobuf-specs
