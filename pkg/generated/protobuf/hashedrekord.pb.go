@@ -37,8 +37,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// A request to add a hashedrekord to the log
-type HashedRekordRequestV0_0_2 struct {
+// A request to add a hashedrekord v0.0.2 to the log
+type HashedRekordRequestV002 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The hashed data
 	Digest []byte `protobuf:"bytes,1,opt,name=digest,proto3" json:"digest,omitempty"`
@@ -48,20 +48,20 @@ type HashedRekordRequestV0_0_2 struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *HashedRekordRequestV0_0_2) Reset() {
-	*x = HashedRekordRequestV0_0_2{}
+func (x *HashedRekordRequestV002) Reset() {
+	*x = HashedRekordRequestV002{}
 	mi := &file_hashedrekord_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *HashedRekordRequestV0_0_2) String() string {
+func (x *HashedRekordRequestV002) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*HashedRekordRequestV0_0_2) ProtoMessage() {}
+func (*HashedRekordRequestV002) ProtoMessage() {}
 
-func (x *HashedRekordRequestV0_0_2) ProtoReflect() protoreflect.Message {
+func (x *HashedRekordRequestV002) ProtoReflect() protoreflect.Message {
 	mi := &file_hashedrekord_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -73,26 +73,26 @@ func (x *HashedRekordRequestV0_0_2) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use HashedRekordRequestV0_0_2.ProtoReflect.Descriptor instead.
-func (*HashedRekordRequestV0_0_2) Descriptor() ([]byte, []int) {
+// Deprecated: Use HashedRekordRequestV002.ProtoReflect.Descriptor instead.
+func (*HashedRekordRequestV002) Descriptor() ([]byte, []int) {
 	return file_hashedrekord_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *HashedRekordRequestV0_0_2) GetDigest() []byte {
+func (x *HashedRekordRequestV002) GetDigest() []byte {
 	if x != nil {
 		return x.Digest
 	}
 	return nil
 }
 
-func (x *HashedRekordRequestV0_0_2) GetSignature() *Signature {
+func (x *HashedRekordRequestV002) GetSignature() *Signature {
 	if x != nil {
 		return x.Signature
 	}
 	return nil
 }
 
-type HashedRekordLogEntryV0_0_2 struct {
+type HashedRekordLogEntryV002 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The hashed data
 	Data *v1.HashOutput `protobuf:"bytes,1,opt,name=data,proto3" json:"data,omitempty"`
@@ -102,20 +102,20 @@ type HashedRekordLogEntryV0_0_2 struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *HashedRekordLogEntryV0_0_2) Reset() {
-	*x = HashedRekordLogEntryV0_0_2{}
+func (x *HashedRekordLogEntryV002) Reset() {
+	*x = HashedRekordLogEntryV002{}
 	mi := &file_hashedrekord_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *HashedRekordLogEntryV0_0_2) String() string {
+func (x *HashedRekordLogEntryV002) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*HashedRekordLogEntryV0_0_2) ProtoMessage() {}
+func (*HashedRekordLogEntryV002) ProtoMessage() {}
 
-func (x *HashedRekordLogEntryV0_0_2) ProtoReflect() protoreflect.Message {
+func (x *HashedRekordLogEntryV002) ProtoReflect() protoreflect.Message {
 	mi := &file_hashedrekord_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -127,19 +127,19 @@ func (x *HashedRekordLogEntryV0_0_2) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use HashedRekordLogEntryV0_0_2.ProtoReflect.Descriptor instead.
-func (*HashedRekordLogEntryV0_0_2) Descriptor() ([]byte, []int) {
+// Deprecated: Use HashedRekordLogEntryV002.ProtoReflect.Descriptor instead.
+func (*HashedRekordLogEntryV002) Descriptor() ([]byte, []int) {
 	return file_hashedrekord_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *HashedRekordLogEntryV0_0_2) GetData() *v1.HashOutput {
+func (x *HashedRekordLogEntryV002) GetData() *v1.HashOutput {
 	if x != nil {
 		return x.Data
 	}
 	return nil
 }
 
-func (x *HashedRekordLogEntryV0_0_2) GetSignature() *Signature {
+func (x *HashedRekordLogEntryV002) GetSignature() *Signature {
 	if x != nil {
 		return x.Signature
 	}
@@ -150,11 +150,11 @@ var File_hashedrekord_proto protoreflect.FileDescriptor
 
 const file_hashedrekord_proto_rawDesc = "" +
 	"\n" +
-	"\x12hashedrekord.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\x1a\x0everifier.proto\"}\n" +
-	"\x19HashedRekordRequestV0_0_2\x12\x1b\n" +
+	"\x12hashedrekord.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\x1a\x0everifier.proto\"{\n" +
+	"\x17HashedRekordRequestV002\x12\x1b\n" +
 	"\x06digest\x18\x01 \x01(\fB\x03\xe0A\x02R\x06digest\x12C\n" +
-	"\tsignature\x18\x02 \x01(\v2 .dev.sigstore.rekor.v2.SignatureB\x03\xe0A\x02R\tsignature\"\x9e\x01\n" +
-	"\x1aHashedRekordLogEntryV0_0_2\x12;\n" +
+	"\tsignature\x18\x02 \x01(\v2 .dev.sigstore.rekor.v2.SignatureB\x03\xe0A\x02R\tsignature\"\x9c\x01\n" +
+	"\x18HashedRekordLogEntryV002\x12;\n" +
 	"\x04data\x18\x01 \x01(\v2\".dev.sigstore.common.v1.HashOutputB\x03\xe0A\x02R\x04data\x12C\n" +
 	"\tsignature\x18\x02 \x01(\v2 .dev.sigstore.rekor.v2.SignatureB\x03\xe0A\x02R\tsignatureB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
 
@@ -172,15 +172,15 @@ func file_hashedrekord_proto_rawDescGZIP() []byte {
 
 var file_hashedrekord_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_hashedrekord_proto_goTypes = []any{
-	(*HashedRekordRequestV0_0_2)(nil),  // 0: dev.sigstore.rekor.v2.HashedRekordRequestV0_0_2
-	(*HashedRekordLogEntryV0_0_2)(nil), // 1: dev.sigstore.rekor.v2.HashedRekordLogEntryV0_0_2
-	(*Signature)(nil),                  // 2: dev.sigstore.rekor.v2.Signature
-	(*v1.HashOutput)(nil),              // 3: dev.sigstore.common.v1.HashOutput
+	(*HashedRekordRequestV002)(nil),  // 0: dev.sigstore.rekor.v2.HashedRekordRequestV002
+	(*HashedRekordLogEntryV002)(nil), // 1: dev.sigstore.rekor.v2.HashedRekordLogEntryV002
+	(*Signature)(nil),                // 2: dev.sigstore.rekor.v2.Signature
+	(*v1.HashOutput)(nil),            // 3: dev.sigstore.common.v1.HashOutput
 }
 var file_hashedrekord_proto_depIdxs = []int32{
-	2, // 0: dev.sigstore.rekor.v2.HashedRekordRequestV0_0_2.signature:type_name -> dev.sigstore.rekor.v2.Signature
-	3, // 1: dev.sigstore.rekor.v2.HashedRekordLogEntryV0_0_2.data:type_name -> dev.sigstore.common.v1.HashOutput
-	2, // 2: dev.sigstore.rekor.v2.HashedRekordLogEntryV0_0_2.signature:type_name -> dev.sigstore.rekor.v2.Signature
+	2, // 0: dev.sigstore.rekor.v2.HashedRekordRequestV002.signature:type_name -> dev.sigstore.rekor.v2.Signature
+	3, // 1: dev.sigstore.rekor.v2.HashedRekordLogEntryV002.data:type_name -> dev.sigstore.common.v1.HashOutput
+	2, // 2: dev.sigstore.rekor.v2.HashedRekordLogEntryV002.signature:type_name -> dev.sigstore.rekor.v2.Signature
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name

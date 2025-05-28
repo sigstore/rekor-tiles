@@ -178,7 +178,7 @@ func TestReadWrite(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "hashedrekord", e.Kind)
 	assert.Equal(t, "0.0.2", e.ApiVersion)
-	hrEntry := e.Spec.GetHashedRekordV0_0_2()
+	hrEntry := e.Spec.GetHashedRekordV002()
 	assert.NotNil(t, hrEntry)
 
 	// Add a DSSE entry
@@ -215,7 +215,7 @@ func TestReadWrite(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "dsse", e.Kind)
 	assert.Equal(t, "0.0.2", e.ApiVersion)
-	dsseEntry := e.Spec.GetDsseV0_0_2()
+	dsseEntry := e.Spec.GetDsseV002()
 	assert.NotNil(t, dsseEntry)
 
 	// Add a second identical entries immediately to check for deduplication
@@ -271,13 +271,13 @@ func genKeys() (*ecdsa.PrivateKey, []byte, error) {
 	return privKey, pubKey, nil
 }
 
-func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64) (*pb.HashedRekordRequestV0_0_2, error) {
+func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64) (*pb.HashedRekordRequestV002, error) {
 	digest := artifactDigest(idx)
 	sig, err := ecdsa.SignASN1(rand.Reader, privKey, digest)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.HashedRekordRequestV0_0_2{
+	return &pb.HashedRekordRequestV002{
 		Signature: &pb.Signature{
 			Content: sig,
 			Verifier: &pb.Verifier{
@@ -313,12 +313,12 @@ func newDSSEEnvelope(privKey *ecdsa.PrivateKey) (*pbdsse.Envelope, error) {
 	return dsset.ToProto(envelope)
 }
 
-func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV0_0_2, error) {
+func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV002, error) {
 	envelope, err := newDSSEEnvelope(privKey)
 	if err != nil {
 		return nil, err
 	}
-	return &pb.DSSERequestV0_0_2{
+	return &pb.DSSERequestV002{
 		Envelope: envelope,
 		Verifiers: []*pb.Verifier{
 			{
@@ -333,7 +333,7 @@ func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV0
 	}, nil
 }
 
-func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialTreeSize, numNewEntries uint64, logID []byte, verifier signednote.Verifier, hr *pb.HashedRekordRequestV0_0_2) {
+func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialTreeSize, numNewEntries uint64, logID []byte, verifier signednote.Verifier, hr *pb.HashedRekordRequestV002) {
 	assert.NotNil(t, tle)
 
 	// Check server does not set deprecated fields
@@ -359,14 +359,14 @@ func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialT
 	assert.NoError(t, err)
 	assert.Equal(t, "hashedrekord", e.Kind)
 	assert.Equal(t, "0.0.2", e.ApiVersion)
-	hrEntry := e.Spec.GetHashedRekordV0_0_2()
+	hrEntry := e.Spec.GetHashedRekordV002()
 	assert.NotNil(t, hrEntry)
 	assert.Equal(t, hrEntry.Signature, hr.Signature)
 	assert.Equal(t, hrEntry.Data.Algorithm, v1.HashAlgorithm_SHA2_256)
 	assert.Equal(t, hrEntry.Data.Digest, hr.Digest)
 }
 
-func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, logID []byte, verifier signednote.Verifier, dr *pb.DSSERequestV0_0_2) {
+func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, logID []byte, verifier signednote.Verifier, dr *pb.DSSERequestV002) {
 	assert.NotNil(t, tle)
 
 	// Check server does not set deprecated fields
@@ -390,7 +390,7 @@ func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, lo
 	assert.NoError(t, err)
 	assert.Equal(t, "dsse", e.Kind)
 	assert.Equal(t, "0.0.2", e.ApiVersion)
-	dsseEntry := e.Spec.GetDsseV0_0_2()
+	dsseEntry := e.Spec.GetDsseV002()
 	assert.NotNil(t, dsseEntry)
 	// Assert payload hash is as expected
 	assert.Equal(t, dsseEntry.PayloadHash.Algorithm, v1.HashAlgorithm_SHA2_256)

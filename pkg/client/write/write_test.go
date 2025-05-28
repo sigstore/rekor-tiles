@@ -123,7 +123,7 @@ func TestAdd(t *testing.T) {
 	}{
 		{
 			name: "valid hashedrekord",
-			entry: &pb.HashedRekordRequestV0_0_2{
+			entry: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: []byte("sign"),
 					Verifier: &pb.Verifier{
@@ -157,7 +157,7 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "valid dsse",
-			entry: &pb.DSSERequestV0_0_2{
+			entry: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     []byte("some payload"),
 					PayloadType: "",
@@ -204,7 +204,7 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "server error",
-			entry: &pb.DSSERequestV0_0_2{
+			entry: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     []byte("some payload"),
 					PayloadType: "",
@@ -232,7 +232,7 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "unexpected response body from server",
-			entry: &pb.DSSERequestV0_0_2{
+			entry: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     []byte("some payload"),
 					PayloadType: "",
@@ -260,7 +260,7 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "invalid checkpoint",
-			entry: &pb.DSSERequestV0_0_2{
+			entry: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     []byte("some payload"),
 					PayloadType: "",
@@ -301,7 +301,7 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "invalid inclusion proof",
-			entry: &pb.DSSERequestV0_0_2{
+			entry: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     []byte("some payload"),
 					PayloadType: "",

@@ -119,27 +119,27 @@ func (w *writeClient) Add(ctx context.Context, entry any) (*pbs.TransparencyLogE
 
 func createRequest(entry any) (*pb.CreateEntryRequest, error) {
 	switch e := entry.(type) {
-	case *pb.HashedRekordRequestV0_0_2:
+	case *pb.HashedRekordRequestV002:
 		return createHashedRekordRequest(e), nil
-	case *pb.DSSERequestV0_0_2:
+	case *pb.DSSERequestV002:
 		return createDSSERequest(e), nil
 	default:
 		return nil, fmt.Errorf("unsupported entry type: %T", entry)
 	}
 }
 
-func createHashedRekordRequest(h *pb.HashedRekordRequestV0_0_2) *pb.CreateEntryRequest {
+func createHashedRekordRequest(h *pb.HashedRekordRequestV002) *pb.CreateEntryRequest {
 	return &pb.CreateEntryRequest{
-		Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
-			HashedRekordRequestV0_0_2: h,
+		Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+			HashedRekordRequestV002: h,
 		},
 	}
 }
 
-func createDSSERequest(d *pb.DSSERequestV0_0_2) *pb.CreateEntryRequest {
+func createDSSERequest(d *pb.DSSERequestV002) *pb.CreateEntryRequest {
 	return &pb.CreateEntryRequest{
-		Spec: &pb.CreateEntryRequest_DsseRequestV0_0_2{
-			DsseRequestV0_0_2: d,
+		Spec: &pb.CreateEntryRequest_DsseRequestV002{
+			DsseRequestV002: d,
 		},
 	}
 }

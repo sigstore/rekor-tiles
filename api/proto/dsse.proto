@@ -23,8 +23,8 @@ import "verifier.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
-// A request to add a DSSE entry to the log
-message DSSERequestV0_0_2 {
+// A request to add a DSSE v0.0.2 entry to the log
+message DSSERequestV002 {
     // A DSSE envelope
     io.intoto.Envelope envelope = 1 [(google.api.field_behavior) = REQUIRED];
     // All necessary verification material to verify all signatures embedded in the envelope
@@ -32,7 +32,7 @@ message DSSERequestV0_0_2 {
 }
 
 
-message DSSELogEntryV0_0_2 {
+message DSSELogEntryV002 {
     // The hash of the DSSE payload
     dev.sigstore.common.v1.HashOutput payloadHash = 1 [(google.api.field_behavior) = REQUIRED];
     // Signatures and their associated verification material used to verify the payload
