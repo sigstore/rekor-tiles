@@ -107,8 +107,8 @@ type Spec struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Spec:
 	//
-	//	*Spec_HashedRekordV0_0_2
-	//	*Spec_DsseV0_0_2
+	//	*Spec_HashedRekordV002
+	//	*Spec_DsseV002
 	Spec          isSpec_Spec `protobuf_oneof:"spec"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -151,19 +151,19 @@ func (x *Spec) GetSpec() isSpec_Spec {
 	return nil
 }
 
-func (x *Spec) GetHashedRekordV0_0_2() *HashedRekordLogEntryV0_0_2 {
+func (x *Spec) GetHashedRekordV002() *HashedRekordLogEntryV002 {
 	if x != nil {
-		if x, ok := x.Spec.(*Spec_HashedRekordV0_0_2); ok {
-			return x.HashedRekordV0_0_2
+		if x, ok := x.Spec.(*Spec_HashedRekordV002); ok {
+			return x.HashedRekordV002
 		}
 	}
 	return nil
 }
 
-func (x *Spec) GetDsseV0_0_2() *DSSELogEntryV0_0_2 {
+func (x *Spec) GetDsseV002() *DSSELogEntryV002 {
 	if x != nil {
-		if x, ok := x.Spec.(*Spec_DsseV0_0_2); ok {
-			return x.DsseV0_0_2
+		if x, ok := x.Spec.(*Spec_DsseV002); ok {
+			return x.DsseV002
 		}
 	}
 	return nil
@@ -173,17 +173,17 @@ type isSpec_Spec interface {
 	isSpec_Spec()
 }
 
-type Spec_HashedRekordV0_0_2 struct {
-	HashedRekordV0_0_2 *HashedRekordLogEntryV0_0_2 `protobuf:"bytes,1,opt,name=hashed_rekord_v0_0_2,json=hashedRekordV002,proto3,oneof"`
+type Spec_HashedRekordV002 struct {
+	HashedRekordV002 *HashedRekordLogEntryV002 `protobuf:"bytes,1,opt,name=hashed_rekord_v002,json=hashedRekordV002,proto3,oneof"`
 }
 
-type Spec_DsseV0_0_2 struct {
-	DsseV0_0_2 *DSSELogEntryV0_0_2 `protobuf:"bytes,2,opt,name=dsse_v0_0_2,json=dsseV002,proto3,oneof"`
+type Spec_DsseV002 struct {
+	DsseV002 *DSSELogEntryV002 `protobuf:"bytes,2,opt,name=dsse_v002,json=dsseV002,proto3,oneof"`
 }
 
-func (*Spec_HashedRekordV0_0_2) isSpec_Spec() {}
+func (*Spec_HashedRekordV002) isSpec_Spec() {}
 
-func (*Spec_DsseV0_0_2) isSpec_Spec() {}
+func (*Spec_DsseV002) isSpec_Spec() {}
 
 var File_entry_proto protoreflect.FileDescriptor
 
@@ -195,10 +195,10 @@ const file_entry_proto_rawDesc = "" +
 	"\x04kind\x18\x01 \x01(\tB\x03\xe0A\x02R\x04kind\x12$\n" +
 	"\vapi_version\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
 	"apiVersion\x124\n" +
-	"\x04spec\x18\x03 \x01(\v2\x1b.dev.sigstore.rekor.v2.SpecB\x03\xe0A\x02R\x04spec\"\xc9\x01\n" +
-	"\x04Spec\x12h\n" +
-	"\x14hashed_rekord_v0_0_2\x18\x01 \x01(\v21.dev.sigstore.rekor.v2.HashedRekordLogEntryV0_0_2B\x03\xe0A\x02H\x00R\x10hashedRekordV002\x12O\n" +
-	"\vdsse_v0_0_2\x18\x02 \x01(\v2).dev.sigstore.rekor.v2.DSSELogEntryV0_0_2B\x03\xe0A\x02H\x00R\bdsseV002B\x06\n" +
+	"\x04spec\x18\x03 \x01(\v2\x1b.dev.sigstore.rekor.v2.SpecB\x03\xe0A\x02R\x04spec\"\xc1\x01\n" +
+	"\x04Spec\x12d\n" +
+	"\x12hashed_rekord_v002\x18\x01 \x01(\v2/.dev.sigstore.rekor.v2.HashedRekordLogEntryV002B\x03\xe0A\x02H\x00R\x10hashedRekordV002\x12K\n" +
+	"\tdsse_v002\x18\x02 \x01(\v2'.dev.sigstore.rekor.v2.DSSELogEntryV002B\x03\xe0A\x02H\x00R\bdsseV002B\x06\n" +
 	"\x04specB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
 
 var (
@@ -215,15 +215,15 @@ func file_entry_proto_rawDescGZIP() []byte {
 
 var file_entry_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_entry_proto_goTypes = []any{
-	(*Entry)(nil),                      // 0: dev.sigstore.rekor.v2.Entry
-	(*Spec)(nil),                       // 1: dev.sigstore.rekor.v2.Spec
-	(*HashedRekordLogEntryV0_0_2)(nil), // 2: dev.sigstore.rekor.v2.HashedRekordLogEntryV0_0_2
-	(*DSSELogEntryV0_0_2)(nil),         // 3: dev.sigstore.rekor.v2.DSSELogEntryV0_0_2
+	(*Entry)(nil),                    // 0: dev.sigstore.rekor.v2.Entry
+	(*Spec)(nil),                     // 1: dev.sigstore.rekor.v2.Spec
+	(*HashedRekordLogEntryV002)(nil), // 2: dev.sigstore.rekor.v2.HashedRekordLogEntryV002
+	(*DSSELogEntryV002)(nil),         // 3: dev.sigstore.rekor.v2.DSSELogEntryV002
 }
 var file_entry_proto_depIdxs = []int32{
 	1, // 0: dev.sigstore.rekor.v2.Entry.spec:type_name -> dev.sigstore.rekor.v2.Spec
-	2, // 1: dev.sigstore.rekor.v2.Spec.hashed_rekord_v0_0_2:type_name -> dev.sigstore.rekor.v2.HashedRekordLogEntryV0_0_2
-	3, // 2: dev.sigstore.rekor.v2.Spec.dsse_v0_0_2:type_name -> dev.sigstore.rekor.v2.DSSELogEntryV0_0_2
+	2, // 1: dev.sigstore.rekor.v2.Spec.hashed_rekord_v002:type_name -> dev.sigstore.rekor.v2.HashedRekordLogEntryV002
+	3, // 2: dev.sigstore.rekor.v2.Spec.dsse_v002:type_name -> dev.sigstore.rekor.v2.DSSELogEntryV002
 	3, // [3:3] is the sub-list for method output_type
 	3, // [3:3] is the sub-list for method input_type
 	3, // [3:3] is the sub-list for extension type_name
@@ -239,8 +239,8 @@ func file_entry_proto_init() {
 	file_dsse_proto_init()
 	file_hashedrekord_proto_init()
 	file_entry_proto_msgTypes[1].OneofWrappers = []any{
-		(*Spec_HashedRekordV0_0_2)(nil),
-		(*Spec_DsseV0_0_2)(nil),
+		(*Spec_HashedRekordV002)(nil),
+		(*Spec_DsseV002)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{

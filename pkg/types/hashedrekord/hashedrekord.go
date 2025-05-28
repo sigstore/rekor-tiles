@@ -31,7 +31,7 @@ import (
 )
 
 // ToLogEntry validates a request, verifies its signature, and converts it to a log entry type for inclusion in the log
-func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.Entry, error) {
+func ToLogEntry(hr *pb.HashedRekordRequestV002, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.Entry, error) {
 	if err := validate(hr); err != nil {
 		return nil, err
 	}
@@ -54,8 +54,8 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.A
 		Kind:       "hashedrekord",
 		ApiVersion: "0.0.2",
 		Spec: &pb.Spec{
-			Spec: &pb.Spec_HashedRekordV0_0_2{
-				HashedRekordV0_0_2: &pb.HashedRekordLogEntryV0_0_2{
+			Spec: &pb.Spec_HashedRekordV002{
+				HashedRekordV002: &pb.HashedRekordLogEntryV002{
 					Signature: hr.Signature,
 					Data:      &v1.HashOutput{Digest: hr.Digest, Algorithm: algDetails.GetProtoHashType()},
 				},
@@ -64,8 +64,8 @@ func ToLogEntry(hr *pb.HashedRekordRequestV0_0_2, algorithmRegistry *signature.A
 	}, nil
 }
 
-// validate validates there are no missing fields in a HashedRekordRequestV0_0_2 protobuf
-func validate(hr *pb.HashedRekordRequestV0_0_2) error {
+// validate validates there are no missing fields in a HashedRekordRequestV002 protobuf
+func validate(hr *pb.HashedRekordRequestV002) error {
 	if hr.Signature == nil || len(hr.Signature.Content) == 0 {
 		return fmt.Errorf("missing signature")
 	}
@@ -81,7 +81,7 @@ func validate(hr *pb.HashedRekordRequestV0_0_2) error {
 	return nil
 }
 
-func extractVerifier(hr *pb.HashedRekordRequestV0_0_2) (verifier.Verifier, error) {
+func extractVerifier(hr *pb.HashedRekordRequestV002) (verifier.Verifier, error) {
 	var v verifier.Verifier
 	var err error
 	if pubKey := hr.Signature.Verifier.GetPublicKey(); pubKey != nil {
@@ -116,7 +116,7 @@ func verifySupportedAlgorithm(keyDetails v1.PublicKeyDetails, v verifier.Verifie
 	return algDetails, nil
 }
 
-func verifySignature(hr *pb.HashedRekordRequestV0_0_2, v verifier.Verifier, hashAlg crypto.Hash) error {
+func verifySignature(hr *pb.HashedRekordRequestV002, v verifier.Verifier, hashAlg crypto.Hash) error {
 	sigVerifier, err := signature.LoadVerifierWithOpts(v.PublicKey(), options.WithED25519ph())
 	if err != nil {
 		return fmt.Errorf("loading verifier: %v", err)

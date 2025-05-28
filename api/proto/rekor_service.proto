@@ -61,8 +61,8 @@ service Rekor {
 // Create a new HashedRekord or DSSE
 message CreateEntryRequest {
     oneof spec {
-        HashedRekordRequestV0_0_2 hashed_rekord_request_v0_0_2 = 1 [(google.api.field_behavior) = REQUIRED];
-        DSSERequestV0_0_2 dsse_request_v0_0_2  = 2 [(google.api.field_behavior) = REQUIRED];
+        HashedRekordRequestV002 hashed_rekord_request_v002 = 1 [(google.api.field_behavior) = REQUIRED];
+        DSSERequestV002 dsse_request_v002 = 2 [(google.api.field_behavior) = REQUIRED];
     }
 }
 

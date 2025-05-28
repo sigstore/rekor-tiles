@@ -37,7 +37,7 @@ message Entry {
 // Spec contains one of the Rekor entry types.
 message Spec {
     oneof spec {
-        HashedRekordLogEntryV0_0_2 hashed_rekord_v0_0_2 = 1 [(google.api.field_behavior) = REQUIRED];
-        DSSELogEntryV0_0_2 dsse_v0_0_2  = 2 [(google.api.field_behavior) = REQUIRED];
+        HashedRekordLogEntryV002 hashed_rekord_v002 = 1 [(google.api.field_behavior) = REQUIRED];
+        DSSELogEntryV002 dsse_v002  = 2 [(google.api.field_behavior) = REQUIRED];
     }
 }

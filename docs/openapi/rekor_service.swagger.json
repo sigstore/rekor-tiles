@@ -454,10 +454,10 @@
       "type": "object",
       "properties": {
         "hashedRekordRequestV002": {
-          "$ref": "#/definitions/v2HashedRekordRequestV0_0_2"
+          "$ref": "#/definitions/v2HashedRekordRequestV002"
         },
         "dsseRequestV002": {
-          "$ref": "#/definitions/v2DSSERequestV0_0_2"
+          "$ref": "#/definitions/v2DSSERequestV002"
         }
       },
       "title": "Create a new HashedRekord or DSSE",
@@ -466,7 +466,7 @@
         "dsseRequestV002"
       ]
     },
-    "v2DSSERequestV0_0_2": {
+    "v2DSSERequestV002": {
       "type": "object",
       "properties": {
         "envelope": {
@@ -482,13 +482,13 @@
           "title": "All necessary verification material to verify all signatures embedded in the envelope"
         }
       },
-      "title": "A request to add a DSSE entry to the log",
+      "title": "A request to add a DSSE v0.0.2 entry to the log",
       "required": [
         "envelope",
         "verifiers"
       ]
     },
-    "v2HashedRekordRequestV0_0_2": {
+    "v2HashedRekordRequestV002": {
       "type": "object",
       "properties": {
         "digest": {
@@ -501,7 +501,7 @@
           "title": "A single signature over the hashed data with the verifier needed to validate it"
         }
       },
-      "title": "A request to add a hashedrekord to the log",
+      "title": "A request to add a hashedrekord v0.0.2 to the log",
       "required": [
         "digest",
         "signature"

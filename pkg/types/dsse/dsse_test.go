@@ -85,14 +85,14 @@ func TestToLogEntry(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		dsse              *pb.DSSERequestV0_0_2
+		dsse              *pb.DSSERequestV002
 		allowedAlgorithms []v1.PublicKeyDetails
 		expectErr         error
 		expectedEntry     *pb.Entry
 	}{
 		{
 			name: "valid dsse",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -118,8 +118,8 @@ func TestToLogEntry(t *testing.T) {
 				Kind:       "dsse",
 				ApiVersion: "0.0.2",
 				Spec: &pb.Spec{
-					Spec: &pb.Spec_DsseV0_0_2{
-						DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+					Spec: &pb.Spec_DsseV002{
+						DsseV002: &pb.DSSELogEntryV002{
 							PayloadHash: &v1.HashOutput{
 								Algorithm: v1.HashAlgorithm_SHA2_256,
 								Digest:    payloadHash[:],
@@ -144,7 +144,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "missing envelope",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Verifiers: []*pb.Verifier{
 					{
 						Verifier: &pb.Verifier_PublicKey{
@@ -160,7 +160,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "missing verifiers",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -176,7 +176,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "invalid verifier",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     []byte("payload"),
 					PayloadType: "application/vnd.in-toto+json",
@@ -200,7 +200,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "missing signatures",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -220,7 +220,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "empty signatures",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -241,7 +241,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "invalid signature",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -267,7 +267,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "valid dsse with X.509 cert",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -293,8 +293,8 @@ func TestToLogEntry(t *testing.T) {
 				Kind:       "dsse",
 				ApiVersion: "0.0.2",
 				Spec: &pb.Spec{
-					Spec: &pb.Spec_DsseV0_0_2{
-						DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+					Spec: &pb.Spec_DsseV002{
+						DsseV002: &pb.DSSELogEntryV002{
 							PayloadHash: &v1.HashOutput{
 								Algorithm: v1.HashAlgorithm_SHA2_256,
 								Digest:    payloadHash[:],
@@ -319,7 +319,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "mismatched key algorithm",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -346,7 +346,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "valid DSSE with multiple signatures, different algorithm",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -384,8 +384,8 @@ func TestToLogEntry(t *testing.T) {
 				Kind:       "dsse",
 				ApiVersion: "0.0.2",
 				Spec: &pb.Spec{
-					Spec: &pb.Spec_DsseV0_0_2{
-						DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+					Spec: &pb.Spec_DsseV002{
+						DsseV002: &pb.DSSELogEntryV002{
 							PayloadHash: &v1.HashOutput{
 								Algorithm: v1.HashAlgorithm_SHA2_256,
 								Digest:    payloadHash[:],
@@ -423,7 +423,7 @@ func TestToLogEntry(t *testing.T) {
 			// test input is same as "valid DSSE with multiple signatures, different algorithm",
 			// but with signature input swapped, to show that response signature order is canonicalized
 			name: "valid DSSE with multiple signatures in consistent order",
-			dsse: &pb.DSSERequestV0_0_2{
+			dsse: &pb.DSSERequestV002{
 				Envelope: &dsse.Envelope{
 					Payload:     payload,
 					PayloadType: "application/vnd.in-toto+json",
@@ -461,8 +461,8 @@ func TestToLogEntry(t *testing.T) {
 				Kind:       "dsse",
 				ApiVersion: "0.0.2",
 				Spec: &pb.Spec{
-					Spec: &pb.Spec_DsseV0_0_2{
-						DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+					Spec: &pb.Spec_DsseV002{
+						DsseV002: &pb.DSSELogEntryV002{
 							PayloadHash: &v1.HashOutput{
 								Algorithm: v1.HashAlgorithm_SHA2_256,
 								Digest:    payloadHash[:],

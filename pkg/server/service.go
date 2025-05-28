@@ -81,8 +81,8 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	var metricsCounter prometheus.Counter
 	var kv *pbs.KindVersion
 	switch req.GetSpec().(type) {
-	case *pb.CreateEntryRequest_HashedRekordRequestV0_0_2:
-		hr := req.GetHashedRekordRequestV0_0_2()
+	case *pb.CreateEntryRequest_HashedRekordRequestV002:
+		hr := req.GetHashedRekordRequestV002()
 		entry, err := hashedrekord.ToLogEntry(hr, s.algorithmRegistry)
 		if err != nil {
 			slog.WarnContext(ctx, "failed validating hashedrekord request", "error", err.Error())
@@ -98,8 +98,8 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 			return nil, status.Errorf(codes.InvalidArgument, "invalid hashedrekord request")
 		}
 		metricsCounter = getMetrics().newHashedRekordEntries
-	case *pb.CreateEntryRequest_DsseRequestV0_0_2:
-		ds := req.GetDsseRequestV0_0_2()
+	case *pb.CreateEntryRequest_DsseRequestV002:
+		ds := req.GetDsseRequestV002()
 		entry, err := dsse.ToLogEntry(ds, s.algorithmRegistry)
 		if err != nil {
 			slog.WarnContext(ctx, "failed validating dsse request", "error", err.Error())

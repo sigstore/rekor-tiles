@@ -79,14 +79,14 @@ func TestToLogEntry(t *testing.T) {
 
 	tests := []struct {
 		name              string
-		hashedrekord      *pb.HashedRekordRequestV0_0_2
+		hashedrekord      *pb.HashedRekordRequestV002
 		allowedAlgorithms []v1.PublicKeyDetails
 		expectErr         error
 		expectedEntry     *pb.Entry
 	}{
 		{
 			name: "valid hashedrekord",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: b64DecodeOrDie(t, b64EncodedSignature),
 					Verifier: &pb.Verifier{
@@ -104,8 +104,8 @@ func TestToLogEntry(t *testing.T) {
 				Kind:       "hashedrekord",
 				ApiVersion: "0.0.2",
 				Spec: &pb.Spec{
-					Spec: &pb.Spec_HashedRekordV0_0_2{
-						HashedRekordV0_0_2: &pb.HashedRekordLogEntryV0_0_2{
+					Spec: &pb.Spec_HashedRekordV002{
+						HashedRekordV002: &pb.HashedRekordLogEntryV002{
 							Data: &v1.HashOutput{
 								Digest:    hexDecodeOrDie(t, hexEncodedDigest),
 								Algorithm: v1.HashAlgorithm_SHA2_256,
@@ -128,7 +128,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "missing signature",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
@@ -145,7 +145,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "missing verifier",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: b64DecodeOrDie(t, b64EncodedSignature),
 				},
@@ -155,7 +155,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "missing digest",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: b64DecodeOrDie(t, b64EncodedSignature),
 					Verifier: &pb.Verifier{
@@ -172,7 +172,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "invalid verifier",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: []byte("sig"),
 					Verifier: &pb.Verifier{
@@ -188,7 +188,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "invalid signature",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: []byte("foobar"),
 					Verifier: &pb.Verifier{
@@ -206,7 +206,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "valid hashedrekord with X.509 cert",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: b64DecodeOrDie(t, b64EncodedSignature),
 					Verifier: &pb.Verifier{
@@ -224,8 +224,8 @@ func TestToLogEntry(t *testing.T) {
 				Kind:       "hashedrekord",
 				ApiVersion: "0.0.2",
 				Spec: &pb.Spec{
-					Spec: &pb.Spec_HashedRekordV0_0_2{
-						HashedRekordV0_0_2: &pb.HashedRekordLogEntryV0_0_2{
+					Spec: &pb.Spec_HashedRekordV002{
+						HashedRekordV002: &pb.HashedRekordLogEntryV002{
 							Data: &v1.HashOutput{
 								Digest:    hexDecodeOrDie(t, hexEncodedDigest),
 								Algorithm: v1.HashAlgorithm_SHA2_256,
@@ -248,7 +248,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "mismatched key algorithm",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: b64DecodeOrDie(t, b64EncodedSignature),
 					Verifier: &pb.Verifier{
@@ -267,7 +267,7 @@ func TestToLogEntry(t *testing.T) {
 		},
 		{
 			name: "valid hashedrekord with different algorithm",
-			hashedrekord: &pb.HashedRekordRequestV0_0_2{
+			hashedrekord: &pb.HashedRekordRequestV002{
 				Signature: &pb.Signature{
 					Content: b64DecodeOrDie(t, b64EncodedSignatureP384),
 					Verifier: &pb.Verifier{
@@ -285,8 +285,8 @@ func TestToLogEntry(t *testing.T) {
 				Kind:       "hashedrekord",
 				ApiVersion: "0.0.2",
 				Spec: &pb.Spec{
-					Spec: &pb.Spec_HashedRekordV0_0_2{
-						HashedRekordV0_0_2: &pb.HashedRekordLogEntryV0_0_2{
+					Spec: &pb.Spec_HashedRekordV002{
+						HashedRekordV002: &pb.HashedRekordLogEntryV002{
 							Data: &v1.HashOutput{
 								Digest:    hexDecodeOrDie(t, hexEncodedDigest384),
 								Algorithm: v1.HashAlgorithm_SHA2_384,

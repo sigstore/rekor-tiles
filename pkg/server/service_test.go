@@ -54,8 +54,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "valid hashedrekord",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
-					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+					HashedRekordRequestV002: &pb.HashedRekordRequestV002{
 						Signature: &pb.Signature{
 							Content: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
 							Verifier: &pb.Verifier{
@@ -77,8 +77,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "valid dsse",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_DsseRequestV0_0_2{
-					DsseRequestV0_0_2: &pb.DSSERequestV0_0_2{
+				Spec: &pb.CreateEntryRequest_DsseRequestV002{
+					DsseRequestV002: &pb.DSSERequestV002{
 						Envelope: &dsse.Envelope{
 							Payload:     b64DecodeOrDie(t, "cGF5bG9hZA=="),
 							PayloadType: "application/vnd.in-toto+json",
@@ -108,8 +108,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "invalid hashedrekord",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
-					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{},
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+					HashedRekordRequestV002: &pb.HashedRekordRequestV002{},
 				},
 			},
 			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
@@ -119,8 +119,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "invalid dsse",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_DsseRequestV0_0_2{
-					DsseRequestV0_0_2: &pb.DSSERequestV0_0_2{},
+				Spec: &pb.CreateEntryRequest_DsseRequestV002{
+					DsseRequestV002: &pb.DSSERequestV002{},
 				},
 			},
 			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
@@ -130,8 +130,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "failed integration",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
-					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+					HashedRekordRequestV002: &pb.HashedRekordRequestV002{
 						Signature: &pb.Signature{
 							Content: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
 							Verifier: &pb.Verifier{
@@ -154,8 +154,8 @@ func TestCreateEntry(t *testing.T) {
 		{
 			name: "hashedrekord signed with disallowed algorithm",
 			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_HashedRekordRequestV0_0_2{
-					HashedRekordRequestV0_0_2: &pb.HashedRekordRequestV0_0_2{
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+					HashedRekordRequestV002: &pb.HashedRekordRequestV002{
 						Signature: &pb.Signature{
 							Content: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
 							Verifier: &pb.Verifier{

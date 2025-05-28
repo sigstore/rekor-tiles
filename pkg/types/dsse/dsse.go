@@ -37,7 +37,7 @@ import (
 )
 
 // ToLogEntry validates a request, verifies all envelope signatures, and converts it to a log entry type for inclusion in the log
-func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.Entry, error) {
+func ToLogEntry(ds *pb.DSSERequestV002, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.Entry, error) {
 	if err := validate(ds); err != nil {
 		return nil, err
 	}
@@ -73,8 +73,8 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 		Kind:       "dsse",
 		ApiVersion: "0.0.2",
 		Spec: &pb.Spec{
-			Spec: &pb.Spec_DsseV0_0_2{
-				DsseV0_0_2: &pb.DSSELogEntryV0_0_2{
+			Spec: &pb.Spec_DsseV002{
+				DsseV002: &pb.DSSELogEntryV002{
 					PayloadHash: &v1.HashOutput{
 						Algorithm: v1.HashAlgorithm_SHA2_256,
 						Digest:    payloadHash[:],
@@ -86,8 +86,8 @@ func ToLogEntry(ds *pb.DSSERequestV0_0_2, algorithmRegistry *signature.Algorithm
 	}, nil
 }
 
-// validate validates there are no missing fields in a DSSERequestV0_0_2 protobuf
-func validate(ds *pb.DSSERequestV0_0_2) error {
+// validate validates there are no missing fields in a DSSERequestV002 protobuf
+func validate(ds *pb.DSSERequestV002) error {
 	if ds.Envelope == nil {
 		return fmt.Errorf("missing envelope")
 	}
@@ -111,7 +111,7 @@ func validate(ds *pb.DSSERequestV0_0_2) error {
 }
 
 // extractVerifiers returns a map of protobuf verifiers to verifier interface
-func extractVerifiers(ds *pb.DSSERequestV0_0_2) (map[*pb.Verifier]verifier.Verifier, error) {
+func extractVerifiers(ds *pb.DSSERequestV002) (map[*pb.Verifier]verifier.Verifier, error) {
 	verifiers := make(map[*pb.Verifier]verifier.Verifier, 0)
 	for _, v := range ds.Verifiers {
 		pubKey := v.GetPublicKey()

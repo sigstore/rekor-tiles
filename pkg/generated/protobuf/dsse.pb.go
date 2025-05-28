@@ -38,8 +38,8 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// A request to add a DSSE entry to the log
-type DSSERequestV0_0_2 struct {
+// A request to add a DSSE v0.0.2 entry to the log
+type DSSERequestV002 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// A DSSE envelope
 	Envelope *dsse.Envelope `protobuf:"bytes,1,opt,name=envelope,proto3" json:"envelope,omitempty"`
@@ -49,20 +49,20 @@ type DSSERequestV0_0_2 struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DSSERequestV0_0_2) Reset() {
-	*x = DSSERequestV0_0_2{}
+func (x *DSSERequestV002) Reset() {
+	*x = DSSERequestV002{}
 	mi := &file_dsse_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DSSERequestV0_0_2) String() string {
+func (x *DSSERequestV002) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DSSERequestV0_0_2) ProtoMessage() {}
+func (*DSSERequestV002) ProtoMessage() {}
 
-func (x *DSSERequestV0_0_2) ProtoReflect() protoreflect.Message {
+func (x *DSSERequestV002) ProtoReflect() protoreflect.Message {
 	mi := &file_dsse_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -74,26 +74,26 @@ func (x *DSSERequestV0_0_2) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DSSERequestV0_0_2.ProtoReflect.Descriptor instead.
-func (*DSSERequestV0_0_2) Descriptor() ([]byte, []int) {
+// Deprecated: Use DSSERequestV002.ProtoReflect.Descriptor instead.
+func (*DSSERequestV002) Descriptor() ([]byte, []int) {
 	return file_dsse_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *DSSERequestV0_0_2) GetEnvelope() *dsse.Envelope {
+func (x *DSSERequestV002) GetEnvelope() *dsse.Envelope {
 	if x != nil {
 		return x.Envelope
 	}
 	return nil
 }
 
-func (x *DSSERequestV0_0_2) GetVerifiers() []*Verifier {
+func (x *DSSERequestV002) GetVerifiers() []*Verifier {
 	if x != nil {
 		return x.Verifiers
 	}
 	return nil
 }
 
-type DSSELogEntryV0_0_2 struct {
+type DSSELogEntryV002 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The hash of the DSSE payload
 	PayloadHash *v1.HashOutput `protobuf:"bytes,1,opt,name=payloadHash,proto3" json:"payloadHash,omitempty"`
@@ -103,20 +103,20 @@ type DSSELogEntryV0_0_2 struct {
 	sizeCache     protoimpl.SizeCache
 }
 
-func (x *DSSELogEntryV0_0_2) Reset() {
-	*x = DSSELogEntryV0_0_2{}
+func (x *DSSELogEntryV002) Reset() {
+	*x = DSSELogEntryV002{}
 	mi := &file_dsse_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
 
-func (x *DSSELogEntryV0_0_2) String() string {
+func (x *DSSELogEntryV002) String() string {
 	return protoimpl.X.MessageStringOf(x)
 }
 
-func (*DSSELogEntryV0_0_2) ProtoMessage() {}
+func (*DSSELogEntryV002) ProtoMessage() {}
 
-func (x *DSSELogEntryV0_0_2) ProtoReflect() protoreflect.Message {
+func (x *DSSELogEntryV002) ProtoReflect() protoreflect.Message {
 	mi := &file_dsse_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
@@ -128,19 +128,19 @@ func (x *DSSELogEntryV0_0_2) ProtoReflect() protoreflect.Message {
 	return mi.MessageOf(x)
 }
 
-// Deprecated: Use DSSELogEntryV0_0_2.ProtoReflect.Descriptor instead.
-func (*DSSELogEntryV0_0_2) Descriptor() ([]byte, []int) {
+// Deprecated: Use DSSELogEntryV002.ProtoReflect.Descriptor instead.
+func (*DSSELogEntryV002) Descriptor() ([]byte, []int) {
 	return file_dsse_proto_rawDescGZIP(), []int{1}
 }
 
-func (x *DSSELogEntryV0_0_2) GetPayloadHash() *v1.HashOutput {
+func (x *DSSELogEntryV002) GetPayloadHash() *v1.HashOutput {
 	if x != nil {
 		return x.PayloadHash
 	}
 	return nil
 }
 
-func (x *DSSELogEntryV0_0_2) GetSignatures() []*Signature {
+func (x *DSSELogEntryV002) GetSignatures() []*Signature {
 	if x != nil {
 		return x.Signatures
 	}
@@ -152,11 +152,11 @@ var File_dsse_proto protoreflect.FileDescriptor
 const file_dsse_proto_rawDesc = "" +
 	"\n" +
 	"\n" +
-	"dsse.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\x1a\x0eenvelope.proto\x1a\x0everifier.proto\"\x8d\x01\n" +
-	"\x11DSSERequestV0_0_2\x124\n" +
+	"dsse.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\x1a\x0eenvelope.proto\x1a\x0everifier.proto\"\x8b\x01\n" +
+	"\x0fDSSERequestV002\x124\n" +
 	"\benvelope\x18\x01 \x01(\v2\x13.io.intoto.EnvelopeB\x03\xe0A\x02R\benvelope\x12B\n" +
-	"\tverifiers\x18\x02 \x03(\v2\x1f.dev.sigstore.rekor.v2.VerifierB\x03\xe0A\x02R\tverifiers\"\xa6\x01\n" +
-	"\x12DSSELogEntryV0_0_2\x12I\n" +
+	"\tverifiers\x18\x02 \x03(\v2\x1f.dev.sigstore.rekor.v2.VerifierB\x03\xe0A\x02R\tverifiers\"\xa4\x01\n" +
+	"\x10DSSELogEntryV002\x12I\n" +
 	"\vpayloadHash\x18\x01 \x01(\v2\".dev.sigstore.common.v1.HashOutputB\x03\xe0A\x02R\vpayloadHash\x12E\n" +
 	"\n" +
 	"signatures\x18\x02 \x03(\v2 .dev.sigstore.rekor.v2.SignatureB\x03\xe0A\x02R\n" +
@@ -176,18 +176,18 @@ func file_dsse_proto_rawDescGZIP() []byte {
 
 var file_dsse_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
 var file_dsse_proto_goTypes = []any{
-	(*DSSERequestV0_0_2)(nil),  // 0: dev.sigstore.rekor.v2.DSSERequestV0_0_2
-	(*DSSELogEntryV0_0_2)(nil), // 1: dev.sigstore.rekor.v2.DSSELogEntryV0_0_2
-	(*dsse.Envelope)(nil),      // 2: io.intoto.Envelope
-	(*Verifier)(nil),           // 3: dev.sigstore.rekor.v2.Verifier
-	(*v1.HashOutput)(nil),      // 4: dev.sigstore.common.v1.HashOutput
-	(*Signature)(nil),          // 5: dev.sigstore.rekor.v2.Signature
+	(*DSSERequestV002)(nil),  // 0: dev.sigstore.rekor.v2.DSSERequestV002
+	(*DSSELogEntryV002)(nil), // 1: dev.sigstore.rekor.v2.DSSELogEntryV002
+	(*dsse.Envelope)(nil),    // 2: io.intoto.Envelope
+	(*Verifier)(nil),         // 3: dev.sigstore.rekor.v2.Verifier
+	(*v1.HashOutput)(nil),    // 4: dev.sigstore.common.v1.HashOutput
+	(*Signature)(nil),        // 5: dev.sigstore.rekor.v2.Signature
 }
 var file_dsse_proto_depIdxs = []int32{
-	2, // 0: dev.sigstore.rekor.v2.DSSERequestV0_0_2.envelope:type_name -> io.intoto.Envelope
-	3, // 1: dev.sigstore.rekor.v2.DSSERequestV0_0_2.verifiers:type_name -> dev.sigstore.rekor.v2.Verifier
-	4, // 2: dev.sigstore.rekor.v2.DSSELogEntryV0_0_2.payloadHash:type_name -> dev.sigstore.common.v1.HashOutput
-	5, // 3: dev.sigstore.rekor.v2.DSSELogEntryV0_0_2.signatures:type_name -> dev.sigstore.rekor.v2.Signature
+	2, // 0: dev.sigstore.rekor.v2.DSSERequestV002.envelope:type_name -> io.intoto.Envelope
+	3, // 1: dev.sigstore.rekor.v2.DSSERequestV002.verifiers:type_name -> dev.sigstore.rekor.v2.Verifier
+	4, // 2: dev.sigstore.rekor.v2.DSSELogEntryV002.payloadHash:type_name -> dev.sigstore.common.v1.HashOutput
+	5, // 3: dev.sigstore.rekor.v2.DSSELogEntryV002.signatures:type_name -> dev.sigstore.rekor.v2.Signature
 	4, // [4:4] is the sub-list for method output_type
 	4, // [4:4] is the sub-list for method input_type
 	4, // [4:4] is the sub-list for extension type_name
