@@ -17,7 +17,7 @@ below:
 ```jsonc
 // Request with a Fulcio certificate
 {
-    "hashedRekordRequestV0_0_2": {
+    "hashedRekordRequestV002": {
         // Must use hash algorithm from key_details
         "digest": "<base64 digest of artifact>",
         "signature": {
@@ -33,7 +33,7 @@ below:
 
 // Request with a self-managed key
 {
-    "hashedRekordRequestV0_0_2": {
+    "hashedRekordRequestV002": {
         "digest": "<base64 digest of artifact>",
         "signature": {
             "content": "<base64 signature>",
@@ -49,7 +49,7 @@ below:
 
 // Request with an attestation
 {
-    "dsseRequestV0_0_2": {
+    "dsseRequestV002": {
         "envelope": {
             "payload": "<base64-encoded message>",
             "payloadType": "<type, e.g. application/vnd.in-toto+json>",
@@ -70,7 +70,7 @@ below:
 
 // Request with an attestation with a self-managed key
 {
-    "dsseRequestV0_0_2": {
+    "dsseRequestV002": {
         "envelope": {
             "payload": "<base64-encoded message>",
             "payloadType": "<type, e.g. application/vnd.in-toto+json>",
@@ -107,7 +107,7 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
     "apiVersion": "0.0.2",
     "kind": "hashedrekord",
     "spec": {
-        "hashedRekordV0_0_2": {
+        "hashedRekordV002": {
             "data": {
                 "algorithm": "<hash algorithm, e.g. 'SHA2_256'>",
                 "digest": "<base64-encoded digest of artifact>"
@@ -131,7 +131,7 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
     "apiVersion": "0.0.2",
     "kind": "dsse",
     "spec": {
-        "dsseV0_0_2": {
+        "dsseV002": {
             "data": {
                 "algorithm": "SHA2_256",
                 // Note that we no longer include the envelope hash, since there is no
@@ -157,8 +157,8 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
 
 ### Two Entry Types
 
-Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV0_0_2`) and
-`dsse` (`DSSELogEntryV0_0_2`) entry types, dropping a number of unused types
+Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV002`) and
+`dsse` (`DSSELogEntryV002`) entry types, dropping a number of unused types
 such as `jar`, `alpine`, `rpm`, and the older types `rekord` and `intoto`.
 Additional types may be added in the future if there is demand, but this
 will require updating the client specification so that all clients implement
@@ -548,7 +548,7 @@ Post an entry:
 ```bash
 curl  -H \
  "Accept: application/json" -X \
-POST http://localhost:3003/api/v2/log/entries -o rekor_response -d "{ \"hashedRekordRequestV0_0_2\":{ \"digest\":\"$(cat artifact_dgst|base64)\", \"signature\":{ \"content\": \"$(cat artifact.sig | base64)\", \"verifier\": { \"key_details\": \"PKIX_ECDSA_P256_SHA_256\", \"public_key\": { \"raw_bytes\": \"$(openssl base64 -d -in ec_public.pem | base64)\" } } } } }"
+POST http://localhost:3003/api/v2/log/entries -o rekor_response -d "{ \"hashedRekordRequestV002\":{ \"digest\":\"$(cat artifact_dgst|base64)\", \"signature\":{ \"content\": \"$(cat artifact.sig | base64)\", \"verifier\": { \"key_details\": \"PKIX_ECDSA_P256_SHA_256\", \"public_key\": { \"raw_bytes\": \"$(openssl base64 -d -in ec_public.pem | base64)\" } } } } }"
 ```
 
 View the response with `cat rekor_response | jq .` Example:
@@ -585,7 +585,7 @@ Parse the entry (i.e. canonicalized body) with `cat rekor_response | jq -r .cano
   "apiVersion": "0.0.2",
   "kind": "hashedrekord",
   "spec": {
-    "hashedRekordV0_0_2": {
+    "hashedRekordV002": {
       "data": {
         "algorithm": "SHA2_256",
         "digest": "dyj4ednYHjN4/zsjjBeeLahS9slp97Z67LTAVxjrjXw="
@@ -625,7 +625,7 @@ Only `CreateEntry` is implemented currently.
 Post an entry:
 
 ```bash
-grpcurl -d "{ \"hashed_rekord_request_v0_0_2\":{ \"digest\":\"$(cat artifact_dgst|base64)\", \"signature\":{ \"content\": \"$(cat artifact.sig | base64)\", \"verifier\": { \"key_details\": \"PKIX_ECDSA_P256_SHA_256\", \"public_key\": { \"raw_bytes\": \"$(openssl base64 -d -in ec_public.pem | base64)\" } } } } }" -plaintext localhost:3001 dev.sigstore.rekor.v2.Rekor.CreateEntry > rekor_response
+grpcurl -d "{ \"hashed_rekord_request_v002\":{ \"digest\":\"$(cat artifact_dgst|base64)\", \"signature\":{ \"content\": \"$(cat artifact.sig | base64)\", \"verifier\": { \"key_details\": \"PKIX_ECDSA_P256_SHA_256\", \"public_key\": { \"raw_bytes\": \"$(openssl base64 -d -in ec_public.pem | base64)\" } } } } }" -plaintext localhost:3001 dev.sigstore.rekor.v2.Rekor.CreateEntry > rekor_response
 ```
 
 View the response with `cat rekor_response | jq .`.
