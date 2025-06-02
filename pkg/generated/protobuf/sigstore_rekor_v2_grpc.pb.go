@@ -1,4 +1,4 @@
-// Copyright 2025 The Sigstore Authors.
+// Copyright 2025 The Sigstore Authors
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,7 +16,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: rekor_service.proto
+// source: sigstore_rekor_v2.proto
 
 package protobuf
 
@@ -262,5 +262,5 @@ var Rekor_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "rekor_service.proto",
+	Metadata: "sigstore_rekor_v2.proto",
 }

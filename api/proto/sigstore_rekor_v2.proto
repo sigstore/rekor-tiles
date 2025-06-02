@@ -1,0 +1,156 @@
+// Copyright 2025 The Sigstore Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dev.sigstore.rekor.v2;
+
+import "envelope.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/api/httpbody.proto";
+import "google/protobuf/empty.proto";
+import "sigstore_common.proto";
+import "sigstore_rekor.proto";
+
+option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
+
+// A service for sigstore clients to connect to to create log entries
+// and for log monitors and witnesses to audit/inspect the log
+service Rekor {
+    // Create an entry in the log
+    rpc CreateEntry (CreateEntryRequest) returns (dev.sigstore.rekor.v1.TransparencyLogEntry) {
+        option (google.api.http) = {
+            post: "/api/v2/log/entries"
+            body: "*"
+        };
+    }
+
+    // Get a tile from the log
+    rpc GetTile (TileRequest) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/api/v2/tile/{L}/{N=**}"
+        };
+    }
+
+    // Get an entry bundle from the log
+    rpc GetEntryBundle (EntryBundleRequest) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/api/v2/tile/entries/{N=**}"
+        };
+    }
+
+    // Get a checkpoint from the log
+    rpc GetCheckpoint (google.protobuf.Empty) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            get: "/api/v2/checkpoint"
+        };
+    }
+}
+
+// Create a new HashedRekord or DSSE
+message CreateEntryRequest {
+    oneof spec {
+        HashedRekordRequestV002 hashed_rekord_request_v002 = 1 [(google.api.field_behavior) = REQUIRED];
+        DSSERequestV002 dsse_request_v002 = 2 [(google.api.field_behavior) = REQUIRED];
+    }
+}
+
+// A request to add a hashedrekord v0.0.2 to the log
+message HashedRekordRequestV002 {
+    // The hashed data
+    bytes digest = 1 [(google.api.field_behavior) = REQUIRED];
+    // A single signature over the hashed data with the verifier needed to validate it
+    Signature signature = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// A request to add a DSSE v0.0.2 entry to the log
+message DSSERequestV002 {
+    // A DSSE envelope
+    io.intoto.Envelope envelope = 1 [(google.api.field_behavior) = REQUIRED];
+    // All necessary verification material to verify all signatures embedded in the envelope
+    repeated Verifier verifiers = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Request for a full or partial tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
+message TileRequest {
+    uint32 L = 1;
+    // N must be either an index encoded as zero-padded 3-digit path elements, e.g. "x123/x456/789",
+    // and may end with ".p/<W>", where "<W>" is a uint8
+    string N = 2;
+}
+
+// Request for a full or partial entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
+message EntryBundleRequest {
+    // N must be either an index encoded as zero-padded 3-digit path elements, e.g. "x123/x456/789",
+    // and may end with ".p/<W>", where "<W>" is a uint8
+    string N = 1;
+}
+
+// Entry is the message that is canonicalized and uploaded to the log.
+// This format is meant to be compliant with Rekor v1 entries in that
+// the `apiVersion` and `kind` can be parsed before parsing the spec.
+// Clients are expected to understand and handle the differences in the
+// contents of `spec` between Rekor v1 (a polymorphic OpenAPI definition)
+// and Rekor v2 (a typed proto defintion).
+message Entry {
+    string kind = 1 [(google.api.field_behavior) = REQUIRED];
+    string api_version = 2 [(google.api.field_behavior) = REQUIRED];
+    Spec spec = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Spec contains one of the Rekor entry types.
+message Spec {
+    oneof spec {
+        HashedRekordLogEntryV002 hashed_rekord_v002 = 1 [(google.api.field_behavior) = REQUIRED];
+        DSSELogEntryV002 dsse_v002  = 2 [(google.api.field_behavior) = REQUIRED];
+    }
+}
+
+message HashedRekordLogEntryV002 {
+    // The hashed data
+    dev.sigstore.common.v1.HashOutput data = 1 [(google.api.field_behavior) = REQUIRED];
+    // A single signature over the hashed data with the verifier needed to validate it
+    Signature signature = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message DSSELogEntryV002 {
+    // The hash of the DSSE payload
+    dev.sigstore.common.v1.HashOutput payloadHash = 1 [(google.api.field_behavior) = REQUIRED];
+    // Signatures and their associated verification material used to verify the payload
+    repeated Signature signatures = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+// PublicKey contains an encoded public key
+message PublicKey {
+    // DER-encoded public key
+    bytes raw_bytes = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// Either a public key or a X.509 cerificiate with an embedded public key
+message Verifier {
+    oneof verifier {
+        // DER-encoded public key. Encoding method is specified by the key_details attribute
+        PublicKey public_key = 1 [(google.api.field_behavior) = REQUIRED];
+        // DER-encoded certificate
+        dev.sigstore.common.v1.X509Certificate x509_certificate = 2 [(google.api.field_behavior) = REQUIRED];
+    }
+    // Key encoding and signature algorithm to use for this key
+    dev.sigstore.common.v1.PublicKeyDetails key_details = 3 [(google.api.field_behavior) = REQUIRED];
+}
+
+// A signature and an associated verifier
+message Signature {
+    bytes content = 1 [(google.api.field_behavior) = REQUIRED];
+    Verifier verifier = 2 [(google.api.field_behavior) = REQUIRED];
+}
