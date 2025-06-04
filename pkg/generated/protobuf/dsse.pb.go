@@ -16,7 +16,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: dsse.proto
+// source: rekor/v2/dsse.proto
 
 package protobuf
 
@@ -51,7 +51,7 @@ type DSSERequestV002 struct {
 
 func (x *DSSERequestV002) Reset() {
 	*x = DSSERequestV002{}
-	mi := &file_dsse_proto_msgTypes[0]
+	mi := &file_rekor_v2_dsse_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -63,7 +63,7 @@ func (x *DSSERequestV002) String() string {
 func (*DSSERequestV002) ProtoMessage() {}
 
 func (x *DSSERequestV002) ProtoReflect() protoreflect.Message {
-	mi := &file_dsse_proto_msgTypes[0]
+	mi := &file_rekor_v2_dsse_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -76,7 +76,7 @@ func (x *DSSERequestV002) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DSSERequestV002.ProtoReflect.Descriptor instead.
 func (*DSSERequestV002) Descriptor() ([]byte, []int) {
-	return file_dsse_proto_rawDescGZIP(), []int{0}
+	return file_rekor_v2_dsse_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *DSSERequestV002) GetEnvelope() *dsse.Envelope {
@@ -105,7 +105,7 @@ type DSSELogEntryV002 struct {
 
 func (x *DSSELogEntryV002) Reset() {
 	*x = DSSELogEntryV002{}
-	mi := &file_dsse_proto_msgTypes[1]
+	mi := &file_rekor_v2_dsse_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -117,7 +117,7 @@ func (x *DSSELogEntryV002) String() string {
 func (*DSSELogEntryV002) ProtoMessage() {}
 
 func (x *DSSELogEntryV002) ProtoReflect() protoreflect.Message {
-	mi := &file_dsse_proto_msgTypes[1]
+	mi := &file_rekor_v2_dsse_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -130,7 +130,7 @@ func (x *DSSELogEntryV002) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DSSELogEntryV002.ProtoReflect.Descriptor instead.
 func (*DSSELogEntryV002) Descriptor() ([]byte, []int) {
-	return file_dsse_proto_rawDescGZIP(), []int{1}
+	return file_rekor_v2_dsse_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *DSSELogEntryV002) GetPayloadHash() *v1.HashOutput {
@@ -147,12 +147,11 @@ func (x *DSSELogEntryV002) GetSignatures() []*Signature {
 	return nil
 }
 
-var File_dsse_proto protoreflect.FileDescriptor
+var File_rekor_v2_dsse_proto protoreflect.FileDescriptor
 
-const file_dsse_proto_rawDesc = "" +
+const file_rekor_v2_dsse_proto_rawDesc = "" +
 	"\n" +
-	"\n" +
-	"dsse.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\x1a\x0eenvelope.proto\x1a\x0everifier.proto\"\x8b\x01\n" +
+	"\x13rekor/v2/dsse.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\x1a\x0eenvelope.proto\x1a\x17rekor/v2/verifier.proto\"\x8b\x01\n" +
 	"\x0fDSSERequestV002\x124\n" +
 	"\benvelope\x18\x01 \x01(\v2\x13.io.intoto.EnvelopeB\x03\xe0A\x02R\benvelope\x12B\n" +
 	"\tverifiers\x18\x02 \x03(\v2\x1f.dev.sigstore.rekor.v2.VerifierB\x03\xe0A\x02R\tverifiers\"\xa4\x01\n" +
@@ -160,22 +159,23 @@ const file_dsse_proto_rawDesc = "" +
 	"\vpayloadHash\x18\x01 \x01(\v2\".dev.sigstore.common.v1.HashOutputB\x03\xe0A\x02R\vpayloadHash\x12E\n" +
 	"\n" +
 	"signatures\x18\x02 \x03(\v2 .dev.sigstore.rekor.v2.SignatureB\x03\xe0A\x02R\n" +
-	"signaturesB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
+	"signaturesBz\n" +
+	"\x1bdev.sigstore.proto.rekor.v2B\vRekorV2DsseP\x01Z6github.com/sigstore/rekor-tiles/pkg/generated/protobuf\xea\x02\x13Sigstore::Rekor::V2b\x06proto3"
 
 var (
-	file_dsse_proto_rawDescOnce sync.Once
-	file_dsse_proto_rawDescData []byte
+	file_rekor_v2_dsse_proto_rawDescOnce sync.Once
+	file_rekor_v2_dsse_proto_rawDescData []byte
 )
 
-func file_dsse_proto_rawDescGZIP() []byte {
-	file_dsse_proto_rawDescOnce.Do(func() {
-		file_dsse_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_dsse_proto_rawDesc), len(file_dsse_proto_rawDesc)))
+func file_rekor_v2_dsse_proto_rawDescGZIP() []byte {
+	file_rekor_v2_dsse_proto_rawDescOnce.Do(func() {
+		file_rekor_v2_dsse_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_rekor_v2_dsse_proto_rawDesc), len(file_rekor_v2_dsse_proto_rawDesc)))
 	})
-	return file_dsse_proto_rawDescData
+	return file_rekor_v2_dsse_proto_rawDescData
 }
 
-var file_dsse_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_dsse_proto_goTypes = []any{
+var file_rekor_v2_dsse_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_rekor_v2_dsse_proto_goTypes = []any{
 	(*DSSERequestV002)(nil),  // 0: dev.sigstore.rekor.v2.DSSERequestV002
 	(*DSSELogEntryV002)(nil), // 1: dev.sigstore.rekor.v2.DSSELogEntryV002
 	(*dsse.Envelope)(nil),    // 2: io.intoto.Envelope
@@ -183,7 +183,7 @@ var file_dsse_proto_goTypes = []any{
 	(*v1.HashOutput)(nil),    // 4: dev.sigstore.common.v1.HashOutput
 	(*Signature)(nil),        // 5: dev.sigstore.rekor.v2.Signature
 }
-var file_dsse_proto_depIdxs = []int32{
+var file_rekor_v2_dsse_proto_depIdxs = []int32{
 	2, // 0: dev.sigstore.rekor.v2.DSSERequestV002.envelope:type_name -> io.intoto.Envelope
 	3, // 1: dev.sigstore.rekor.v2.DSSERequestV002.verifiers:type_name -> dev.sigstore.rekor.v2.Verifier
 	4, // 2: dev.sigstore.rekor.v2.DSSELogEntryV002.payloadHash:type_name -> dev.sigstore.common.v1.HashOutput
@@ -195,27 +195,27 @@ var file_dsse_proto_depIdxs = []int32{
 	0, // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_dsse_proto_init() }
-func file_dsse_proto_init() {
-	if File_dsse_proto != nil {
+func init() { file_rekor_v2_dsse_proto_init() }
+func file_rekor_v2_dsse_proto_init() {
+	if File_rekor_v2_dsse_proto != nil {
 		return
 	}
-	file_verifier_proto_init()
+	file_rekor_v2_verifier_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_dsse_proto_rawDesc), len(file_dsse_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rekor_v2_dsse_proto_rawDesc), len(file_rekor_v2_dsse_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_dsse_proto_goTypes,
-		DependencyIndexes: file_dsse_proto_depIdxs,
-		MessageInfos:      file_dsse_proto_msgTypes,
+		GoTypes:           file_rekor_v2_dsse_proto_goTypes,
+		DependencyIndexes: file_rekor_v2_dsse_proto_depIdxs,
+		MessageInfos:      file_rekor_v2_dsse_proto_msgTypes,
 	}.Build()
-	File_dsse_proto = out.File
-	file_dsse_proto_goTypes = nil
-	file_dsse_proto_depIdxs = nil
+	File_rekor_v2_dsse_proto = out.File
+	file_rekor_v2_dsse_proto_goTypes = nil
+	file_rekor_v2_dsse_proto_depIdxs = nil
 }

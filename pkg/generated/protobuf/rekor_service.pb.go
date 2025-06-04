@@ -16,7 +16,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: rekor_service.proto
+// source: rekor/v2/rekor_service.proto
 
 package protobuf
 
@@ -53,7 +53,7 @@ type CreateEntryRequest struct {
 
 func (x *CreateEntryRequest) Reset() {
 	*x = CreateEntryRequest{}
-	mi := &file_rekor_service_proto_msgTypes[0]
+	mi := &file_rekor_v2_rekor_service_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -65,7 +65,7 @@ func (x *CreateEntryRequest) String() string {
 func (*CreateEntryRequest) ProtoMessage() {}
 
 func (x *CreateEntryRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rekor_service_proto_msgTypes[0]
+	mi := &file_rekor_v2_rekor_service_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -78,7 +78,7 @@ func (x *CreateEntryRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateEntryRequest.ProtoReflect.Descriptor instead.
 func (*CreateEntryRequest) Descriptor() ([]byte, []int) {
-	return file_rekor_service_proto_rawDescGZIP(), []int{0}
+	return file_rekor_v2_rekor_service_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *CreateEntryRequest) GetSpec() isCreateEntryRequest_Spec {
@@ -135,7 +135,7 @@ type TileRequest struct {
 
 func (x *TileRequest) Reset() {
 	*x = TileRequest{}
-	mi := &file_rekor_service_proto_msgTypes[1]
+	mi := &file_rekor_v2_rekor_service_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -147,7 +147,7 @@ func (x *TileRequest) String() string {
 func (*TileRequest) ProtoMessage() {}
 
 func (x *TileRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rekor_service_proto_msgTypes[1]
+	mi := &file_rekor_v2_rekor_service_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -160,7 +160,7 @@ func (x *TileRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TileRequest.ProtoReflect.Descriptor instead.
 func (*TileRequest) Descriptor() ([]byte, []int) {
-	return file_rekor_service_proto_rawDescGZIP(), []int{1}
+	return file_rekor_v2_rekor_service_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *TileRequest) GetL() uint32 {
@@ -189,7 +189,7 @@ type EntryBundleRequest struct {
 
 func (x *EntryBundleRequest) Reset() {
 	*x = EntryBundleRequest{}
-	mi := &file_rekor_service_proto_msgTypes[2]
+	mi := &file_rekor_v2_rekor_service_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -201,7 +201,7 @@ func (x *EntryBundleRequest) String() string {
 func (*EntryBundleRequest) ProtoMessage() {}
 
 func (x *EntryBundleRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_rekor_service_proto_msgTypes[2]
+	mi := &file_rekor_v2_rekor_service_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -214,7 +214,7 @@ func (x *EntryBundleRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntryBundleRequest.ProtoReflect.Descriptor instead.
 func (*EntryBundleRequest) Descriptor() ([]byte, []int) {
-	return file_rekor_service_proto_rawDescGZIP(), []int{2}
+	return file_rekor_v2_rekor_service_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *EntryBundleRequest) GetN() string {
@@ -224,12 +224,11 @@ func (x *EntryBundleRequest) GetN() string {
 	return ""
 }
 
-var File_rekor_service_proto protoreflect.FileDescriptor
+var File_rekor_v2_rekor_service_proto protoreflect.FileDescriptor
 
-const file_rekor_service_proto_rawDesc = "" +
+const file_rekor_v2_rekor_service_proto_rawDesc = "" +
 	"\n" +
-	"\x13rekor_service.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/httpbody.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x14sigstore_rekor.proto\x1a\x12hashedrekord.proto\x1a\n" +
-	"dsse.proto\"\xeb\x01\n" +
+	"\x1crekor/v2/rekor_service.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x19google/api/httpbody.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x14sigstore_rekor.proto\x1a\x1brekor/v2/hashedrekord.proto\x1a\x13rekor/v2/dsse.proto\"\xeb\x01\n" +
 	"\x12CreateEntryRequest\x12r\n" +
 	"\x1ahashed_rekord_request_v002\x18\x01 \x01(\v2..dev.sigstore.rekor.v2.HashedRekordRequestV002B\x03\xe0A\x02H\x00R\x17hashedRekordRequestV002\x12Y\n" +
 	"\x11dsse_request_v002\x18\x02 \x01(\v2&.dev.sigstore.rekor.v2.DSSERequestV002B\x03\xe0A\x02H\x00R\x0fdsseRequestV002B\x06\n" +
@@ -243,22 +242,23 @@ const file_rekor_service_proto_rawDesc = "" +
 	"\vCreateEntry\x12).dev.sigstore.rekor.v2.CreateEntryRequest\x1a+.dev.sigstore.rekor.v1.TransparencyLogEntry\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*\"\x13/api/v2/log/entries\x12d\n" +
 	"\aGetTile\x12\".dev.sigstore.rekor.v2.TileRequest\x1a\x14.google.api.HttpBody\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/v2/tile/{L}/{N=**}\x12v\n" +
 	"\x0eGetEntryBundle\x12).dev.sigstore.rekor.v2.EntryBundleRequest\x1a\x14.google.api.HttpBody\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/v2/tile/entries/{N=**}\x12Y\n" +
-	"\rGetCheckpoint\x12\x16.google.protobuf.Empty\x1a\x14.google.api.HttpBody\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/v2/checkpointB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
+	"\rGetCheckpoint\x12\x16.google.protobuf.Empty\x1a\x14.google.api.HttpBody\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/v2/checkpointB}\n" +
+	"\x1bdev.sigstore.proto.rekor.v2B\x0eRekorV2ServiceP\x01Z6github.com/sigstore/rekor-tiles/pkg/generated/protobuf\xea\x02\x13Sigstore::Rekor::V2b\x06proto3"
 
 var (
-	file_rekor_service_proto_rawDescOnce sync.Once
-	file_rekor_service_proto_rawDescData []byte
+	file_rekor_v2_rekor_service_proto_rawDescOnce sync.Once
+	file_rekor_v2_rekor_service_proto_rawDescData []byte
 )
 
-func file_rekor_service_proto_rawDescGZIP() []byte {
-	file_rekor_service_proto_rawDescOnce.Do(func() {
-		file_rekor_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_rekor_service_proto_rawDesc), len(file_rekor_service_proto_rawDesc)))
+func file_rekor_v2_rekor_service_proto_rawDescGZIP() []byte {
+	file_rekor_v2_rekor_service_proto_rawDescOnce.Do(func() {
+		file_rekor_v2_rekor_service_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_rekor_v2_rekor_service_proto_rawDesc), len(file_rekor_v2_rekor_service_proto_rawDesc)))
 	})
-	return file_rekor_service_proto_rawDescData
+	return file_rekor_v2_rekor_service_proto_rawDescData
 }
 
-var file_rekor_service_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_rekor_service_proto_goTypes = []any{
+var file_rekor_v2_rekor_service_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_rekor_v2_rekor_service_proto_goTypes = []any{
 	(*CreateEntryRequest)(nil),      // 0: dev.sigstore.rekor.v2.CreateEntryRequest
 	(*TileRequest)(nil),             // 1: dev.sigstore.rekor.v2.TileRequest
 	(*EntryBundleRequest)(nil),      // 2: dev.sigstore.rekor.v2.EntryBundleRequest
@@ -268,7 +268,7 @@ var file_rekor_service_proto_goTypes = []any{
 	(*v1.TransparencyLogEntry)(nil), // 6: dev.sigstore.rekor.v1.TransparencyLogEntry
 	(*httpbody.HttpBody)(nil),       // 7: google.api.HttpBody
 }
-var file_rekor_service_proto_depIdxs = []int32{
+var file_rekor_v2_rekor_service_proto_depIdxs = []int32{
 	3, // 0: dev.sigstore.rekor.v2.CreateEntryRequest.hashed_rekord_request_v002:type_name -> dev.sigstore.rekor.v2.HashedRekordRequestV002
 	4, // 1: dev.sigstore.rekor.v2.CreateEntryRequest.dsse_request_v002:type_name -> dev.sigstore.rekor.v2.DSSERequestV002
 	0, // 2: dev.sigstore.rekor.v2.Rekor.CreateEntry:input_type -> dev.sigstore.rekor.v2.CreateEntryRequest
@@ -286,14 +286,14 @@ var file_rekor_service_proto_depIdxs = []int32{
 	0, // [0:2] is the sub-list for field type_name
 }
 
-func init() { file_rekor_service_proto_init() }
-func file_rekor_service_proto_init() {
-	if File_rekor_service_proto != nil {
+func init() { file_rekor_v2_rekor_service_proto_init() }
+func file_rekor_v2_rekor_service_proto_init() {
+	if File_rekor_v2_rekor_service_proto != nil {
 		return
 	}
-	file_hashedrekord_proto_init()
-	file_dsse_proto_init()
-	file_rekor_service_proto_msgTypes[0].OneofWrappers = []any{
+	file_rekor_v2_hashedrekord_proto_init()
+	file_rekor_v2_dsse_proto_init()
+	file_rekor_v2_rekor_service_proto_msgTypes[0].OneofWrappers = []any{
 		(*CreateEntryRequest_HashedRekordRequestV002)(nil),
 		(*CreateEntryRequest_DsseRequestV002)(nil),
 	}
@@ -301,17 +301,17 @@ func file_rekor_service_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rekor_service_proto_rawDesc), len(file_rekor_service_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rekor_v2_rekor_service_proto_rawDesc), len(file_rekor_v2_rekor_service_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
-		GoTypes:           file_rekor_service_proto_goTypes,
-		DependencyIndexes: file_rekor_service_proto_depIdxs,
-		MessageInfos:      file_rekor_service_proto_msgTypes,
+		GoTypes:           file_rekor_v2_rekor_service_proto_goTypes,
+		DependencyIndexes: file_rekor_v2_rekor_service_proto_depIdxs,
+		MessageInfos:      file_rekor_v2_rekor_service_proto_msgTypes,
 	}.Build()
-	File_rekor_service_proto = out.File
-	file_rekor_service_proto_goTypes = nil
-	file_rekor_service_proto_depIdxs = nil
+	File_rekor_v2_rekor_service_proto = out.File
+	file_rekor_v2_rekor_service_proto_goTypes = nil
+	file_rekor_v2_rekor_service_proto_depIdxs = nil
 }

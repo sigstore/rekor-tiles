@@ -17,10 +17,15 @@ package dev.sigstore.rekor.v2;
 
 import "google/api/field_behavior.proto";
 
-import "dsse.proto";
-import "hashedrekord.proto";
+import "rekor/v2/dsse.proto";
+import "rekor/v2/hashedrekord.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
+
+option java_package = "dev.sigstore.proto.rekor.v2";
+option java_multiple_files = true;
+option java_outer_classname = "RekorV2Entry";
+option ruby_package = "Sigstore::Rekor::V2";
 
 // Entry is the message that is canonicalized and uploaded to the log.
 // This format is meant to be compliant with Rekor v1 entries in that

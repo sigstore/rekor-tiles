@@ -19,9 +19,14 @@ import "google/api/field_behavior.proto";
 import "sigstore_common.proto";
 import "envelope.proto";
 
-import "verifier.proto";
+import "rekor/v2/verifier.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
+
+option java_package = "dev.sigstore.proto.rekor.v2";
+option java_multiple_files = true;
+option java_outer_classname = "RekorV2Dsse";
+option ruby_package = "Sigstore::Rekor::V2";
 
 // A request to add a DSSE v0.0.2 entry to the log
 message DSSERequestV002 {

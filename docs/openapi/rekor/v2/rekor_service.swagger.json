@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "rekor_service.proto",
+    "title": "rekor/v2/rekor_service.proto",
     "version": "version not set"
   },
   "tags": [

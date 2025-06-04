@@ -16,7 +16,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: hashedrekord.proto
+// source: rekor/v2/hashedrekord.proto
 
 package protobuf
 
@@ -50,7 +50,7 @@ type HashedRekordRequestV002 struct {
 
 func (x *HashedRekordRequestV002) Reset() {
 	*x = HashedRekordRequestV002{}
-	mi := &file_hashedrekord_proto_msgTypes[0]
+	mi := &file_rekor_v2_hashedrekord_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -62,7 +62,7 @@ func (x *HashedRekordRequestV002) String() string {
 func (*HashedRekordRequestV002) ProtoMessage() {}
 
 func (x *HashedRekordRequestV002) ProtoReflect() protoreflect.Message {
-	mi := &file_hashedrekord_proto_msgTypes[0]
+	mi := &file_rekor_v2_hashedrekord_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -75,7 +75,7 @@ func (x *HashedRekordRequestV002) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HashedRekordRequestV002.ProtoReflect.Descriptor instead.
 func (*HashedRekordRequestV002) Descriptor() ([]byte, []int) {
-	return file_hashedrekord_proto_rawDescGZIP(), []int{0}
+	return file_rekor_v2_hashedrekord_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *HashedRekordRequestV002) GetDigest() []byte {
@@ -104,7 +104,7 @@ type HashedRekordLogEntryV002 struct {
 
 func (x *HashedRekordLogEntryV002) Reset() {
 	*x = HashedRekordLogEntryV002{}
-	mi := &file_hashedrekord_proto_msgTypes[1]
+	mi := &file_rekor_v2_hashedrekord_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -116,7 +116,7 @@ func (x *HashedRekordLogEntryV002) String() string {
 func (*HashedRekordLogEntryV002) ProtoMessage() {}
 
 func (x *HashedRekordLogEntryV002) ProtoReflect() protoreflect.Message {
-	mi := &file_hashedrekord_proto_msgTypes[1]
+	mi := &file_rekor_v2_hashedrekord_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -129,7 +129,7 @@ func (x *HashedRekordLogEntryV002) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use HashedRekordLogEntryV002.ProtoReflect.Descriptor instead.
 func (*HashedRekordLogEntryV002) Descriptor() ([]byte, []int) {
-	return file_hashedrekord_proto_rawDescGZIP(), []int{1}
+	return file_rekor_v2_hashedrekord_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *HashedRekordLogEntryV002) GetData() *v1.HashOutput {
@@ -146,38 +146,39 @@ func (x *HashedRekordLogEntryV002) GetSignature() *Signature {
 	return nil
 }
 
-var File_hashedrekord_proto protoreflect.FileDescriptor
+var File_rekor_v2_hashedrekord_proto protoreflect.FileDescriptor
 
-const file_hashedrekord_proto_rawDesc = "" +
+const file_rekor_v2_hashedrekord_proto_rawDesc = "" +
 	"\n" +
-	"\x12hashedrekord.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\x1a\x0everifier.proto\"{\n" +
+	"\x1brekor/v2/hashedrekord.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\x1a\x17rekor/v2/verifier.proto\"{\n" +
 	"\x17HashedRekordRequestV002\x12\x1b\n" +
 	"\x06digest\x18\x01 \x01(\fB\x03\xe0A\x02R\x06digest\x12C\n" +
 	"\tsignature\x18\x02 \x01(\v2 .dev.sigstore.rekor.v2.SignatureB\x03\xe0A\x02R\tsignature\"\x9c\x01\n" +
 	"\x18HashedRekordLogEntryV002\x12;\n" +
 	"\x04data\x18\x01 \x01(\v2\".dev.sigstore.common.v1.HashOutputB\x03\xe0A\x02R\x04data\x12C\n" +
-	"\tsignature\x18\x02 \x01(\v2 .dev.sigstore.rekor.v2.SignatureB\x03\xe0A\x02R\tsignatureB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
+	"\tsignature\x18\x02 \x01(\v2 .dev.sigstore.rekor.v2.SignatureB\x03\xe0A\x02R\tsignatureB\x82\x01\n" +
+	"\x1bdev.sigstore.proto.rekor.v2B\x13RekorV2HashedRekordP\x01Z6github.com/sigstore/rekor-tiles/pkg/generated/protobuf\xea\x02\x13Sigstore::Rekor::V2b\x06proto3"
 
 var (
-	file_hashedrekord_proto_rawDescOnce sync.Once
-	file_hashedrekord_proto_rawDescData []byte
+	file_rekor_v2_hashedrekord_proto_rawDescOnce sync.Once
+	file_rekor_v2_hashedrekord_proto_rawDescData []byte
 )
 
-func file_hashedrekord_proto_rawDescGZIP() []byte {
-	file_hashedrekord_proto_rawDescOnce.Do(func() {
-		file_hashedrekord_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_hashedrekord_proto_rawDesc), len(file_hashedrekord_proto_rawDesc)))
+func file_rekor_v2_hashedrekord_proto_rawDescGZIP() []byte {
+	file_rekor_v2_hashedrekord_proto_rawDescOnce.Do(func() {
+		file_rekor_v2_hashedrekord_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_rekor_v2_hashedrekord_proto_rawDesc), len(file_rekor_v2_hashedrekord_proto_rawDesc)))
 	})
-	return file_hashedrekord_proto_rawDescData
+	return file_rekor_v2_hashedrekord_proto_rawDescData
 }
 
-var file_hashedrekord_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_hashedrekord_proto_goTypes = []any{
+var file_rekor_v2_hashedrekord_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_rekor_v2_hashedrekord_proto_goTypes = []any{
 	(*HashedRekordRequestV002)(nil),  // 0: dev.sigstore.rekor.v2.HashedRekordRequestV002
 	(*HashedRekordLogEntryV002)(nil), // 1: dev.sigstore.rekor.v2.HashedRekordLogEntryV002
 	(*Signature)(nil),                // 2: dev.sigstore.rekor.v2.Signature
 	(*v1.HashOutput)(nil),            // 3: dev.sigstore.common.v1.HashOutput
 }
-var file_hashedrekord_proto_depIdxs = []int32{
+var file_rekor_v2_hashedrekord_proto_depIdxs = []int32{
 	2, // 0: dev.sigstore.rekor.v2.HashedRekordRequestV002.signature:type_name -> dev.sigstore.rekor.v2.Signature
 	3, // 1: dev.sigstore.rekor.v2.HashedRekordLogEntryV002.data:type_name -> dev.sigstore.common.v1.HashOutput
 	2, // 2: dev.sigstore.rekor.v2.HashedRekordLogEntryV002.signature:type_name -> dev.sigstore.rekor.v2.Signature
@@ -188,27 +189,27 @@ var file_hashedrekord_proto_depIdxs = []int32{
 	0, // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_hashedrekord_proto_init() }
-func file_hashedrekord_proto_init() {
-	if File_hashedrekord_proto != nil {
+func init() { file_rekor_v2_hashedrekord_proto_init() }
+func file_rekor_v2_hashedrekord_proto_init() {
+	if File_rekor_v2_hashedrekord_proto != nil {
 		return
 	}
-	file_verifier_proto_init()
+	file_rekor_v2_verifier_proto_init()
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_hashedrekord_proto_rawDesc), len(file_hashedrekord_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rekor_v2_hashedrekord_proto_rawDesc), len(file_rekor_v2_hashedrekord_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_hashedrekord_proto_goTypes,
-		DependencyIndexes: file_hashedrekord_proto_depIdxs,
-		MessageInfos:      file_hashedrekord_proto_msgTypes,
+		GoTypes:           file_rekor_v2_hashedrekord_proto_goTypes,
+		DependencyIndexes: file_rekor_v2_hashedrekord_proto_depIdxs,
+		MessageInfos:      file_rekor_v2_hashedrekord_proto_msgTypes,
 	}.Build()
-	File_hashedrekord_proto = out.File
-	file_hashedrekord_proto_goTypes = nil
-	file_hashedrekord_proto_depIdxs = nil
+	File_rekor_v2_hashedrekord_proto = out.File
+	file_rekor_v2_hashedrekord_proto_goTypes = nil
+	file_rekor_v2_hashedrekord_proto_depIdxs = nil
 }
