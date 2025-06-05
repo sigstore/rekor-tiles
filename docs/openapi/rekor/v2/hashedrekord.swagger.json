@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "dsse.proto",
+    "title": "rekor/v2/hashedrekord.proto",
     "version": "version not set"
   },
   "consumes": [

@@ -16,7 +16,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: verifier.proto
+// source: rekor/v2/verifier.proto
 
 package protobuf
 
@@ -48,7 +48,7 @@ type PublicKey struct {
 
 func (x *PublicKey) Reset() {
 	*x = PublicKey{}
-	mi := &file_verifier_proto_msgTypes[0]
+	mi := &file_rekor_v2_verifier_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -60,7 +60,7 @@ func (x *PublicKey) String() string {
 func (*PublicKey) ProtoMessage() {}
 
 func (x *PublicKey) ProtoReflect() protoreflect.Message {
-	mi := &file_verifier_proto_msgTypes[0]
+	mi := &file_rekor_v2_verifier_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -73,7 +73,7 @@ func (x *PublicKey) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PublicKey.ProtoReflect.Descriptor instead.
 func (*PublicKey) Descriptor() ([]byte, []int) {
-	return file_verifier_proto_rawDescGZIP(), []int{0}
+	return file_rekor_v2_verifier_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *PublicKey) GetRawBytes() []byte {
@@ -99,7 +99,7 @@ type Verifier struct {
 
 func (x *Verifier) Reset() {
 	*x = Verifier{}
-	mi := &file_verifier_proto_msgTypes[1]
+	mi := &file_rekor_v2_verifier_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -111,7 +111,7 @@ func (x *Verifier) String() string {
 func (*Verifier) ProtoMessage() {}
 
 func (x *Verifier) ProtoReflect() protoreflect.Message {
-	mi := &file_verifier_proto_msgTypes[1]
+	mi := &file_rekor_v2_verifier_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -124,7 +124,7 @@ func (x *Verifier) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Verifier.ProtoReflect.Descriptor instead.
 func (*Verifier) Descriptor() ([]byte, []int) {
-	return file_verifier_proto_rawDescGZIP(), []int{1}
+	return file_rekor_v2_verifier_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Verifier) GetVerifier() isVerifier_Verifier {
@@ -188,7 +188,7 @@ type Signature struct {
 
 func (x *Signature) Reset() {
 	*x = Signature{}
-	mi := &file_verifier_proto_msgTypes[2]
+	mi := &file_rekor_v2_verifier_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -200,7 +200,7 @@ func (x *Signature) String() string {
 func (*Signature) ProtoMessage() {}
 
 func (x *Signature) ProtoReflect() protoreflect.Message {
-	mi := &file_verifier_proto_msgTypes[2]
+	mi := &file_rekor_v2_verifier_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -213,7 +213,7 @@ func (x *Signature) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Signature.ProtoReflect.Descriptor instead.
 func (*Signature) Descriptor() ([]byte, []int) {
-	return file_verifier_proto_rawDescGZIP(), []int{2}
+	return file_rekor_v2_verifier_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Signature) GetContent() []byte {
@@ -230,11 +230,11 @@ func (x *Signature) GetVerifier() *Verifier {
 	return nil
 }
 
-var File_verifier_proto protoreflect.FileDescriptor
+var File_rekor_v2_verifier_proto protoreflect.FileDescriptor
 
-const file_verifier_proto_rawDesc = "" +
+const file_rekor_v2_verifier_proto_rawDesc = "" +
 	"\n" +
-	"\x0everifier.proto\x12\x15dev.sigstore.rekor.v2\x1a\x15sigstore_common.proto\x1a\x1fgoogle/api/field_behavior.proto\"-\n" +
+	"\x17rekor/v2/verifier.proto\x12\x15dev.sigstore.rekor.v2\x1a\x15sigstore_common.proto\x1a\x1fgoogle/api/field_behavior.proto\"-\n" +
 	"\tPublicKey\x12 \n" +
 	"\traw_bytes\x18\x01 \x01(\fB\x03\xe0A\x02R\brawBytes\"\x89\x02\n" +
 	"\bVerifier\x12F\n" +
@@ -247,29 +247,30 @@ const file_verifier_proto_rawDesc = "" +
 	"\bverifier\"l\n" +
 	"\tSignature\x12\x1d\n" +
 	"\acontent\x18\x01 \x01(\fB\x03\xe0A\x02R\acontent\x12@\n" +
-	"\bverifier\x18\x02 \x01(\v2\x1f.dev.sigstore.rekor.v2.VerifierB\x03\xe0A\x02R\bverifierB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
+	"\bverifier\x18\x02 \x01(\v2\x1f.dev.sigstore.rekor.v2.VerifierB\x03\xe0A\x02R\bverifierB~\n" +
+	"\x1bdev.sigstore.proto.rekor.v2B\x0fRekorV2VerifierP\x01Z6github.com/sigstore/rekor-tiles/pkg/generated/protobuf\xea\x02\x13Sigstore::Rekor::V2b\x06proto3"
 
 var (
-	file_verifier_proto_rawDescOnce sync.Once
-	file_verifier_proto_rawDescData []byte
+	file_rekor_v2_verifier_proto_rawDescOnce sync.Once
+	file_rekor_v2_verifier_proto_rawDescData []byte
 )
 
-func file_verifier_proto_rawDescGZIP() []byte {
-	file_verifier_proto_rawDescOnce.Do(func() {
-		file_verifier_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_verifier_proto_rawDesc), len(file_verifier_proto_rawDesc)))
+func file_rekor_v2_verifier_proto_rawDescGZIP() []byte {
+	file_rekor_v2_verifier_proto_rawDescOnce.Do(func() {
+		file_rekor_v2_verifier_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_rekor_v2_verifier_proto_rawDesc), len(file_rekor_v2_verifier_proto_rawDesc)))
 	})
-	return file_verifier_proto_rawDescData
+	return file_rekor_v2_verifier_proto_rawDescData
 }
 
-var file_verifier_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
-var file_verifier_proto_goTypes = []any{
+var file_rekor_v2_verifier_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_rekor_v2_verifier_proto_goTypes = []any{
 	(*PublicKey)(nil),          // 0: dev.sigstore.rekor.v2.PublicKey
 	(*Verifier)(nil),           // 1: dev.sigstore.rekor.v2.Verifier
 	(*Signature)(nil),          // 2: dev.sigstore.rekor.v2.Signature
 	(*v1.X509Certificate)(nil), // 3: dev.sigstore.common.v1.X509Certificate
 	(v1.PublicKeyDetails)(0),   // 4: dev.sigstore.common.v1.PublicKeyDetails
 }
-var file_verifier_proto_depIdxs = []int32{
+var file_rekor_v2_verifier_proto_depIdxs = []int32{
 	0, // 0: dev.sigstore.rekor.v2.Verifier.public_key:type_name -> dev.sigstore.rekor.v2.PublicKey
 	3, // 1: dev.sigstore.rekor.v2.Verifier.x509_certificate:type_name -> dev.sigstore.common.v1.X509Certificate
 	4, // 2: dev.sigstore.rekor.v2.Verifier.key_details:type_name -> dev.sigstore.common.v1.PublicKeyDetails
@@ -281,12 +282,12 @@ var file_verifier_proto_depIdxs = []int32{
 	0, // [0:4] is the sub-list for field type_name
 }
 
-func init() { file_verifier_proto_init() }
-func file_verifier_proto_init() {
-	if File_verifier_proto != nil {
+func init() { file_rekor_v2_verifier_proto_init() }
+func file_rekor_v2_verifier_proto_init() {
+	if File_rekor_v2_verifier_proto != nil {
 		return
 	}
-	file_verifier_proto_msgTypes[1].OneofWrappers = []any{
+	file_rekor_v2_verifier_proto_msgTypes[1].OneofWrappers = []any{
 		(*Verifier_PublicKey)(nil),
 		(*Verifier_X509Certificate)(nil),
 	}
@@ -294,17 +295,17 @@ func file_verifier_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_verifier_proto_rawDesc), len(file_verifier_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rekor_v2_verifier_proto_rawDesc), len(file_rekor_v2_verifier_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_verifier_proto_goTypes,
-		DependencyIndexes: file_verifier_proto_depIdxs,
-		MessageInfos:      file_verifier_proto_msgTypes,
+		GoTypes:           file_rekor_v2_verifier_proto_goTypes,
+		DependencyIndexes: file_rekor_v2_verifier_proto_depIdxs,
+		MessageInfos:      file_rekor_v2_verifier_proto_msgTypes,
 	}.Build()
-	File_verifier_proto = out.File
-	file_verifier_proto_goTypes = nil
-	file_verifier_proto_depIdxs = nil
+	File_rekor_v2_verifier_proto = out.File
+	file_rekor_v2_verifier_proto_goTypes = nil
+	file_rekor_v2_verifier_proto_depIdxs = nil
 }

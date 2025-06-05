@@ -20,10 +20,16 @@ import "google/api/field_behavior.proto";
 import "google/api/httpbody.proto";
 import "google/protobuf/empty.proto";
 import "sigstore_rekor.proto";
-import "hashedrekord.proto";
-import "dsse.proto";
+
+import "rekor/v2/hashedrekord.proto";
+import "rekor/v2/dsse.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
+
+option java_package = "dev.sigstore.proto.rekor.v2";
+option java_multiple_files = true;
+option java_outer_classname = "RekorV2Service";
+option ruby_package = "Sigstore::Rekor::V2";
 
 // A service for sigstore clients to connect to to create log entries
 // and for log monitors and witnesses to audit/inspect the log

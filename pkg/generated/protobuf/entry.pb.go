@@ -16,7 +16,7 @@
 // versions:
 // 	protoc-gen-go v1.36.6
 // 	protoc        v5.29.3
-// source: entry.proto
+// source: rekor/v2/entry.proto
 
 package protobuf
 
@@ -53,7 +53,7 @@ type Entry struct {
 
 func (x *Entry) Reset() {
 	*x = Entry{}
-	mi := &file_entry_proto_msgTypes[0]
+	mi := &file_rekor_v2_entry_proto_msgTypes[0]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -65,7 +65,7 @@ func (x *Entry) String() string {
 func (*Entry) ProtoMessage() {}
 
 func (x *Entry) ProtoReflect() protoreflect.Message {
-	mi := &file_entry_proto_msgTypes[0]
+	mi := &file_rekor_v2_entry_proto_msgTypes[0]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -78,7 +78,7 @@ func (x *Entry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Entry.ProtoReflect.Descriptor instead.
 func (*Entry) Descriptor() ([]byte, []int) {
-	return file_entry_proto_rawDescGZIP(), []int{0}
+	return file_rekor_v2_entry_proto_rawDescGZIP(), []int{0}
 }
 
 func (x *Entry) GetKind() string {
@@ -116,7 +116,7 @@ type Spec struct {
 
 func (x *Spec) Reset() {
 	*x = Spec{}
-	mi := &file_entry_proto_msgTypes[1]
+	mi := &file_rekor_v2_entry_proto_msgTypes[1]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -128,7 +128,7 @@ func (x *Spec) String() string {
 func (*Spec) ProtoMessage() {}
 
 func (x *Spec) ProtoReflect() protoreflect.Message {
-	mi := &file_entry_proto_msgTypes[1]
+	mi := &file_rekor_v2_entry_proto_msgTypes[1]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -141,7 +141,7 @@ func (x *Spec) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Spec.ProtoReflect.Descriptor instead.
 func (*Spec) Descriptor() ([]byte, []int) {
-	return file_entry_proto_rawDescGZIP(), []int{1}
+	return file_rekor_v2_entry_proto_rawDescGZIP(), []int{1}
 }
 
 func (x *Spec) GetSpec() isSpec_Spec {
@@ -185,12 +185,11 @@ func (*Spec_HashedRekordV002) isSpec_Spec() {}
 
 func (*Spec_DsseV002) isSpec_Spec() {}
 
-var File_entry_proto protoreflect.FileDescriptor
+var File_rekor_v2_entry_proto protoreflect.FileDescriptor
 
-const file_entry_proto_rawDesc = "" +
+const file_rekor_v2_entry_proto_rawDesc = "" +
 	"\n" +
-	"\ventry.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\n" +
-	"dsse.proto\x1a\x12hashedrekord.proto\"|\n" +
+	"\x14rekor/v2/entry.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x13rekor/v2/dsse.proto\x1a\x1brekor/v2/hashedrekord.proto\"|\n" +
 	"\x05Entry\x12\x17\n" +
 	"\x04kind\x18\x01 \x01(\tB\x03\xe0A\x02R\x04kind\x12$\n" +
 	"\vapi_version\x18\x02 \x01(\tB\x03\xe0A\x02R\n" +
@@ -199,28 +198,29 @@ const file_entry_proto_rawDesc = "" +
 	"\x04Spec\x12d\n" +
 	"\x12hashed_rekord_v002\x18\x01 \x01(\v2/.dev.sigstore.rekor.v2.HashedRekordLogEntryV002B\x03\xe0A\x02H\x00R\x10hashedRekordV002\x12K\n" +
 	"\tdsse_v002\x18\x02 \x01(\v2'.dev.sigstore.rekor.v2.DSSELogEntryV002B\x03\xe0A\x02H\x00R\bdsseV002B\x06\n" +
-	"\x04specB8Z6github.com/sigstore/rekor-tiles/pkg/generated/protobufb\x06proto3"
+	"\x04specB{\n" +
+	"\x1bdev.sigstore.proto.rekor.v2B\fRekorV2EntryP\x01Z6github.com/sigstore/rekor-tiles/pkg/generated/protobuf\xea\x02\x13Sigstore::Rekor::V2b\x06proto3"
 
 var (
-	file_entry_proto_rawDescOnce sync.Once
-	file_entry_proto_rawDescData []byte
+	file_rekor_v2_entry_proto_rawDescOnce sync.Once
+	file_rekor_v2_entry_proto_rawDescData []byte
 )
 
-func file_entry_proto_rawDescGZIP() []byte {
-	file_entry_proto_rawDescOnce.Do(func() {
-		file_entry_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_entry_proto_rawDesc), len(file_entry_proto_rawDesc)))
+func file_rekor_v2_entry_proto_rawDescGZIP() []byte {
+	file_rekor_v2_entry_proto_rawDescOnce.Do(func() {
+		file_rekor_v2_entry_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_rekor_v2_entry_proto_rawDesc), len(file_rekor_v2_entry_proto_rawDesc)))
 	})
-	return file_entry_proto_rawDescData
+	return file_rekor_v2_entry_proto_rawDescData
 }
 
-var file_entry_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
-var file_entry_proto_goTypes = []any{
+var file_rekor_v2_entry_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_rekor_v2_entry_proto_goTypes = []any{
 	(*Entry)(nil),                    // 0: dev.sigstore.rekor.v2.Entry
 	(*Spec)(nil),                     // 1: dev.sigstore.rekor.v2.Spec
 	(*HashedRekordLogEntryV002)(nil), // 2: dev.sigstore.rekor.v2.HashedRekordLogEntryV002
 	(*DSSELogEntryV002)(nil),         // 3: dev.sigstore.rekor.v2.DSSELogEntryV002
 }
-var file_entry_proto_depIdxs = []int32{
+var file_rekor_v2_entry_proto_depIdxs = []int32{
 	1, // 0: dev.sigstore.rekor.v2.Entry.spec:type_name -> dev.sigstore.rekor.v2.Spec
 	2, // 1: dev.sigstore.rekor.v2.Spec.hashed_rekord_v002:type_name -> dev.sigstore.rekor.v2.HashedRekordLogEntryV002
 	3, // 2: dev.sigstore.rekor.v2.Spec.dsse_v002:type_name -> dev.sigstore.rekor.v2.DSSELogEntryV002
@@ -231,14 +231,14 @@ var file_entry_proto_depIdxs = []int32{
 	0, // [0:3] is the sub-list for field type_name
 }
 
-func init() { file_entry_proto_init() }
-func file_entry_proto_init() {
-	if File_entry_proto != nil {
+func init() { file_rekor_v2_entry_proto_init() }
+func file_rekor_v2_entry_proto_init() {
+	if File_rekor_v2_entry_proto != nil {
 		return
 	}
-	file_dsse_proto_init()
-	file_hashedrekord_proto_init()
-	file_entry_proto_msgTypes[1].OneofWrappers = []any{
+	file_rekor_v2_dsse_proto_init()
+	file_rekor_v2_hashedrekord_proto_init()
+	file_rekor_v2_entry_proto_msgTypes[1].OneofWrappers = []any{
 		(*Spec_HashedRekordV002)(nil),
 		(*Spec_DsseV002)(nil),
 	}
@@ -246,17 +246,17 @@ func file_entry_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_entry_proto_rawDesc), len(file_entry_proto_rawDesc)),
+			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rekor_v2_entry_proto_rawDesc), len(file_rekor_v2_entry_proto_rawDesc)),
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
-		GoTypes:           file_entry_proto_goTypes,
-		DependencyIndexes: file_entry_proto_depIdxs,
-		MessageInfos:      file_entry_proto_msgTypes,
+		GoTypes:           file_rekor_v2_entry_proto_goTypes,
+		DependencyIndexes: file_rekor_v2_entry_proto_depIdxs,
+		MessageInfos:      file_rekor_v2_entry_proto_msgTypes,
 	}.Build()
-	File_entry_proto = out.File
-	file_entry_proto_goTypes = nil
-	file_entry_proto_depIdxs = nil
+	File_rekor_v2_entry_proto = out.File
+	file_rekor_v2_entry_proto_goTypes = nil
+	file_rekor_v2_entry_proto_depIdxs = nil
 }

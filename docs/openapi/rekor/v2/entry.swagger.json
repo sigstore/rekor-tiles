@@ -1,7 +1,7 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "verifier.proto",
+    "title": "rekor/v2/entry.proto",
     "version": "version not set"
   },
   "consumes": [

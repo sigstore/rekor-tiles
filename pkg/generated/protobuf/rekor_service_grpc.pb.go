@@ -16,7 +16,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.5.1
 // - protoc             v5.29.3
-// source: rekor_service.proto
+// source: rekor/v2/rekor_service.proto
 
 package protobuf
 
@@ -262,5 +262,5 @@ var Rekor_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "rekor_service.proto",
+	Metadata: "rekor/v2/rekor_service.proto",
 }
