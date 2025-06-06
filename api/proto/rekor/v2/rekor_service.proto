@@ -16,13 +16,11 @@ syntax = "proto3";
 package dev.sigstore.rekor.v2;
 
 import "google/api/annotations.proto";
-import "google/api/field_behavior.proto";
 import "google/api/httpbody.proto";
 import "google/protobuf/empty.proto";
 import "sigstore_rekor.proto";
 
-import "rekor/v2/hashedrekord.proto";
-import "rekor/v2/dsse.proto";
+import "rekor/v2/entry.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
 
@@ -61,14 +59,6 @@ service Rekor {
         option (google.api.http) = {
             get: "/api/v2/checkpoint"
         };
-    }
-}
-
-// Create a new HashedRekord or DSSE
-message CreateEntryRequest {
-    oneof spec {
-        HashedRekordRequestV002 hashed_rekord_request_v002 = 1 [(google.api.field_behavior) = REQUIRED];
-        DSSERequestV002 dsse_request_v002 = 2 [(google.api.field_behavior) = REQUIRED];
     }
 }
 

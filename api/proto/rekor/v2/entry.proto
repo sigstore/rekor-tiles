@@ -46,3 +46,11 @@ message Spec {
         DSSELogEntryV002 dsse_v002  = 2 [(google.api.field_behavior) = REQUIRED];
     }
 }
+
+// Create a new HashedRekord or DSSE
+message CreateEntryRequest {
+    oneof spec {
+        HashedRekordRequestV002 hashed_rekord_request_v002 = 1 [(google.api.field_behavior) = REQUIRED];
+        DSSERequestV002 dsse_request_v002 = 2 [(google.api.field_behavior) = REQUIRED];
+    }
+}
