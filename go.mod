@@ -29,7 +29,7 @@ require (
 	github.com/transparency-dev/tessera v0.2.0
 	go.step.sm/crypto v0.66.0
 	golang.org/x/exp v0.0.0-20250408133849-7e4ce0ab07d0
-	golang.org/x/mod v0.24.0
+	golang.org/x/mod v0.25.0
 	golang.org/x/sync v0.15.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250519155744-55703ea1f237
 	google.golang.org/grpc v1.73.0
