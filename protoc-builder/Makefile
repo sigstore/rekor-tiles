@@ -16,7 +16,6 @@
 # TODO(#66): replace this whole build with https://github.com/sigstore/protobuf-specs/issues/542
 
 PROTOC_REKOR_IMAGE = protoc-rekor
-PROTOC_PYTHON_IMAGE = protoc-rekor-python
 
 PLATFORM ?= linux/amd64
 UID ?= $(shell id -u)
@@ -35,11 +34,8 @@ PROTOS = $(shell cd ..; find api/proto/ -iname "*.proto" | sed 's|^|/project_dir
 PROTO_OUT = pkg/generated/protobuf
 OPENAPI_OUT = docs/openapi
 MOUNT_POINT = /project_dir
-CLIENTS_OUT = clients
 
 all: protos
-
-clients: python
 
 # generate Go protobuf code
 protos: protoc-image
@@ -53,22 +49,6 @@ protos: protoc-image
 		--grpc-gateway_opt=module=${GO_MODULE} --grpc-gateway_opt=logtostderr=true --grpc-gateway_out=${MOUNT_POINT} \
 		--openapiv2_out=${MOUNT_POINT}/${OPENAPI_OUT} \
     ${PROTOS}
-
-python: Dockerfile.python protoc-python-image
-	@echo "Generating python protos"
-	@mkdir -p ${PROJECT_DIR}/${CLIENTS_OUT}/python
-	${DOCKER_RUN} -v ${PROJECT_DIR}:${MOUNT_POINT} ${PROTOC_PYTHON_IMAGE} \
-		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
-    --python_betterproto_opt=pydantic_dataclasses \
-	  --python_betterproto_out=${MOUNT_POINT}/${CLIENTS_OUT}/python \
-    ${PROTOS}
-
-.PHONY: protoc-python-image
-protoc-python-image: Dockerfile.python protoc-image
-	@echo "Generating python proto Docker image"
-	${DOCKER_BUILD} -t ${PROTOC_PYTHON_IMAGE} -f Dockerfile.python \
-    --build-arg PROTOC_BASE=${PROTOC_REKOR_IMAGE} \
-    .
 
 .PHONY: protoc-image
 protoc-image: Dockerfile
@@ -90,7 +70,6 @@ proto-no-cache:
 
 # clean up generated files
 clean:
-	docker rmi -f ${PROTOC_REKOR_IMAGE} ${PROTOC_PYTHON_IMAGE}
+	docker rmi -f ${PROTOC_REKOR_IMAGE}
 	rm -rf ${PROJECT_DIR}/docs/openapi/*
 	rm -rf ${PROJECT_DIR}/pkg/generated/protobuf/*
-	rm -rf ${PROJECT_DIR}/clients/*
