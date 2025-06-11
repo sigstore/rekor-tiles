@@ -83,7 +83,7 @@ func TestReadWrite(t *testing.T) {
 	}
 
 	// writer client
-	writer, err := write.NewWriter(defaultRekorURL, defaultRekorHostname, verifier)
+	writer, err := write.NewWriter(defaultRekorURL)
 	if err != nil {
 		t.Fatal(err)
 	}
