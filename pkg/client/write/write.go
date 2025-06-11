@@ -27,10 +27,6 @@ import (
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/pkg/client"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
-	rekornote "github.com/sigstore/rekor-tiles/pkg/note"
-	"github.com/sigstore/rekor-tiles/pkg/verify"
-	"github.com/sigstore/sigstore/pkg/signature"
-	"golang.org/x/mod/sumdb/note"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -44,14 +40,12 @@ type Client interface {
 }
 
 type writeClient struct {
-	baseURL  *url.URL
-	client   *http.Client
-	origin   string
-	verifier note.Verifier
+	baseURL *url.URL
+	client  *http.Client
 }
 
 // NewWriter creates a new writer client.
-func NewWriter(writeURL, origin string, verifier signature.Verifier, opts ...client.Option) (Client, error) {
+func NewWriter(writeURL string, opts ...client.Option) (Client, error) {
 	cfg := &client.Config{}
 	for _, o := range opts {
 		o(cfg)
@@ -60,19 +54,13 @@ func NewWriter(writeURL, origin string, verifier signature.Verifier, opts ...cli
 	if err != nil {
 		return nil, fmt.Errorf("parsing url %s: %w", writeURL, err)
 	}
-	noteVerifier, err := rekornote.NewNoteVerifier(origin, verifier)
-	if err != nil {
-		return nil, fmt.Errorf("creating note verifier: %w", err)
-	}
 	httpClient := &http.Client{
 		Transport: client.CreateRoundTripper(http.DefaultTransport, cfg.UserAgent),
 		Timeout:   cfg.Timeout,
 	}
 	return &writeClient{
-		baseURL:  baseURL,
-		client:   httpClient,
-		origin:   origin,
-		verifier: noteVerifier,
+		baseURL: baseURL,
+		client:  httpClient,
 	}, nil
 }
 
@@ -110,9 +98,6 @@ func (w *writeClient) Add(ctx context.Context, entry any) (*pbs.TransparencyLogE
 	err = protojson.Unmarshal(body, &tle)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshaling response body: %w", err)
-	}
-	if err := verify.VerifyLogEntry(&tle, w.verifier); err != nil {
-		return nil, fmt.Errorf("verifying transparency log entry: %w", err)
 	}
 	return &tle, nil
 }

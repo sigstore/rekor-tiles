@@ -17,11 +17,8 @@ package write
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
-	"encoding/pem"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -35,23 +32,11 @@ import (
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/pkg/client"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
-	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 )
 
-var ed25519PrivKey = `
------BEGIN PRIVATE KEY-----
-MC4CAQAwBQYDK2VwBCIEIGuZ8UWTFmXi/26ZgF4VYL8HfLSuW12TN5XMFQRt1Loc
------END PRIVATE KEY-----
-`
-
 func TestNewWriter(t *testing.T) {
 	writeURL := "http://localhost:3003"
-	origin := "rekor-local"
-	verifier, err := getVerifier(ed25519PrivKey)
-	if err != nil {
-		t.Fatal(err)
-	}
 	tests := []struct {
 		name     string
 		opts     []client.Option
@@ -62,7 +47,6 @@ func TestNewWriter(t *testing.T) {
 			expected: &writeClient{
 				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
 				client:  &http.Client{Transport: http.DefaultTransport},
-				origin:  "rekor-local",
 			},
 		},
 		{
@@ -73,7 +57,6 @@ func TestNewWriter(t *testing.T) {
 			expected: &writeClient{
 				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
 				client:  &http.Client{Transport: client.CreateRoundTripper(nil, "test")},
-				origin:  "rekor-local",
 			},
 		},
 		{
@@ -84,7 +67,6 @@ func TestNewWriter(t *testing.T) {
 			expected: &writeClient{
 				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
 				client:  &http.Client{Transport: http.DefaultTransport, Timeout: 1 * time.Second},
-				origin:  "rekor-local",
 			},
 		},
 		{
@@ -98,17 +80,15 @@ func TestNewWriter(t *testing.T) {
 				client: &http.Client{Transport: client.CreateRoundTripper(nil, "test"),
 					Timeout: 1 * time.Second,
 				},
-				origin: "rekor-local",
 			},
 		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			got, gotErr := NewWriter(writeURL, origin, verifier, test.opts...)
+			got, gotErr := NewWriter(writeURL, test.opts...)
 			assert.NoError(t, gotErr)
 			assert.Equal(t, test.expected.baseURL, got.(*writeClient).baseURL)
 			assert.Equal(t, test.expected.client, got.(*writeClient).client)
-			assert.Equal(t, test.expected.origin, got.(*writeClient).origin)
 		})
 	}
 }
@@ -258,91 +238,6 @@ func TestAdd(t *testing.T) {
 			respCode:  http.StatusCreated,
 			expectErr: fmt.Errorf("unmarshaling response body: proto"),
 		},
-		{
-			name: "invalid checkpoint",
-			entry: &pb.DSSERequestV002{
-				Envelope: &dsse.Envelope{
-					Payload:     []byte("some payload"),
-					PayloadType: "",
-					Signatures: []*dsse.Signature{
-						{
-							Sig:   []byte("some signature"),
-							Keyid: "abcd",
-						},
-					},
-				},
-				Verifiers: []*pb.Verifier{
-					{
-						Verifier: &pb.Verifier_PublicKey{
-							PublicKey: &pb.PublicKey{
-								RawBytes: []byte("key"),
-							},
-						},
-					},
-				},
-			},
-			respBody: marshalJSONOrDie(t, pbs.TransparencyLogEntry{
-				LogIndex: 1,
-				InclusionProof: &pbs.InclusionProof{
-					RootHash: b64DecodeOrDie(t, "YmMwMDVjZTE3OGY1MWJkNTE0YzkyMDUxNjAzYmQzNjY5NjJkNzQzYTliMjhkZjU3YjYxMDFiNjM4MzZhNzdmNg=="),
-
-					TreeSize: 2,
-					Hashes: [][]byte{
-						b64DecodeOrDie(t, "wWB4RFtzi4KkguQYjzcUge9No4fwgGMVdtQt6ls5B0I="),
-					},
-					Checkpoint: &pbs.Checkpoint{
-						Envelope: "wrong-origin\n2\nvABc4Xj1G9UUySBRYDvTZpYtdDqbKN9XthAbY4Nqd/Y=\n\n— rekor-local 2AtEIJwBlAY6KMMNAqcWRKgPZDhP6/bpBmefw4mD89JwL3KozxrLgz7MA8G5pM4UrGNoTOxxpW2bbdv/A5l22ymMLAU=\n",
-					},
-				},
-				CanonicalizedBody: []byte(`{"envelope":"dsse","verifier":[{"publicKey":{"rawBytes":"a2V5"}}]}`),
-			}),
-			respCode:  http.StatusCreated,
-			expectErr: fmt.Errorf("verifying transparency log entry: unverified checkpoint signature: failed to verify signatures on checkpoint: invalid signature for key"),
-		},
-		{
-			name: "invalid inclusion proof",
-			entry: &pb.DSSERequestV002{
-				Envelope: &dsse.Envelope{
-					Payload:     []byte("some payload"),
-					PayloadType: "",
-					Signatures: []*dsse.Signature{
-						{
-							Sig:   []byte("some signature"),
-							Keyid: "abcd",
-						},
-					},
-				},
-				Verifiers: []*pb.Verifier{
-					{
-						Verifier: &pb.Verifier_PublicKey{
-							PublicKey: &pb.PublicKey{
-								RawBytes: []byte("key"),
-							},
-						},
-					},
-				},
-			},
-			respBody: marshalJSONOrDie(t, pbs.TransparencyLogEntry{
-				LogIndex: 1,
-				InclusionProof: &pbs.InclusionProof{
-					RootHash: b64DecodeOrDie(t, "YmMwMDVjZTE3OGY1MWJkNTE0YzkyMDUxNjAzYmQzNjY5NjJkNzQzYTliMjhkZjU3YjYxMDFiNjM4MzZhNzdmNg=="),
-
-					TreeSize: 2,
-					Hashes:   [][]byte{},
-					Checkpoint: &pbs.Checkpoint{
-						Envelope: "rekor-local\n2\nvABc4Xj1G9UUySBRYDvTZpYtdDqbKN9XthAbY4Nqd/Y=\n\n— rekor-local 2AtEIJwBlAY6KMMNAqcWRKgPZDhP6/bpBmefw4mD89JwL3KozxrLgz7MA8G5pM4UrGNoTOxxpW2bbdv/A5l22ymMLAU=\n",
-					},
-				},
-				CanonicalizedBody: []byte(`{"envelope":"dsse","verifier":[{"publicKey":{"rawBytes":"a2V5"}}]}`),
-			}),
-			respCode:  http.StatusCreated,
-			expectErr: fmt.Errorf("verifying transparency log entry: verifying inclusion: "),
-		},
-	}
-
-	verifier, err := getVerifier(ed25519PrivKey)
-	if err != nil {
-		t.Fatal(err)
 	}
 
 	for _, test := range tests {
@@ -354,7 +249,7 @@ func TestAdd(t *testing.T) {
 					w.Write([]byte(test.respBody))
 				}))
 			defer server.Close()
-			client, err := NewWriter(server.URL, "rekor-local", verifier)
+			client, err := NewWriter(server.URL)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -383,17 +278,4 @@ func marshalJSONOrDie(t *testing.T, obj any) []byte {
 		t.Fatal(err)
 	}
 	return marshaledResp
-}
-
-func getVerifier(privKey string) (signature.Verifier, error) {
-	block, _ := pem.Decode([]byte(privKey))
-	priv, err := x509.ParsePKCS8PrivateKey(block.Bytes)
-	if err != nil {
-		return nil, err
-	}
-	verifier, err := signature.LoadDefaultSignerVerifier(priv.(ed25519.PrivateKey))
-	if err != nil {
-		return nil, err
-	}
-	return verifier, nil
 }

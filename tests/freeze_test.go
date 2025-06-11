@@ -45,7 +45,7 @@ func setup(ctx context.Context) (read.Client, write.Client, error) {
 	}
 
 	// writer client
-	writer, err := write.NewWriter(defaultRekorURL, defaultRekorHostname, verifier)
+	writer, err := write.NewWriter(defaultRekorURL)
 	if err != nil {
 		return nil, nil, err
 	}
