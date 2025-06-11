@@ -36,7 +36,7 @@ Update `charts/rekor-tiles/values.yaml` with the new container version and diges
 
 Update `charts/rekor-tiles/Chart.yaml`, bumping `version`, `appVersion`, and the image reference.
 
-Run `helm-docs -g charts/tsa` to update the README.
+Run `helm-docs -g charts/rekor-tiles` to update the README.
 
 Create a PR and wait for an oncall engineer to approve and merge. An oncall engineer also needs to
 update the chart version on the PGI repo.
