@@ -23,7 +23,9 @@ below:
         "signature": {
             "content": "<base64 signature>",
             "verifier": {
-                "x509Certificate": "<base64 DER-encoded certificate>",
+                "x509Certificate": {
+                    "rawBytes": "<base64 DER-encoded certificate>"
+                },
                 // Must match signing algorithm
                 "keyDetails": "PKIX_ECDSA_P256_SHA_256"
             }
@@ -61,7 +63,9 @@ below:
             ]
         },
         "verifier": {
-            "x509Certificate": "<base64 DER-encoded certificate>",
+            "x509Certificate": {
+                "rawBytes": "<base64 DER-encoded certificate>"
+            },
             // Must match signing algorithm
             "keyDetails": "PKIX_ECDSA_P256_SHA_256"
         }
