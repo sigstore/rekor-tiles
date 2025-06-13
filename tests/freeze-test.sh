@@ -39,7 +39,7 @@ trap cleanup_tmp EXIT
 docker compose down rekor && docker compose -f $composefile up -d rekor --wait --wait-timeout 60
 
 echo "freezing checkpoint"
-go run cmd/freeze-checkpoint/main.go --gcp-bucket "tiles" --signer-filepath tests/testdata/pki/ed25519-priv-key.pem --hostname rekor-local
+go run cmd/freeze-checkpoint/main.go --gcp-bucket "tiles" --signer-filepath tests/testdata/pki/ed25519-priv-key.pem --hostname localhost
 
 echo "running post-freeze tests"
 go test -v -tags=e2e,freeze -run TestPostFreeze ./tests
