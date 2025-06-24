@@ -17,19 +17,23 @@ package client
 
 import "time"
 
+// Config contains connection options for the client.
 type Config struct {
 	UserAgent string
 	Timeout   time.Duration
 }
 
+// Option customizes the client Config.
 type Option func(*Config)
 
+// WithUserAgent sets the user agent.
 func WithUserAgent(agent string) Option {
 	return func(c *Config) {
 		c.UserAgent = agent
 	}
 }
 
+// WithTimeout sets the timeout.
 func WithTimeout(timeout time.Duration) Option {
 	return func(c *Config) {
 		c.Timeout = timeout

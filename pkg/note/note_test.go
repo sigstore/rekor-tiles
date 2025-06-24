@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/sigstore/rekor-tiles/pkg/signerverifier"
+	"github.com/sigstore/rekor-tiles/internal/signerverifier"
 	"github.com/stretchr/testify/assert"
 )
 

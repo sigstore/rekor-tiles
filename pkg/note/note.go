@@ -74,14 +74,17 @@ type noteVerifier struct {
 	verify func(msg, sig []byte) bool
 }
 
+// Name implements note.Verifier.
 func (n *noteVerifier) Name() string {
 	return n.name
 }
 
+// Keyhash implements note.Verifier.
 func (n *noteVerifier) KeyHash() uint32 {
 	return n.hash
 }
 
+// Verify implements note.Verifier.
 func (n *noteVerifier) Verify(msg, sig []byte) bool {
 	return n.verify(msg, sig)
 }
@@ -187,6 +190,7 @@ func NewNoteSigner(ctx context.Context, origin string, signer signature.Signer) 
 	}, nil
 }
 
+// NewNoteVerifier converts a sigstore/sigstore/pkg/signature.Verifier into a note.Verifier.
 func NewNoteVerifier(origin string, verifier signature.Verifier) (note.Verifier, error) {
 	if !isValidName(origin) {
 		return nil, fmt.Errorf("invalid name %s", origin)
