@@ -27,8 +27,8 @@ import (
 	"time"
 
 	gcs "cloud.google.com/go/storage"
+	"github.com/sigstore/rekor-tiles/internal/signerverifier"
 	rekornote "github.com/sigstore/rekor-tiles/pkg/note"
-	"github.com/sigstore/rekor-tiles/pkg/signerverifier"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"

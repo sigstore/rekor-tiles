@@ -25,7 +25,7 @@ import (
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
+	"github.com/sigstore/rekor-tiles/internal/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/stretchr/testify/assert"
 	ttessera "github.com/transparency-dev/tessera"

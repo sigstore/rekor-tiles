@@ -24,6 +24,7 @@ type roundTripper struct {
 	userAgent string
 }
 
+// RoundTrip implements http.RoundTripper.
 func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	if rt.userAgent != "" {
 		req.Header.Set("User-Agent", rt.userAgent)
@@ -31,6 +32,7 @@ func (rt *roundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
 	return rt.RoundTripper.RoundTrip(req)
 }
 
+// CreateRoundTripper creates an http.RoundTripper.
 func CreateRoundTripper(inner http.RoundTripper, userAgent string) http.RoundTripper {
 	if inner == nil {
 		inner = http.DefaultTransport

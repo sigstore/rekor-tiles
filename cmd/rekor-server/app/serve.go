@@ -34,11 +34,11 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
-	"github.com/sigstore/rekor-tiles/pkg/algorithmregistry"
+	"github.com/sigstore/rekor-tiles/internal/algorithmregistry"
+	"github.com/sigstore/rekor-tiles/internal/server"
+	"github.com/sigstore/rekor-tiles/internal/signerverifier"
+	"github.com/sigstore/rekor-tiles/internal/tessera"
 	"github.com/sigstore/rekor-tiles/pkg/note"
-	"github.com/sigstore/rekor-tiles/pkg/server"
-	"github.com/sigstore/rekor-tiles/pkg/signerverifier"
-	"github.com/sigstore/rekor-tiles/pkg/tessera"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
