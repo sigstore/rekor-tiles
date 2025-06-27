@@ -172,3 +172,8 @@ tool (
 	github.com/google/addlicense
 	golang.org/x/tools/cmd/goimports
 )
+
+retract (
+	v0.99.1 // Contains only retractions
+	v0.99.0 // Accidental tag
+)
