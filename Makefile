@@ -32,9 +32,22 @@ ifeq ($(DIFF), 1)
     GIT_TREESTATE = "dirty"
 endif
 
-PROTO_DIRS = pkg/generated/protobuf/ api/proto/ protoc-builder/
+PROTO_DIRS = pkg/generated/protobuf/ api/proto/
 SRC = $(shell find . -iname "*.go" | grep -v -e $(subst $() $(), -e ,$(strip $(PROTO_DIRS))))
 PROTO_SRC = $(shell find $(PROTO_DIRS))
+
+SIGSTORE_PROTO_BUILDER = $(shell grep FROM Dockerfile.protobuf-specs | cut -d' ' -f 2)
+
+# for docker protobuf build
+GO_MODULE = github.com/sigstore/rekor-tiles
+PROTOS = $(shell find api/proto/ -iname "*.proto" | sed 's|^|/project_dir/|')
+PROTO_OUT = pkg/generated/protobuf
+OPENAPI_OUT = docs/openapi
+MOUNT_POINT = /project_dir
+PLATFORM ?= linux/amd64
+UID ?= $(shell id -u)
+GID ?= $(shell id -g)
+DOCKER_RUN = docker run --platform ${PLATFORM} --user ${UID}:${GID}
 
 REKOR_LDFLAGS=-buildid= \
               -X sigs.k8s.io/release-utils/version.gitVersion=$(GIT_VERSION) \
@@ -73,14 +86,25 @@ ko-local: ## Build container images locally using ko
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
 		github.com/sigstore/rekor-tiles/cmd/rekor-server
 
-protos: $(PROTO_SRC)
-	$(MAKE) -C protoc-builder protos
+# generate Go protobuf code
+protos:
+	@echo "Generating go protobuf files"
+	@mkdir -p ${OPENAPI_OUT}
+	${DOCKER_RUN} -v ${PWD}:${MOUNT_POINT} ${SIGSTORE_PROTO_BUILDER} \
+		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
+		--go_out=${MOUNT_POINT} \
+		--go_opt=module=${GO_MODULE} \
+		--go-grpc_opt=module=${GO_MODULE} --go-grpc_out=${MOUNT_POINT} \
+		--grpc-gateway_opt=module=${GO_MODULE} --grpc-gateway_opt=logtostderr=true --grpc-gateway_out=${MOUNT_POINT} \
+		--openapiv2_out=${MOUNT_POINT}/${OPENAPI_OUT} \
+    ${PROTOS}
 
 clean: ## Remove built binaries and artifacts
+	rm -rf docs/openapi/*
+	rm -rf pkg/generated/protobuf/*
 	rm -rf dist
 	rm -rf hack/tools/bin
 	rm -rf rekor-server
-	$(MAKE) -C protoc-builder clean
 
 ##################
 # help
