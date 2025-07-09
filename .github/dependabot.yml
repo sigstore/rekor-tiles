@@ -43,6 +43,7 @@ updates:
   - package-ecosystem: "docker-compose"
     directories:
       - "/"
+      - "./tests/sharding/"
     schedule:
       interval: "weekly"
     groups:
