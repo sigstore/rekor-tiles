@@ -64,6 +64,7 @@ services:
     - "--checkpoint-interval=2s"
     - "--log-level=debug"
     - "--request-response-logging=true"
+    - "--persistent-antispam"
     ports:
     - "3003:3000" # http port
     - "3001:3001" # grpc port

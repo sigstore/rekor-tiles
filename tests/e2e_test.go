@@ -26,7 +26,10 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"os/exec"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
@@ -217,15 +220,6 @@ func TestReadWrite(t *testing.T) {
 	assert.Equal(t, "0.0.2", e.ApiVersion)
 	dsseEntry := e.Spec.GetDsseV002()
 	assert.NotNil(t, dsseEntry)
-
-	// Add a second identical entries immediately to check for deduplication
-	// TODO(#158): add more advanced deduplication checking when the Spanner emulator supports the "batch write" operation
-	// (https://cloud.google.com/spanner/docs/batch-write) (https://github.com/GoogleCloudPlatform/cloud-spanner-emulator/issues/172).
-	oldIndex := tle.LogIndex
-	_, err = writer.Add(ctx, dr)
-	assert.Error(t, err)
-	assert.ErrorContains(t, err, "unexpected response: 409")
-	assert.ErrorContains(t, err, fmt.Sprintf("an equivalent entry already exists in the transparency log with index %d", oldIndex))
 }
 
 func TestUnimplementedReadMethods(t *testing.T) {
@@ -250,6 +244,67 @@ func TestUnimplementedReadMethods(t *testing.T) {
 	assert.ErrorContains(t, err, "501")
 	_, err = reader.ReadEntryBundle(ctx, 0, 0)
 	assert.ErrorContains(t, err, "501")
+}
+
+func TestPersistentDeduplication(t *testing.T) {
+	ctx := context.Background()
+
+	path, err := exec.LookPath("docker")
+	if err != nil {
+		t.Skip("skipping persistent deduplication test because docker is not installed")
+	}
+	output, err := exec.Command(path, "compose", "ps", "rekor").Output()
+	if err != nil || !strings.Contains(string(output), "rekor-tiles-rekor-1") {
+		t.Skip("skipping persistent deduplication test because rekor-tiles is not running as a local docker container")
+	}
+
+	// writer client
+	writer, err := write.NewWriter(defaultRekorURL)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	clientPrivKey, clientPubKey, err := genKeys()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// add one entry
+	hr, err := newHashedRekordRequest(clientPrivKey, clientPubKey, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = writer.Add(ctx, hr)
+	assert.NoError(t, err)
+
+	// add the same entry and check for in-memory deduplication
+	_, err = writer.Add(ctx, hr)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "unexpected response: 409")
+	assert.ErrorContains(t, err, fmt.Sprintf("an equivalent entry already exists in the transparency log with index"))
+
+	// restart rekor-tiles and check for persistent deduplication
+	err = exec.Command(path, "compose", "restart", "rekor").Run()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := 0; i <= 3; i++ {
+		out, err := exec.Command(path, "compose", "ps", "rekor", "--format='{{print .Status}}'").Output()
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(string(out), "(healthy)") {
+			break
+		}
+		if i == 3 {
+			t.Fatal("docker container took too long to restart")
+		}
+		time.Sleep(1 * time.Second)
+	}
+	_, err = writer.Add(ctx, hr)
+	assert.Error(t, err)
+	assert.ErrorContains(t, err, "unexpected response: 409")
+	assert.ErrorContains(t, err, fmt.Sprintf("an equivalent entry already exists in the transparency log with index"))
 }
 
 func artifactDigest(idx uint64) []byte {
