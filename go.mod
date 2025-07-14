@@ -12,7 +12,7 @@ require (
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.1
 	github.com/prometheus/client_golang v1.22.0
 	github.com/secure-systems-lab/go-securesystemslib v0.9.0
-	github.com/sigstore/protobuf-specs v0.4.3
+	github.com/sigstore/protobuf-specs v0.5.0
 	github.com/sigstore/sigstore v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.9.5
 	github.com/sigstore/sigstore/pkg/signature/kms/azure v1.9.5
