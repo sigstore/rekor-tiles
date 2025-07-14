@@ -33,5 +33,10 @@ gcloud spanner databases list --instance $SPANNER_INSTANCE | grep $SPANNER_DB ||
     gcloud spanner databases create $SPANNER_DB \
         --no-user-output-enabled \
         --instance $SPANNER_INSTANCE
+spanner_antispam_db=$SPANNER_DB-antispam
+gcloud spanner databases list --instance $SPANNER_INSTANCE | grep $spanner_antispam_db || \
+    gcloud spanner databases create $spanner_antispam_db \
+        --no-user-output-enabled \
+        --instance $SPANNER_INSTANCE
 
 echo "done" > /root/finished
