@@ -188,6 +188,14 @@ to parse an entry:
    bundle, but will have the canonicalized body. A monitor must use the `kind` and
    `apiVersion` to parse `spec`.
 
+#### DSSE
+
+For DSSE entries, the entry payload hash will always be SHA-256, regardless of
+the signature hashing algorithm specified in the key details. If non-default
+signing key algorithms (e.g. not ECDSA-P256) are supported, when verifying an entry,
+clients will need to handle computing the digest of the payload using SHA-256
+and computing the digest to verify based on the key details.
+
 ### Certificate and Public Key Verifiers
 
 Rekor v2 only supports signature verification using a certificate or a
