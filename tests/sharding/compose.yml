@@ -15,13 +15,13 @@
 
 services:
   spanner1:
-    image: gcr.io/cloud-spanner-emulator/emulator:1.5.37@sha256:48bd5bbf3dc5bd543bab34c544ed76b167a184c105a98a7268fc8ec8487ef0f2
+    image: gcr.io/cloud-spanner-emulator/emulator:1.5.38@sha256:3b235876677d9e09fb1a52c4f10bf0aa005eb9f1f7f00ee5dc1213fa9be9c9b2
     profiles:
     - shard1
     networks:
     - shard1
   spanner2:
-    image: gcr.io/cloud-spanner-emulator/emulator:1.5.37@sha256:48bd5bbf3dc5bd543bab34c544ed76b167a184c105a98a7268fc8ec8487ef0f2
+    image: gcr.io/cloud-spanner-emulator/emulator:1.5.38@sha256:3b235876677d9e09fb1a52c4f10bf0aa005eb9f1f7f00ee5dc1213fa9be9c9b2
     profiles:
     - shard2
     networks:
