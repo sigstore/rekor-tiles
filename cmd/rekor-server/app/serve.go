@@ -62,6 +62,9 @@ var serveCmd = &cobra.Command{
 
 		slog.Info("starting rekor-server", "version", version.GetVersionInfo())
 
+		shutdownOtel := initOTel(ctx)
+		defer shutdownOtel(ctx)
+
 		var signerOpts []signerverifier.Option
 		switch {
 		case viper.GetString("signer-filepath") != "":
