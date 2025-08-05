@@ -331,7 +331,7 @@ You should have the log public key saved in `public.pem` from when you generated
 If you don't have the public key, look at the service logs to find the public key, which
 is logged on service startup.
 
-The key is PEM-encoded. Remove the PEM header and footer and remove all newline characters to get the DER-encoded public key.
+The key is PEM-encoded. Remove the PEM header and footer and remove all newline characters to get the base64-encoded PKIX public key.
 
 ### Update TrustedRoot
 
