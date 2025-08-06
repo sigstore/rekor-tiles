@@ -126,26 +126,32 @@ Request a review from an infrastructure maintainer and merge.
 
 4. Authenticate to gcloud with application credentials: `gcloud auth application-default login`
 
-5. Using [tinkey](https://developers.google.com/tink/tinkey-overview#installation), create an encrypted Tink keyset:
+5. Checkout [`scaffolding`](https://github.com/sigstore/scaffolding), and using
+   [`create-tink-keyset`](https://github.com/sigstore/scaffolding/tree/main/cmd/create-tink-keyset), create an encrypted Tink keyset:
 
 ```
-tinkey create-keyset --key-template ED25519 --out enc-keyset.cfg --master-key-uri gcp-kms://projects/<project name>/locations/<region>/keyRings/<key-ring>/cryptoKeys/checkpoint-signer-key-encryption-key
+go run ./cmd/create-tink-keyset \
+  --key-template ED25519 \
+  --out enc-keyset.cfg \
+  --key-encryption-key-uri gcp-kms://projects/<project name>/locations/<region>/keyRings/<key-ring>/cryptoKeys/checkpoint-signer-key-encryption-key \
+  --public-key-out public.pem
 ```
 
 Example:
 
 ```
-tinkey create-keyset --key-template ED25519 --out enc-keyset.cfg --master-key-uri gcp-kms://projects/projectsigstore-staging/locations/global/keyRings/log2026-1-rekor-tiles-keyring/cryptoKeys/checkpoint-signer-key-encryption-key
+go run ./cmd/create-tink-keyset \
+  --key-template ED25519 \
+  --out enc-keyset.cfg \
+  --key-encryption-key-uri gcp-kms://projects/projectsigstore-staging/locations/global/keyRings/log2026-1-rekor-tiles-keyring/cryptoKeys/checkpoint-signer-key-encryption-key \
+  --public-key-out public.pem
 ```
 
-TODO: Once https://github.com/sigstore/scaffolding/pull/1627 is merged, use `create-tink-keyset` rather than
-`tinkey` since this command doesn't require a Java runtime environment and will output the public key.
+Note we won't use [tinkey](https://developers.google.com/tink/tinkey-overview#installation) since
+that requires a Java runtime environment and won't output the public key.
 
-Save the output file `enc-keyset.cfg`, which will be used as a value in the Helm chart.
-
-You'll need the public key from the private keyset for the TUF TrustedRoot later on.
-Unfortunately, Tinkey does not provide a utility to transform either a public or private keyset
-into a PEM-encoded public key. You'll fetch this public key from the server logs.
+Save the output file `enc-keyset.cfg`, which will be used as a value in the Helm chart,
+and `public.pem`, which will be distributed in the TUF repo.
 
 6. Revoke IAM access by reverting the PR and removing `google_kms_key_ring_iam_member`, and run `plan` and `apply`.
 
@@ -227,6 +233,18 @@ Finally, reapply the org restriction to prevent public buckets.
 
 [Example PR](https://github.com/sigstore/public-good-instance/pull/2978)
 
+### WIP: Add Monitoring and Alerting
+
+Add a `PodMonitoring` collector for gathering metrics from the service
+and add Terraform for setting up metrics and alerts on GCP.
+
+Example PRs:
+
+* [`PodMonitoring`](https://github.com/sigstore/public-good-instance/pull/3100/) - Will rollout automatically after merging
+* [`Terraform for metrics`](https://github.com/sigstore/public-good-instance/pull/3115/) - `terraform apply` after merging
+
+TODO: Determine if these can be merged earlier in the process
+
 ## Verify Shard Health
 
 In GCP, make sure you're viewing the correct project for either production or staging.
@@ -307,13 +325,13 @@ have picked up the latest TrustedRoot.
 if they are after this date. This must be after the start of the new shard. It doesn't have to be
 overly precise, and can be updated in a future TUF signing event.
 
-### Retrieve shard public key
+### Get shard public key
 
-Look at the service logs to find the public key. This is the easiest way to retrieve
-the public key, as there is no CLI tool to convert a Tink keyset into a DER-encoded public key.
+You should have the log public key saved in `public.pem` from when you generated the key.
+If you don't have the public key, look at the service logs to find the public key, which
+is logged on service startup.
 
-The key will be printed as a PEM-encoded public key. Remove the PEM header and footer and remove
-all newline characters to get the DER-encoded public key.
+The key is PEM-encoded. Remove the PEM header and footer and remove all newline characters to get the base64-encoded PKIX public key.
 
 ### Update TrustedRoot
 
