@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"log/slog"
 	"net"
 	"net/http"
@@ -78,7 +77,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	// See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/#adding-healthz-endpoint-to-runtimeservemux.
 	cc, err := grpc.NewClient(grpcServer.serverEndpoint, opts...)
 	if err != nil {
-		slog.Error("failed to connect to grpc server:", "errors", err)
+		slog.Error("failed to connect to grpc server", "error", err)
 		os.Exit(1)
 	}
 	mux := runtime.NewServeMux(
@@ -156,10 +155,10 @@ func (hp *httpProxy) start(wg *sync.WaitGroup) {
 		<-sigint
 
 		if err := hp.Shutdown(context.Background()); err != nil {
-			slog.Info("http server shutdown errors:", "error", err)
+			slog.Info("http server shutdown returned an error", "error", err)
 		}
 		close(waitToClose)
-		slog.Info(fmt.Sprintf("Stopped %s server", protocol))
+		slog.Info("stopped server", "protocol", protocol)
 	}()
 
 	wg.Add(1)
@@ -172,12 +171,12 @@ func (hp *httpProxy) start(wg *sync.WaitGroup) {
 		}
 
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			slog.Error(fmt.Sprintf("could not start %s server:", protocol), "error", err)
+			slog.Error("could not start server", "protocol", protocol, "error", err)
 			os.Exit(1)
 		}
 		<-waitToClose
 		wg.Done()
-		slog.Info(fmt.Sprintf("%s server shutdown complete", protocol))
+		slog.Info("server shutdown complete", "protocol", protocol)
 	}()
 }
 

@@ -70,36 +70,36 @@ var serveCmd = &cobra.Command{
 			kmshash := viper.GetString("signer-kmshash")
 			hashAlg, ok := hashAlgMap[kmshash]
 			if !ok {
-				slog.Error(fmt.Sprintf("invalid hash algorithm for --signer-kmshash: %s", kmshash))
+				slog.Error("invalid hash algorithm for --signer-kmshash", "algorithm", kmshash)
 				os.Exit(1)
 			}
 			signerOpts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg)}
 		case viper.GetString("signer-tink-kek-uri") != "":
 			signerOpts = []signerverifier.Option{signerverifier.WithTink(viper.GetString("signer-tink-kek-uri"), viper.GetString("signer-tink-keyset-path"))}
 		default:
-			slog.Error("must provide a signer using a file, KMS, or Tink")
+			slog.Error("no signer configured; must provide a signer using a file, KMS, or Tink")
 			os.Exit(1)
 		}
 		signer, err := signerverifier.New(ctx, signerOpts...)
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to initialize signer: %v", err.Error()))
+			slog.Error("failed to initialize signer", "error", err)
 			os.Exit(1)
 		}
 		pubkey, err := signer.PublicKey()
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to get public key from signing key: %v", err.Error()))
+			slog.Error("failed to get public key from signing key", "error", err)
 			os.Exit(1)
 		}
 		der, err := x509.MarshalPKIXPublicKey(pubkey)
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to marshal public key to DER: %v", err.Error()))
+			slog.Error("failed to marshal public key to DER", "error", err)
 			os.Exit(1)
 		}
 		slog.Info("Loaded signing key", "pubkey in base64 DER", base64.StdEncoding.EncodeToString(der))
 
 		appendOptions, err := tessera.NewAppendOptions(ctx, viper.GetString("hostname"), signer)
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to initialize append options: %v", err))
+			slog.Error("failed to initialize append options", "error", err)
 			os.Exit(1)
 		}
 		// Compute log ID for TransparencyLogEntry, to be used by clients to look up
@@ -107,12 +107,12 @@ var serveCmd = &cobra.Command{
 		// hash of the public key and origin per the signed-note C2SP spec.
 		pubKey, err := signer.PublicKey(options.WithContext(ctx))
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to get public key: %v", err))
+			slog.Error("failed to get public key", "error", err)
 			os.Exit(1)
 		}
 		_, logID, err := note.KeyHash(viper.GetString("hostname"), pubKey)
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to get log ID: %v", err))
+			slog.Error("failed to get log ID", "error", err)
 			os.Exit(1)
 		}
 
@@ -130,24 +130,20 @@ var serveCmd = &cobra.Command{
 			}
 			tesseraDriver, persistentAntispam, err := tessera.NewDriver(ctx, driverConfig)
 			if err != nil {
-				slog.Error(fmt.Sprintf("failed to initialize driver: %v", err))
+				slog.Error("failed to initialize driver", "error", err)
 				os.Exit(1)
 			}
 			appendOptions = tessera.WithLifecycleOptions(appendOptions, viper.GetUint("batch-max-size"), viper.GetDuration("batch-max-age"), viper.GetDuration("checkpoint-interval"), viper.GetUint("pushback-max-outstanding"))
 			appendOptions = tessera.WithAntispamOptions(appendOptions, persistentAntispam)
-			if err != nil {
-				slog.Error(fmt.Sprintf("failed to configure antispam append options: %v", err))
-				os.Exit(1)
-			}
 			tesseraStorage, shutdownFn, err = tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, appendOptions)
 			if err != nil {
-				slog.Error(fmt.Sprintf("failed to initialize tessera storage: %v", err.Error()))
+				slog.Error("failed to initialize tessera storage", "error", err)
 				os.Exit(1)
 			}
 		}
 		algorithmRegistry, err := algorithmregistry.AlgorithmRegistry(viper.GetStringSlice("client-signing-algorithms"))
 		if err != nil {
-			slog.Error(fmt.Sprintf("failed to get algorithm registry: %v", err.Error()))
+			slog.Error("failed to get algorithm registry", "error", err)
 			os.Exit(1)
 		}
 
