@@ -82,8 +82,12 @@ Note that `network_endpoint_group_zones` needs to remain commented out.
 Terraform will error out trying to discover the network endpoint group (NEG) resources
 if we declare the zones but the NEGs haven't been created by GKE through the Helm chart yet.
 
+Additionally, add the Terraform configuration for setting up monitoring: [Example PR](https://github.com/sigstore/public-good-instance/pull/3115/)
+
+**TODO: Update example with a single PR**
+
 Update `production.tf` or `staging.tf` based on the example. Make sure to update
-the `module` name, `shard_name` variable, and the name of the map key for `var.rekor_tiles_shards`.
+the `module` names, `shard_name` variables, and the name of the map key for `var.rekor_tiles_shards`.
 
 After merging, run `terraform plan` through the GitHub Actions workflow
 for [staging](https://github.com/sigstore/public-good-instance/actions/workflows/env-staging.yml)
@@ -204,7 +208,14 @@ For `keyset`, copy the contents of `enc-keyset.cfg` (Since this value is encrypt
 it in the config rather than use GCP Secrets). Make sure `signer.tink.key` is set to either the KMS `key_name`
 or the default value `checkpoint-signer-key-encryption-key`.
 
-[Example PR](https://github.com/sigstore/public-good-instance/pull/2947)
+Additionally, create the `PodMonitoring` collector for gathering metrics from the pod.
+
+Example PRs, which can be merged in a single PR:
+
+* [Deployment](https://github.com/sigstore/public-good-instance/pull/2947)
+* [`PodMonitoring`](https://github.com/sigstore/public-good-instance/pull/3100/)
+
+**TODO: Update this example with a single PR**
 
 Merge, and wait for ArgoCD to create the resources and spin up the service. You can monitor the GKE UI,
 or view the ArgoCD dashboard. To get access, follow the
@@ -232,18 +243,6 @@ as expected in a moment.
 Finally, reapply the org restriction to prevent public buckets.
 
 [Example PR](https://github.com/sigstore/public-good-instance/pull/2978)
-
-### WIP: Add Monitoring and Alerting
-
-Add a `PodMonitoring` collector for gathering metrics from the service
-and add Terraform for setting up metrics and alerts on GCP.
-
-Example PRs:
-
-* [`PodMonitoring`](https://github.com/sigstore/public-good-instance/pull/3100/) - Will rollout automatically after merging
-* [`Terraform for metrics`](https://github.com/sigstore/public-good-instance/pull/3115/) - `terraform apply` after merging
-
-TODO: Determine if these can be merged earlier in the process
 
 ## Verify Shard Health
 
