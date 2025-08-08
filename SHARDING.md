@@ -45,6 +45,9 @@ For production, update the `projects_project-rekor` module. For staging,
 update the `projects_projectsigstore-staging` module. These modules come from
 [this file](https://github.com/sigstore/public-good-instance/blob/main/iam/resource_hierarchy/main.tf).
 
+Run `terraform apply` using
+[Provision sigstore.dev organization](https://github.com/sigstore/public-good-instance/actions/workflows/iam-resource-hierarchy.yml).
+
 ### Create GCP resources
 
 To add a new shard, create a module under either
@@ -52,9 +55,11 @@ To add a new shard, create a module under either
 or
 [`production.tf`](https://github.com/sigstore/public-good-instance/blob/main/terraform/environments/production/1-infrastructure/production.tf).
 
-[Example PR](https://github.com/sigstore/public-good-instance/pull/2907/). For the example,
-you'll only need to look at `staging.tf` and `general.auto.tfvars`. Remember to update
-the correct environment for production or staging.
+Follow the [example PR](https://github.com/sigstore/public-good-instance/pull/3144), which
+will create the required resources and monitoring.
+
+Note: You should omit `key_name`, which will be set to a default value of
+`checkpoint-signer-key-encryption-key`.
 
 Modules should be named based on the year and how many shards
 have been created in the year. For example, the module should
@@ -82,10 +87,6 @@ Note that `network_endpoint_group_zones` needs to remain commented out.
 Terraform will error out trying to discover the network endpoint group (NEG) resources
 if we declare the zones but the NEGs haven't been created by GKE through the Helm chart yet.
 
-Additionally, add the Terraform configuration for setting up monitoring: [Example PR](https://github.com/sigstore/public-good-instance/pull/3115/)
-
-**TODO: Update example with a single PR**
-
 Update `production.tf` or `staging.tf` based on the example. Make sure to update
 the `module` names, `shard_name` variables, and the name of the map key for `var.rekor_tiles_shards`.
 
@@ -105,7 +106,7 @@ Tink is beneficial for reliability and cost reduction - KMS is now only
 a startup dependency rather than a runtime dependency, and signing happens
 exclusively in memory.
 
-To create a shard KEK:
+To create a shard signing key:
 
 1. Grant yourself access to use the new KEK. Update the `staging.tf`
 or `production.tf` config to include the following IAM resource. The shard
@@ -151,6 +152,9 @@ go run ./cmd/create-tink-keyset \
   --public-key-out public.pem
 ```
 
+If there's an error that mentions `invalid_grant`, make sure you've run `gcloud auth application-default login`.
+IAM bindings sometimes take a few minutes to propagate as well.
+
 Note we won't use [tinkey](https://developers.google.com/tink/tinkey-overview#installation) since
 that requires a Java runtime environment and won't output the public key.
 
@@ -179,20 +183,8 @@ projects:
 
 [Example PR](https://github.com/sigstore/public-good-instance/pull/2953)
 
-### Create Kubernetes gRPC Secret
-
-To be able to route gRPC traffic to the Kubernetes backend, you'll need to provide a TLS
-certificate to the service. The certificate can be expired and will be shared between all
-shards, as its only purpose is to allow the load balancer to send encrypted traffic
-(a requirement imposed by the load balancer for HTTP2/gRPC traffic).
-
-Create an ExternalSecret configuration based on the example below. Update the name of the
-file and `metadata.namespace`. All other values will remain the same.
-
-[Example](https://github.com/sigstore/public-good-instance/blob/main/argocd/utilities/manifest/staging/privateKeySecret/log2025-alpha1-rekor-grpc-tls.yaml)
-
-Merge, and ArgoCD will automatically create the Kubernetes secret using the TLS certificate and
-private key stored in GCP Secret Manager.
+Run `terraform apply` with the "Stage of terraform to run" being `all`, not `infra-only`,
+because you're updating ArgoCD's configuration.
 
 ### Create Kubernetes Resources
 
@@ -202,24 +194,33 @@ or
 [staging](https://github.com/sigstore/public-good-instance/blob/main/argocd/bootstrap-utilities/staging/values.yaml)
 to include the new shard.
 
+Follow the [example PR](https://github.com/sigstore/public-good-instance/pull/3151),
+which will set up the deployment, pod monitoring, and gRPC secret. More information is below.
+
 Under `rekorTiles.shards`, copy the previous shard instantiation, and update
 the values accordingly based on the Terraform resource names. In particular, update the `shardName`.
 For `keyset`, copy the contents of `enc-keyset.cfg` (Since this value is encrypted, it's safe to include
 it in the config rather than use GCP Secrets). Make sure `signer.tink.key` is set to either the KMS `key_name`
 or the default value `checkpoint-signer-key-encryption-key`.
 
-Additionally, create the `PodMonitoring` collector for gathering metrics from the pod.
+Additionally, create the `PodMonitoring` collector for gathering metrics from the pod. Add a new
+[`PodMonitoring` collector](https://github.com/sigstore/public-good-instance/blob/main/argocd/utilities/manifest/staging/prometheus-monitoring/rekor-tiles.yaml),
+updating `metadata.name` and `metadata.namespace` for the collector.
 
-Example PRs, which can be merged in a single PR:
-
-* [Deployment](https://github.com/sigstore/public-good-instance/pull/2947)
-* [`PodMonitoring`](https://github.com/sigstore/public-good-instance/pull/3100/)
-
-**TODO: Update this example with a single PR**
+To be able to route gRPC traffic to the Kubernetes backend, you'll need to provide a TLS
+certificate to the service. The certificate can be expired and will be shared between all
+shards, as its only purpose is to allow the load balancer to send encrypted traffic
+(a requirement imposed by the load balancer for HTTP2/gRPC traffic).
+Create an ExternalSecret configuration based on the example. Update the name of the
+file and `metadata.namespace`. All other values will remain the same.
 
 Merge, and wait for ArgoCD to create the resources and spin up the service. You can monitor the GKE UI,
 or view the ArgoCD dashboard. To get access, follow the
 [playbook](https://github.com/sigstore/public-good-instance/blob/main/playbooks/argo-access.md).
+
+You may have to manually "sync" if there's any errors. Note that the namespace must exist
+before any resources can be created. Also note that the gRPC secret must be created before
+the service pods can be started.
 
 Once this completes, all Kubernetes resources will have been created. However, the service will not
 yet be available for traffic.
@@ -231,7 +232,8 @@ reference these NEGs to be able to route traffic from the frontend load balancer
 backend Kubernetes resources.
 
 Uncomment `network_endpoint_group_zones` in `general.auto.tfvars` or set `network_endpoint_group_zones` to
-`["us-central1-c", "us-central1-f", "us-central1-b"]`. 
+`["us-central1-c", "us-central1-f", "us-central1-b"]`.  Note that these zones are based on
+where the VM instances are, which are currently the same for staging and production.
 
 [Example PR](https://github.com/sigstore/public-good-instance/pull/2955)
 
@@ -243,6 +245,9 @@ as expected in a moment.
 Finally, reapply the org restriction to prevent public buckets.
 
 [Example PR](https://github.com/sigstore/public-good-instance/pull/2978)
+
+Run `terraform apply` using
+[Provision sigstore.dev organization](https://github.com/sigstore/public-good-instance/actions/workflows/iam-resource-hierarchy.yml).
 
 ## Verify Shard Health
 
@@ -392,7 +397,7 @@ Update the SigningConfig for the new shard:
             "url": "<year-revision>.rekor.(sigstore|sigstage).dev",
             "major_api_version": 2,
              "valid_for": {
-                "start": "<UTC timestamp, at least one week past when to-be-signed TUF timestamp will expire>",
+                "start": "<UTC timestamp, at least one week past when to-be-signed TUF timestamp will expire>"
             }
         },
         // previous shard
@@ -440,12 +445,18 @@ for failing healthchecks for the write path or missing metrics. As we turn down 
 and delete resources, we expect that healthchecks will start to fail.
 
 As we create alerting, we'll finalize this section with what alerts need to be removed.
+Currently, we should remove the monitoring module for the old shard.
 
 ### Delete Kubernetes resources
 
 Turn down the previous shard by removing the previous shard from `rekorTiles.shards`.
 We can turn down the Kubernetes pods because the server only serves the write path -
 the read path is exclusively served via GCP resources (Load Balancer, Storage).
+
+Remove the `PodMonitoring` collector and the Kubernetes gRPC secret as well for
+the shard.
+
+TODO: Add example PR
 
 Merge and wait for ArgoCD to shut down the server.
 
