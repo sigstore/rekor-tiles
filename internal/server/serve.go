@@ -19,10 +19,11 @@ import (
 	"log/slog"
 	"os"
 	"sync"
+	"time"
 )
 
 // Serve starts the grpc server and its http proxy.
-func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s rekorServer, tesseraShutdownFn func(context.Context) error) {
+func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, tesseraTimeout time.Duration, s rekorServer, tesseraShutdownFn func(context.Context) error) {
 	var wg sync.WaitGroup
 
 	if hc.port == 0 || gc.port == 0 {
@@ -46,7 +47,9 @@ func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, s rekorServer, t
 	wg.Wait()
 
 	slog.Info("shutting down Tessera sequencer")
-	if err := tesseraShutdownFn(ctx); err != nil {
+	tesseraCtx, cancel := context.WithTimeout(ctx, tesseraTimeout)
+	defer cancel()
+	if err := tesseraShutdownFn(tesseraCtx); err != nil {
 		slog.Error("error shutting down Tessera", "error", err)
 	}
 	slog.Info("stopped Tessera sequencer")

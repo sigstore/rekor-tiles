@@ -154,7 +154,7 @@ var serveCmd = &cobra.Command{
 			server.NewHTTPConfig(
 				server.WithHTTPPort(viper.GetInt("http-port")),
 				server.WithHTTPHost(viper.GetString("http-address")),
-				server.WithHTTPTimeout(viper.GetDuration("timeout")),
+				server.WithHTTPTimeout(viper.GetDuration("server-timeout")),
 				server.WithHTTPMaxRequestBodySize(viper.GetInt("max-request-body-size")),
 				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
 				server.WithHTTPTLSCredentials(viper.GetString("http-tls-cert-file"), viper.GetString("http-tls-key-file")),
@@ -163,11 +163,12 @@ var serveCmd = &cobra.Command{
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
 				server.WithGRPCHost(viper.GetString("grpc-address")),
-				server.WithGRPCTimeout(viper.GetDuration("timeout")),
+				server.WithGRPCTimeout(viper.GetDuration("server-timeout")),
 				server.WithGRPCMaxMessageSize(viper.GetInt("max-request-body-size")),
 				server.WithGRPCLogLevel(logLevel, viper.GetBool("request-response-logging")),
 				server.WithTLSCredentials(viper.GetString("grpc-tls-cert-file"), viper.GetString("grpc-tls-key-file")),
 			),
+			viper.GetDuration("tlog-timeout"),
 			rekorServer,
 			shutdownFn,
 		)
@@ -182,7 +183,7 @@ func init() {
 	serveCmd.Flags().Int("http-metrics-port", 2112, "HTTP port to bind metrics to")
 	serveCmd.Flags().Int("grpc-port", 3001, "GRPC port to bind to")
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
-	serveCmd.Flags().Duration("timeout", 60*time.Second, "timeout")
+	serveCmd.Flags().Duration("server-timeout", 20*time.Second, "timeout settings for gRPC and HTTP connections")
 	serveCmd.Flags().Int("max-request-body-size", 4*1024*1024, "maximum request body size in bytes")
 	serveCmd.Flags().String("log-level", "info", "log level for the process. options are [debug, info, warn, error]")
 	serveCmd.Flags().Bool("request-response-logging", false, "enables logging of request and response content; log-level must be 'debug' for this to take effect")
@@ -215,6 +216,7 @@ func init() {
 	serveCmd.Flags().Duration("batch-max-age", tessera.DefaultBatchMaxAge, "the maximum amount of time a batch of entries will wait before being sent to the sequencer")
 	serveCmd.Flags().Duration("checkpoint-interval", tessera.DefaultCheckpointInterval, "the frequency at which a checkpoint will be published")
 	serveCmd.Flags().Uint("pushback-max-outstanding", tessera.DefaultPushbackMaxOutstanding, "the maximum number of 'in-flight' add requests")
+	serveCmd.Flags().Duration("tlog-timeout", 30*time.Second, "timeout for terminating the tiles log queue")
 
 	// antispam configs
 	serveCmd.Flags().Bool("persistent-antispam", false, "whether to enable persistent antispam measures; only available for GCP storage backend and not supported by the Spanner storage emulator")
