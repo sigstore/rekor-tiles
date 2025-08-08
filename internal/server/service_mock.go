@@ -68,7 +68,7 @@ func (ms *MockServer) Start(t *testing.T) {
 	// Start the server
 	ms.wg = &sync.WaitGroup{}
 	go func() {
-		Serve(context.Background(), ms.hc, ms.gc, s, shutdownFn)
+		Serve(context.Background(), ms.hc, ms.gc, 1*time.Second, s, shutdownFn)
 		ms.wg.Done()
 	}()
 	ms.wg.Add(1)
@@ -116,7 +116,7 @@ func (ms *MockServer) StartTLS(t *testing.T) {
 	// Start the server
 	ms.wg = &sync.WaitGroup{}
 	go func() {
-		Serve(context.Background(), ms.hc, ms.gc, s, shutdownFn)
+		Serve(context.Background(), ms.hc, ms.gc, 1*time.Second, s, shutdownFn)
 		ms.wg.Done()
 	}()
 	ms.wg.Add(1)
