@@ -38,6 +38,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -gcflags "all=-
 FROM golang:1.24.4@sha256:10c131810f80a4802c49cab0961bbe18a16f4bb2fb99ef16deaa23e4246fc817 AS deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
+COPY --from=builder /usr/bin/sleep /usr/bin/sleep
 # Set the binary as the entrypoint of the container
 CMD ["rekor-server", "serve"]
 
