@@ -35,7 +35,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.37.0
 	go.step.sm/crypto v0.69.0
 	golang.org/x/exp v0.0.0-20250620022241-b7579e27df2b
-	golang.org/x/mod v0.26.0
+	golang.org/x/mod v0.27.0
 	golang.org/x/sync v0.16.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250721164621-a45f3dfb1074
 	google.golang.org/grpc v1.74.2
