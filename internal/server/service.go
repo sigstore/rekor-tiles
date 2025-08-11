@@ -125,6 +125,9 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	}
 	entry := ttessera.NewEntry(canonicalized)
 	tle, err := s.storage.Add(ctx, entry)
+	if errors.Is(err, ttessera.ErrPushback) {
+		return nil, status.Errorf(codes.Unavailable, "reached max pushback; retry")
+	}
 	if errors.As(err, &tessera.DuplicateError{}) {
 		return nil, status.Error(codes.AlreadyExists, err.Error())
 	}
