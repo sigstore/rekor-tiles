@@ -58,18 +58,12 @@ TEST_validate_shard1_active_for_first_validity_window() {
 }
 
 run() {
-  # Set up TSA.
-  message "SETUP: Starting TSA"
-  start_tsa
-  local tsakey
-  tsakey=$(get_tsa_cert)
-
   # Bring up the first shard. Set up trusted_root.json and signing_config.json
   # to point to it. Signing and verifying should work normally.
   message "SETUP: starting first shard"
   local shard1_key
   shard1_key=$(new_key 1)
-  start_shard1 "$tsakey" "$shard1_key"
+  start_shard1 "$shard1_key"
 
   # Test that the one service works.
   SETUP_validate_shard1_initialized
@@ -81,7 +75,7 @@ run() {
   message "SETUP: starting second shard"
   local shard2_key
   shard2_key=$(new_key 2)
-  start_shard2 "$tsakey" "$shard1_key" "$shard2_key"
+  start_shard2 "$shard1_key" "$shard2_key"
   SETUP_validate_shard2_initialized
 
   # Test that the second service works, using its URL explicitly, and check that

@@ -59,7 +59,7 @@ func main() {
 	}
 
 	verifierConfig := []verify.VerifierOption{
-		verify.WithObserverTimestamps(1),
+		verify.WithNoObserverTimestamps(),
 		verify.WithTransparencyLog(1),
 	}
 	policy := verifyPolicy(artifact)
