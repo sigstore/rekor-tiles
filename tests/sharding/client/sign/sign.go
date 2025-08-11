@@ -171,7 +171,15 @@ func discoverRekorURLs(signingConfig *root.SigningConfig, url string) ([]string,
 	if url != "" {
 		return []string{url}, nil
 	}
-	return root.SelectServices(signingConfig.RekorLogURLs(), signingConfig.RekorLogURLsConfig(), []uint32{2}, now)
+	services, err := root.SelectServices(signingConfig.RekorLogURLs(), signingConfig.RekorLogURLsConfig(), []uint32{2}, now)
+	if err != nil {
+		return nil, err
+	}
+	var urls []string
+	for _, s := range services {
+		urls = append(urls, s.URL)
+	}
+	return urls, nil
 }
 
 func setRekorOpts(opts *sign.BundleOptions, urls []string) error {
