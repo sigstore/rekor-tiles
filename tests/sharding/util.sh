@@ -23,11 +23,6 @@ new_trusted_root() {
   local flags
   while [[ "$#" -gt 0 ]]; do
     case $1 in
-      -tsa)
-        local key=$2
-        shift 2
-        flags="$flags --timestamp-certificate-chain $key --timestamp-uri http://localhost:3004"
-        ;;
       -rekor)
         local key=$2
         local origin=$3
@@ -124,33 +119,14 @@ new_key() {
   echo "${keydir}/${public}"
 }
 
-start_tsa() {
-  pushd "$WORKDIR" >/dev/null || return
-  test -d timestamp-authority || git clone https://github.com/sigstore/timestamp-authority
-  pushd timestamp-authority >/dev/null || return
-  docker compose up -d --wait
-  popd >/dev/null || return
-  popd >/dev/null || return
-}
-
-get_tsa_cert() {
-  local keydir
-  keydir=${WORKDIR}/pki
-  mkdir -p "$keydir"
-  curl -o "${keydir}/tsa.pem" http://localhost:3004/api/v1/timestamp/certchain
-  echo "${keydir}/tsa.pem"
-}
-
 start_shard1() {
-  local tsakey
-  tsakey=$1
   local rekorkey_shard1
-  rekorkey_shard1=$2
+  rekorkey_shard1=$1
 
   # generate trusted root
   local shard1_start
   shard1_start=$(date --iso-8601=sec)
-  new_trusted_root -tsa "$tsakey" -rekor "$rekorkey_shard1" shard1.rekor.local "$shard1_start"
+  new_trusted_root -rekor "$rekorkey_shard1" shard1.rekor.local "$shard1_start"
   # generate signing config
   new_signing_config http://localhost:3003 "$shard1_start"
 
@@ -159,12 +135,10 @@ start_shard1() {
 }
 
 start_shard2() {
-  local tsakey
-  tsakey=$1
   local rekorkey_shard1
-  rekorkey_shard1=$2
+  rekorkey_shard1=$1
   local rekorkey_shard2
-  rekorkey_shard2=$3
+  rekorkey_shard2=$2
 
   local shard1_start
   shard1_start=$(date -d '1 minute ago' --iso-8601=sec)
@@ -172,7 +146,7 @@ start_shard2() {
   shard2_start=$(date -d '1 minute' --iso-8601=sec)
   local shard1_end
   shard1_end=$(date -d '1 week' --iso-8601=sec)
-  new_trusted_root -tsa "$tsakey" -rekor "$rekorkey_shard1" shard1.rekor.local "$shard1_start" "$shard1_end" -rekor "$rekorkey_shard2" shard2.rekor.local "$(date --iso-8601=sec)"
+  new_trusted_root -rekor "$rekorkey_shard1" shard1.rekor.local "$shard1_start" "$shard1_end" -rekor "$rekorkey_shard2" shard2.rekor.local "$(date --iso-8601=sec)"
   new_signing_config http://localhost:3003 "$shard1_start" "$shard2_start" http://localhost:3030 "$shard2_start"
 
   docker compose --profile shard2 up -d --wait
@@ -231,8 +205,4 @@ docker_down() {
 cleanup() {
   docker_down shard1 # should already be off
   docker_down shard2
-  pushd "$WORKDIR/timestamp-authority" >/dev/null || return
-  docker compose down
-  popd >/dev/null || return
 }
-

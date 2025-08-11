@@ -30,8 +30,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-const tsaURL = "http://localhost:3004/api/v1/timestamp"
-
 var (
 	rekorURL          *string
 	bundleOut         *string
@@ -88,8 +86,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	setTSAOpts(&opts)
 
 	signedBundle, err := sign.Bundle(content, keypair, opts)
 	if err != nil {
@@ -193,15 +189,6 @@ func setRekorOpts(opts *sign.BundleOptions, urls []string) error {
 		opts.TransparencyLogs = append(opts.TransparencyLogs, sign.NewRekor(rekorOpts))
 	}
 	return nil
-}
-
-func setTSAOpts(opts *sign.BundleOptions) {
-	tsaOpts := &sign.TimestampAuthorityOptions{
-		URL:     tsaURL,
-		Timeout: time.Duration(5 * time.Second),
-		Retries: 0,
-	}
-	opts.TimestampAuthorities = append(opts.TimestampAuthorities, sign.NewTimestampAuthority(tsaOpts))
 }
 
 type verifyTrustedMaterial struct {

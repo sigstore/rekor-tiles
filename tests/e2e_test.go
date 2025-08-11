@@ -281,7 +281,7 @@ func TestPersistentDeduplication(t *testing.T) {
 	_, err = writer.Add(ctx, hr)
 	assert.Error(t, err)
 	assert.ErrorContains(t, err, "unexpected response: 409")
-	assert.ErrorContains(t, err, fmt.Sprintf("an equivalent entry already exists in the transparency log with index"))
+	assert.ErrorContains(t, err, "an equivalent entry already exists in the transparency log with index")
 
 	// restart rekor-tiles and check for persistent deduplication
 	err = exec.Command(path, "compose", "restart", "rekor").Run()
@@ -304,7 +304,7 @@ func TestPersistentDeduplication(t *testing.T) {
 	_, err = writer.Add(ctx, hr)
 	assert.Error(t, err)
 	assert.ErrorContains(t, err, "unexpected response: 409")
-	assert.ErrorContains(t, err, fmt.Sprintf("an equivalent entry already exists in the transparency log with index"))
+	assert.ErrorContains(t, err, "an equivalent entry already exists in the transparency log with index")
 }
 
 func artifactDigest(idx uint64) []byte {
