@@ -1,2 +1,2 @@
 # A dockerfile to keep the protobuf-specs based builder up to date, we don't actually bulid from here
-FROM ghcr.io/sigstore/protobuf-specs-service-builder:0.4.3@sha256:8a73049de5dc158d74a664a849bc27b9858a184ccae3ba5acf1f012a8486acf6
+FROM ghcr.io/sigstore/protobuf-specs-service-builder:0.5.0@sha256:a999950276fbdecd1388d2933398192acaa9b59b2561f090a7b0be2514eb3256

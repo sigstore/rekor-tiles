@@ -33,7 +33,6 @@ updates:
   - package-ecosystem: "docker"
     directories:
       - "/"
-      - "/protoc-builder"
     schedule:
       interval: "weekly"
     groups:

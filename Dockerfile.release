@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Debian 12 (Bookworm) image to build binary for distroless/static-debian12
-FROM --platform=$BUILDPLATFORM golang:1.24.4-bookworm@sha256:ee7ff13d239350cc9b962c1bf371a60f3c32ee00eaaf0d0f0489713a87e51a67 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.6-bookworm@sha256:2679c15c940573aded505b2f2fbbd4e718b5172327aae3ab9f43a10a5c700dfc AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ENV APP_ROOT=/opt/app-root
@@ -27,13 +27,14 @@ RUN go mod download
 # Add source code
 ADD ./cmd/ $APP_ROOT/src/cmd/
 ADD ./pkg/ $APP_ROOT/src/pkg/
+ADD ./internal/ $APP_ROOT/src/internal/
 
 ARG SERVER_LDFLAGS
 # Build server for deployment. Build without cgo since distroless/static-debian12 doesn't include lib/cgo
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
 
 # Multi-stage deployment build
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:188ddfb9e497f861177352057cb21913d840ecae6c843d39e00d44fa64daa51c AS deploy
+FROM gcr.io/distroless/static-debian12:nonroot@sha256:cdf4daaf154e3e27cfffc799c16f343a384228f38646928a1513d925f473cb46 AS deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 # Set the binary as the entrypoint of the container
