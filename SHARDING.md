@@ -136,20 +136,24 @@ Request a review from an infrastructure maintainer and merge.
 
 ```
 go run ./cmd/create-tink-keyset \
+  --origin <log origin, e.g. schemeless URL>
   --key-template ED25519 \
   --out enc-keyset.cfg \
   --key-encryption-key-uri gcp-kms://projects/<project name>/locations/<region>/keyRings/<key-ring>/cryptoKeys/checkpoint-signer-key-encryption-key \
-  --public-key-out public.pem
+  --public-key-out public.b64
+  --key-id-out keyid.b64
 ```
 
 Example:
 
 ```
 go run ./cmd/create-tink-keyset \
+  --origin log2026-1.rekor.sigstore.dev
   --key-template ED25519 \
   --out enc-keyset.cfg \
   --key-encryption-key-uri gcp-kms://projects/projectsigstore-staging/locations/global/keyRings/log2026-1-rekor-tiles-keyring/cryptoKeys/checkpoint-signer-key-encryption-key \
-  --public-key-out public.pem
+  --public-key-out public.b64
+  --key-id-out keyid.b64
 ```
 
 If there's an error that mentions `invalid_grant`, make sure you've run `gcloud auth application-default login`.
@@ -159,7 +163,7 @@ Note we won't use [tinkey](https://developers.google.com/tink/tinkey-overview#in
 that requires a Java runtime environment and won't output the public key.
 
 Save the output file `enc-keyset.cfg`, which will be used as a value in the Helm chart,
-and `public.pem`, which will be distributed in the TUF repo.
+and `public.b64` and `keyid.b64`, which will be distributed in the TUF repo.
 
 6. Revoke IAM access by reverting the PR and removing `google_kms_key_ring_iam_member`, and run `plan` and `apply`.
 
@@ -331,11 +335,17 @@ overly precise, and can be updated in a future TUF signing event.
 
 ### Get shard public key
 
-You should have the log public key saved in `public.pem` from when you generated the key.
+You should have the log public key saved in `public.b64` from when you generated the key,
+and the log's checkpoint key ID in `keyid.b64`.
 If you don't have the public key, look at the service logs to find the public key, which
-is logged on service startup.
+is logged on service startup. If you don't have the key ID, you can use
+[this script](https://go.dev/play/p/oiE6LjeqLnj) to generate the ID given the key.
 
-The key is PEM-encoded. Remove the PEM header and footer and remove all newline characters to get the base64-encoded PKIX public key.
+The key and ID are formatted such that you just need to copy them into a new
+instance in the TrustedRoot.
+
+// TODO: Give guidance on TrustedRoot and SigningConfig ordering
+// once https://github.com/sigstore/protobuf-specs/issues/729 is resolved
 
 ### Update TrustedRoot
 
@@ -350,14 +360,14 @@ Update the TrustedRoot for the new shard's key material:
       "baseUrl": "https://<year-revision>.rekor.(sigstore|sigstage).dev",
       "hashAlgorithm": "SHA2_256",
       "publicKey": {
-        "rawBytes": "base64-encoded DER public key",
+        "rawBytes": "<base64-encoded public key>",
         "keyDetails": "ED25519",
         "validFor": {
           "start": "<UTC timestamp for when shard was spun up>"
         }
       },
       "logId": {
-        "keyId": "wNI9atQGlz+VWfO6LRygH4QUfY/8W4RFwiT5i5WRgB0="
+        "keyId": "<base64-encoded checkpoint key ID>"
       }
     },
     // previous shard
