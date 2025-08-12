@@ -360,7 +360,7 @@ Update the TrustedRoot for the new shard's key material:
       "baseUrl": "https://<year-revision>.rekor.(sigstore|sigstage).dev",
       "hashAlgorithm": "SHA2_256",
       "publicKey": {
-        "rawBytes": "<base64-encoded PKIX public key>",
+        "rawBytes": "<base64-encoded public key>",
         "keyDetails": "ED25519",
         "validFor": {
           "start": "<UTC timestamp for when shard was spun up>"
