@@ -37,6 +37,7 @@ RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SER
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:cdf4daaf154e3e27cfffc799c16f343a384228f38646928a1513d925f473cb46 AS deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
+COPY --from=builder /usr/bin/sleep /usr/bin/sleep
 # Set the binary as the entrypoint of the container
 CMD ["rekor-server", "serve"]
 
