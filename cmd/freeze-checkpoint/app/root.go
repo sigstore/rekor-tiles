@@ -27,14 +27,18 @@ import (
 	"time"
 
 	gcs "cloud.google.com/go/storage"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/sigstore/rekor-tiles/internal/signerverifier"
 	rekornote "github.com/sigstore/rekor-tiles/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	logformat "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/tessera/api/layout"
 	"golang.org/x/mod/sumdb/note"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 )
 
 const (
@@ -119,6 +123,8 @@ func init() {
 	rootCmd.Flags().String("signer-kmshash", "sha256", "hash algorithm used by the KMS")
 	rootCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset. Valid options are [aws-kms://keyname, gcp-kms://keyname]")
 	rootCmd.Flags().String("signer-tink-keyset-path", "", "path to encrypted Tink keyset")
+	rootCmd.Flags().Uint("gcp-kms-retries", 0, "number of retries for GCP KMS requests")
+	rootCmd.Flags().Uint32("gcp-kms-timeout", 0, "sets the RPC timeout per call for GCP KMS requests in seconds, defaults to 0 (no timeout)")
 
 	if err := viper.BindPFlags(rootCmd.Flags()); err != nil {
 		slog.Error(err.Error())
@@ -143,7 +149,10 @@ func getSignerVerifier(ctx context.Context) (signature.SignerVerifier, error) {
 		if !ok {
 			return nil, fmt.Errorf("invalid hash algorithm for --signer-kmshash: %s", kmshash)
 		}
-		opts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg)}
+		rpcOpts := make([]signature.RPCOption, 0)
+		callOpts := []grpc_retry.CallOption{grpc_retry.WithMax(viper.GetUint("gcp-kms-retries")), grpc_retry.WithPerRetryTimeout(time.Duration(viper.GetUint32("gcp-kms-timeout")) * time.Second)}
+		rpcOpts = append(rpcOpts, gcp.WithGoogleAPIClientOption(option.WithGRPCDialOption(grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(callOpts...)))))
+		opts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg, rpcOpts)}
 	case viper.GetString("signer-tink-kek-uri") != "":
 		opts = []signerverifier.Option{signerverifier.WithTink(viper.GetString("signer-tink-kek-uri"), viper.GetString("signer-tink-keyset-path"))}
 	default:

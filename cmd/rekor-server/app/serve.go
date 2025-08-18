@@ -28,6 +28,9 @@ import (
 	"time"
 
 	clog "github.com/chainguard-dev/clog/gcp"
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 
 	"github.com/spf13/cobra"
@@ -40,6 +43,7 @@ import (
 	"github.com/sigstore/rekor-tiles/internal/tessera"
 	"github.com/sigstore/rekor-tiles/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
+	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -76,7 +80,12 @@ var serveCmd = &cobra.Command{
 				slog.Error("invalid hash algorithm for --signer-kmshash", "algorithm", kmshash)
 				os.Exit(1)
 			}
-			signerOpts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg)}
+			// initialize optional RPC options for GCP KMS
+			rpcOpts := make([]signature.RPCOption, 0)
+			callOpts := []grpc_retry.CallOption{grpc_retry.WithMax(viper.GetUint("gcp-kms-retries")), grpc_retry.WithPerRetryTimeout(time.Duration(viper.GetUint32("gcp-kms-timeout")) * time.Second)}
+			rpcOpts = append(rpcOpts, gcp.WithGoogleAPIClientOption(option.WithGRPCDialOption(grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(callOpts...)))))
+
+			signerOpts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg, rpcOpts)}
 		case viper.GetString("signer-tink-kek-uri") != "":
 			signerOpts = []signerverifier.Option{signerverifier.WithTink(viper.GetString("signer-tink-kek-uri"), viper.GetString("signer-tink-keyset-path"))}
 		default:
@@ -213,6 +222,8 @@ func init() {
 	serveCmd.Flags().String("signer-kmshash", "sha256", "hash algorithm used by the KMS")
 	serveCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset. Valid options are [aws-kms://keyname, gcp-kms://keyname]")
 	serveCmd.Flags().String("signer-tink-keyset-path", "", "path to encrypted Tink keyset")
+	serveCmd.Flags().Uint("gcp-kms-retries", 0, "number of retries for GCP KMS requests")
+	serveCmd.Flags().Uint32("gcp-kms-timeout", 0, "sets the RPC timeout per call for GCP KMS requests in seconds, defaults to 0 (no timeout)")
 
 	// tessera lifecycle configs
 	serveCmd.Flags().Uint("batch-max-size", tessera.DefaultBatchMaxSize, "the maximum number of entries that will accumulated before being sent to the sequencer")
