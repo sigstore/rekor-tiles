@@ -46,7 +46,7 @@ func New(ctx context.Context, opts ...Option) (signature.SignerVerifier, error) 
 		func(s string) bool {
 			return strings.HasPrefix(sc.kms, s)
 		}):
-		return kms.Get(ctx, sc.kms, sc.kmsHash)
+		return kms.Get(ctx, sc.kms, sc.kmsHash, sc.kmsRPCOpts...)
 	case sc.tinkKEKURI != "":
 		return NewTinkSignerVerifier(ctx, sc.tinkKEKURI, sc.tinkKeysetPath)
 	case sc.filePath != "":
@@ -61,6 +61,7 @@ type signerVerifierConfig struct {
 	password       string
 	kms            string
 	kmsHash        crypto.Hash
+	kmsRPCOpts     []signature.RPCOption
 	tinkKEKURI     string
 	tinkKeysetPath string
 }
@@ -76,10 +77,11 @@ func WithFile(filePath, password string) Option {
 }
 
 // WithKMS configures a KMS signer-verifier.
-func WithKMS(kms string, hash crypto.Hash) Option {
+func WithKMS(kms string, hash crypto.Hash, rpcOpts []signature.RPCOption) Option {
 	return func(sc *signerVerifierConfig) {
 		sc.kms = kms
 		sc.kmsHash = hash
+		sc.kmsRPCOpts = rpcOpts
 	}
 }
 
