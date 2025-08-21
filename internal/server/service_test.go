@@ -21,14 +21,16 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
-
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/internal/algorithmregistry"
+	"github.com/sigstore/rekor-tiles/internal/tessera"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	"github.com/stretchr/testify/assert"
 	ttessera "github.com/transparency-dev/tessera"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func TestNewServer(t *testing.T) {
@@ -50,6 +52,7 @@ func TestCreateEntry(t *testing.T) {
 		addFn                   func() (*rekor_pb.TransparencyLogEntry, error)
 		clientSigningAlgorithms []string
 		expectError             error
+		expectedCode            codes.Code
 	}{
 		{
 			name: "valid hashedrekord",
@@ -115,6 +118,7 @@ func TestCreateEntry(t *testing.T) {
 			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
 			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
 			expectError:             fmt.Errorf("invalid hashedrekord request"),
+			expectedCode:            codes.InvalidArgument,
 		},
 		{
 			name: "invalid dsse",
@@ -126,6 +130,82 @@ func TestCreateEntry(t *testing.T) {
 			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
 			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
 			expectError:             fmt.Errorf("invalid dsse request"),
+			expectedCode:            codes.InvalidArgument,
+		},
+		{
+			name: "context canceled",
+			req: &pb.CreateEntryRequest{
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+					HashedRekordRequestV002: &pb.HashedRekordRequestV002{
+						Signature: &pb.Signature{
+							Content: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
+							Verifier: &pb.Verifier{
+								Verifier: &pb.Verifier_PublicKey{
+									PublicKey: &pb.PublicKey{
+										RawBytes: b64DecodeOrDie(t, "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ=="),
+									},
+								},
+								KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+							},
+						},
+						Digest: hexDecodeOrDie(t, "5b3513f580c8397212ff2c8f459c199efc0c90e4354a5f3533adf0a3fff3a530"),
+					},
+				},
+			},
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return nil, context.Canceled },
+			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
+			expectError:             fmt.Errorf("context canceled"),
+			expectedCode:            codes.Canceled,
+		},
+		{
+			name: "duplicate entry",
+			req: &pb.CreateEntryRequest{
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+					HashedRekordRequestV002: &pb.HashedRekordRequestV002{
+						Signature: &pb.Signature{
+							Content: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
+							Verifier: &pb.Verifier{
+								Verifier: &pb.Verifier_PublicKey{
+									PublicKey: &pb.PublicKey{
+										RawBytes: b64DecodeOrDie(t, "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ=="),
+									},
+								},
+								KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+							},
+						},
+						Digest: hexDecodeOrDie(t, "5b3513f580c8397212ff2c8f459c199efc0c90e4354a5f3533adf0a3fff3a530"),
+					},
+				},
+			},
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return nil, tessera.DuplicateError{} },
+			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
+			expectError:             fmt.Errorf("an equivalent entry already exists in the transparency log"),
+			expectedCode:            codes.AlreadyExists,
+		},
+		{
+			name: "inclusion proof verification failure",
+			req: &pb.CreateEntryRequest{
+				Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+					HashedRekordRequestV002: &pb.HashedRekordRequestV002{
+						Signature: &pb.Signature{
+							Content: b64DecodeOrDie(t, "MEYCIQC59oLS3MsCqm0xCxPOy+8FdQK4RYCZE036s3q1ECfcagIhAJ4ATXlCSdFrklKAS8No0PsAE9uLi37TCbIfRXASJTTb"),
+							Verifier: &pb.Verifier{
+								Verifier: &pb.Verifier_PublicKey{
+									PublicKey: &pb.PublicKey{
+										RawBytes: b64DecodeOrDie(t, "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p2D+C5G9xPEsy/PVAo9H0mgS4NYzpGirkXxBht+IvvL19WR1X9ANXha5ldQ=="),
+									},
+								},
+								KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+							},
+						},
+						Digest: hexDecodeOrDie(t, "5b3513f580c8397212ff2c8f459c199efc0c90e4354a5f3533adf0a3fff3a530"),
+					},
+				},
+			},
+			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return nil, tessera.InclusionProofVerificationError{} },
+			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
+			expectError:             fmt.Errorf("failed to integrate entry"),
+			expectedCode:            codes.Unknown,
 		},
 		{
 			name: "failed integration",
@@ -150,6 +230,7 @@ func TestCreateEntry(t *testing.T) {
 			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return nil, fmt.Errorf("timed out") },
 			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
 			expectError:             fmt.Errorf("failed to integrate entry"),
+			expectedCode:            codes.Unknown,
 		},
 		{
 			name: "hashedrekord signed with disallowed algorithm",
@@ -176,6 +257,7 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
 			clientSigningAlgorithms: []string{"rsa-sign-pkcs1-4096-sha256"},
 			expectError:             fmt.Errorf("invalid hashedrekord request"),
+			expectedCode:            codes.InvalidArgument,
 		},
 	}
 	for _, test := range tests {
@@ -194,6 +276,9 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 				assert.NotNil(t, gotTle.KindVersion)
 				assert.NotNil(t, gotTle.LogId)
 			} else {
+				s, ok := status.FromError(gotErr)
+				assert.True(t, ok)
+				assert.Equal(t, s.Code(), test.expectedCode)
 				assert.ErrorContains(t, gotErr, test.expectError.Error())
 			}
 		})

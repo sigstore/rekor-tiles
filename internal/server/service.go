@@ -128,6 +128,10 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 	if errors.Is(err, ttessera.ErrPushback) {
 		return nil, status.Errorf(codes.Unavailable, "reached max pushback; retry")
 	}
+	if errors.Is(err, context.Canceled) {
+		// Returns a 499 Client Closed Request
+		return nil, status.Error(codes.Canceled, err.Error())
+	}
 	if errors.As(err, &tessera.DuplicateError{}) {
 		return nil, status.Error(codes.AlreadyExists, err.Error())
 	}
