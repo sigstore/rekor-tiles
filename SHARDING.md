@@ -45,7 +45,7 @@ For production, update the `projects_project-rekor` module. For staging,
 update the `projects_projectsigstore-staging` module. These modules come from
 [this file](https://github.com/sigstore/public-good-instance/blob/main/iam/resource_hierarchy/main.tf).
 
-Run `terraform apply` using
+Run `terraform plan` and `terraform apply` using
 [Provision sigstore.dev organization](https://github.com/sigstore/public-good-instance/actions/workflows/iam-resource-hierarchy.yml).
 
 ### Create GCP resources
@@ -94,7 +94,6 @@ After merging, run `terraform plan` through the GitHub Actions workflow
 for [staging](https://github.com/sigstore/public-good-instance/actions/workflows/env-staging.yml)
 or [prod](https://github.com/sigstore/public-good-instance/actions/workflows/env-prod.yml).
 Confirm the expected resources are created, then run `terraform apply` through the workflow.
-Note this will also remove the org restriction.
 
 ### Create Key Material
 
@@ -165,7 +164,7 @@ that requires a Java runtime environment and won't output the public key.
 Save the output file `enc-keyset.cfg`, which will be used as a value in the Helm chart,
 and `public.b64` and `keyid.b64`, which will be distributed in the TUF repo.
 
-6. Revoke IAM access by reverting the PR and removing `google_kms_key_ring_iam_member`, and run `plan` and `apply`.
+6. Revoke IAM access by reverting the PR and removing `google_kms_key_ring_iam_member`, and run `terraform plan` and `terraform apply`.
 
 ### Create Kubernetes namespace
 
@@ -241,7 +240,7 @@ where the VM instances are, which are currently the same for staging and product
 
 [Example PR](https://github.com/sigstore/public-good-instance/pull/2955)
 
-Merge, `plan` and `apply`. The service should now be live! We'll verify everything's working
+Merge, `terraform plan` and `terraform apply`. The service should now be live! We'll verify everything's working
 as expected in a moment.
 
 ### Reapply Org Restriction
@@ -322,16 +321,17 @@ the latest TrustedRoot. In practice for our TUF root with timestamp validity
 of one week, this means setting the validity window to be at least one week
 past when the TUF targets are signed.
 
-You will need three timestamps:
+You will need four timestamps:
 
 * New shard's start time for TrustedRoot, which should be when the shard was spun up.
-* New shard's start time for SigningConfig, which should be one week past when the root-signing PR is merged
-and new TUF repository is published. Overestimate (by an hour or even a day) if needed,
-as you don't want clients to start using the new shard before all clients
-have picked up the latest TrustedRoot.
 * Previous shard's end for TrustedRoot: Clients will consider this shard's entry timestamps invalid
 if they are after this date. This must be after the start of the new shard. It doesn't have to be
 overly precise, and can be updated in a future TUF signing event.
+* New shard's start time for SigningConfig, which should be one week past when the root signing PR is merged
+and new TUF repository is published. Overestimate by at least a week of the expected merge date,
+as you don't want clients to start using the new shard before all clients
+have picked up the latest TrustedRoot.
+* Previous shard's end time for SigningConfig: This should be the start time of the new shard.
 
 ### Get shard public key
 
@@ -344,32 +344,15 @@ is logged on service startup. If you don't have the key ID, you can use
 The key and ID are formatted such that you just need to copy them into a new
 instance in the TrustedRoot.
 
-// TODO: Give guidance on TrustedRoot and SigningConfig ordering
-// once https://github.com/sigstore/protobuf-specs/issues/729 is resolved
-
 ### Update TrustedRoot
 
-Update the TrustedRoot for the new shard's key material:
+Update the TrustedRoot for the new shard's key material, with the
+latest shard added to the **end** of the list: 
 
 ```
 {
   "mediaType": "...",
   "tlogs": [
-    // new shard
-    {
-      "baseUrl": "https://<year-revision>.rekor.(sigstore|sigstage).dev",
-      "hashAlgorithm": "SHA2_256",
-      "publicKey": {
-        "rawBytes": "<base64-encoded public key>",
-        "keyDetails": "ED25519",
-        "validFor": {
-          "start": "<UTC timestamp for when shard was spun up>"
-        }
-      },
-      "logId": {
-        "keyId": "<base64-encoded checkpoint key ID>"
-      }
-    },
     // previous shard
     {
       "baseUrl": "...",
@@ -386,14 +369,29 @@ Update the TrustedRoot for the new shard's key material:
         "keyId": "..."
       }
     },
-    ...
+    // new shard
+    {
+      "baseUrl": "https://<year-revision>.rekor.(sigstore|sigstage).dev",
+      "hashAlgorithm": "SHA2_256",
+      "publicKey": {
+        "rawBytes": "<base64-encoded public key>",
+        "keyDetails": "ED25519",
+        "validFor": {
+          "start": "<UTC timestamp for when shard was spun up>"
+        }
+      },
+      "logId": {
+        "keyId": "<base64-encoded checkpoint key ID>"
+      }
+    }
   ],
   ...
 }
 ```
 
 
-Update the SigningConfig for the new shard:
+Update the SigningConfig for the new shard, with the latest
+shard added to the **beginning** of the list:
 
 ```
 {
@@ -441,12 +439,13 @@ Verify write traffic to the previous shard has gone down to ~0 QPS.
 If there is significant traffic, look at the user agent and see if you
 can figure out who's calling the service.
 
-<!--- TODO: Update with link to monitoring -->
+[Example link](https://console.cloud.google.com/monitoring/metrics-explorer;duration=P1D?pageState=%7B%22xyChart%22:%7B%22constantLines%22:%5B%5D,%22dataSets%22:%5B%7B%22plotType%22:%22LINE%22,%22pointConnectionMethod%22:%22GAP_DETECTION%22,%22targetAxis%22:%22Y1%22,%22timeSeriesFilter%22:%7B%22aggregations%22:%5B%7B%22alignmentPeriod%22:%2260s%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%5D,%22apiSource%22:%22DEFAULT_CLOUD%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22filter%22:%22metric.type%3D%5C%22prometheus.googleapis.com%2Frekor_new_hashedrekord_entries%2Fcounter%5C%22%20resource.type%3D%5C%22prometheus_target%5C%22%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22minAlignmentPeriod%22:%2260s%22,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%7D,%7B%22plotType%22:%22LINE%22,%22pointConnectionMethod%22:%22GAP_DETECTION%22,%22targetAxis%22:%22Y1%22,%22timeSeriesFilter%22:%7B%22aggregations%22:%5B%7B%22alignmentPeriod%22:%2260s%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%5D,%22apiSource%22:%22DEFAULT_CLOUD%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22filter%22:%22metric.type%3D%5C%22prometheus.googleapis.com%2Frekor_new_dsse_entries%2Fcounter%5C%22%20resource.type%3D%5C%22prometheus_target%5C%22%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22minAlignmentPeriod%22:%2260s%22,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%7D%5D,%22options%22:%7B%22mode%22:%22COLOR%22%7D,%22y1Axis%22:%7B%22label%22:%22%22,%22scale%22:%22LINEAR%22%7D%7D%7D&project=projectsigstore-staging)
 
 ### Post on Slack
 
 Make a post on Slack letting the community know we'll be freezing
-and turning down the log.
+and turning down the log. Include that the turndown should cause
+no issues for anyone using Sigstore clients.
 
 ### WIP: Disable alerts for old shard
 
@@ -454,8 +453,41 @@ Make sure to either disable or remove via Terraform alerts for the old shard
 for failing healthchecks for the write path or missing metrics. As we turn down the service
 and delete resources, we expect that healthchecks will start to fail.
 
-As we create alerting, we'll finalize this section with what alerts need to be removed.
-Currently, we should remove the monitoring module for the old shard.
+Remove the monitoring module from Terraform, either from `staging.tf` or `production.tf`.
+Merge and run `terraform plan` and `terraform apply`.
+
+[Example PR](https://github.com/sigstore/public-good-instance/pull/3175)
+
+As we create more alerting, we'll finalize this section with specific alerts to remove.
+We may need to add a `freeze_shard` variable that disables write-only metrics.
+For now, we'll remove the entire monitoring module.
+
+### Remove Kubernetes backend services from Load Balancer
+
+The Kubernetes backend services must be removed from the load balancer URL map
+before deleting the backend services. Terraform isn't smart enough to do this
+in a single `apply`, as it tries to delete the backend services while they're
+still in use, which throws a resource-in-use error.
+
+In the Terraform configuration `staging.tf` or `production.tf` for the respective `tiles_tlog` module,
+set `lb_backend_turndown = true`. Merge the PR, and `terraform plan` and `terraform apply`.
+
+### Delete Kubernetes backends from backend services
+
+Kubernetes manages the creation and deletion of network endpoint groups (NEGs),
+while Terraform manages the creation and deletion of backend services which reference
+the NEGs. We must first remove all Kubernetes backends from the backend services
+before deleting the NEGs, otherwise ArgoCD will stall on the deletion of the namespace
+since there will still be a reference to an existing Kubernetes object.
+
+In the Terraform configuration `staging.tf` or `production.tf` for the respective `tiles_tlog` module,
+comment out `network_endpoint_group_zones` or set it to `[]`, effectively reverting
+this [example PR](https://github.com/sigstore/public-good-instance/pull/2955).
+Merge, `terraform plan` and `terraform apply`.
+
+After this is merged, there will still be Kubernetes backend service resources
+in GCP, but they won't be referenced in the load balancer and will contain no
+NEG backends. The backend service resources will be cleaned up later.
 
 ### Delete Kubernetes resources
 
@@ -466,24 +498,71 @@ the read path is exclusively served via GCP resources (Load Balancer, Storage).
 Remove the `PodMonitoring` collector and the Kubernetes gRPC secret as well for
 the shard.
 
-TODO: Add example PR
+[Example PR](https://github.com/sigstore/public-good-instance/pull/3176)
 
-Merge and wait for ArgoCD to shut down the server.
+Merge.
+
+ArgoCD will not automatically delete the resources since we have disabled
+automatic pruning. You'll need to access ArgoCD and manually sync and prune.
+
+First, access ArgoCD following
+[the instructions](https://github.com/sigstore/public-good-instance/blob/main/playbooks/argo-access.md).
+
+You'll need to sync and prune three applications. The recommended order is:
+
+* `prometheus-monitoring`, to clean up the pod monitor
+* `private-key-secret`, to clean up the gRPC TLS secret
+* `bootstrap-utilities`, which should kick off the removal of `rekor-tiles-<log shard name>`
+
+To sync and prune, for each application, click "SYNC", select the "PRUNE" checkbox, and
+click "SYNCHRONIZE".
+
+TODO: Delete this TODO once we've verified this procedure works. Previously, deletion of the
+log application stalled since the NEGs were referenced by backend services. ArgoCD couldn't
+delete the namespace since there was a reference to the namespace still present. Now
+that we delete NEG references via Terraform before this step, ArgoCD should be able
+to prune the log application without issue.
+
+TODO: Delete this TODO once we've verified that `bootstrap-utilities` can be synced
+and pruned, rather than syncing and pruning the specific log application. There
+might be an issue with a namespace getting recreated.
 
 ### Delete GCP resources
 
 We only need a subset of GCP resources to serve read traffic. To save costs,
-we can turn down the databases and destroy the KEK (indirectly destroying the signing key).
+we can turn down the databases and destroy the KEK (indirectly destroying the signing key),
+along with deleting the Compute backend services for routing to the deleted pods.
 
-First, remove the protection bit on the databases. In the Terraform configuration,
+First, remove the protection bit on the databases. In the Terraform configuration `staging.tf`
+or `production.tf` for the respective `tiles_tlog` module,
 set `spanner_database_sequencer_deletion_protection` and `spanner_database_antispam_deletion_protection`
-to `false`. Create a PR, merge, `plan`, and `apply`.
+to `false`. Create a PR, merge, `terraform plan`, and `terraform apply`.
+[Example PR](https://github.com/sigstore/public-good-instance/pull/3177)
 
-To delete the KEK and databases, set `freeze_shard` to `true`, and remove
-`spanner_processing_units`, `spanner_instance_name_suffix`, `spanner_instance_display_name_suffix`,
-`keyring_name_suffix`, `key_name`, `kms_crypto_key_algorithm`, `network_endpoint_group_http_name_suffix`,
-`network_endpoint_group_grpc_name_suffix`, and `network_endpoint_group_zones`. All other variables
-should remain, for the networking stack to serve read traffic from GCS.
+To delete the KEK, databases, and Compute resources, set `freeze_shard` to `true`.
+Leave all variables as they are - even though their values won't be used, most are
+still required.
+
+[Example PR](https://github.com/sigstore/public-good-instance/pull/3180)
+
+Merge, `terraform plan`, and `terraform apply`. The Terraform plan should
+show deletion of:
+
+* Compute resources
+  * Kubernetes gRPC and HTTP backend services
+  * Backend service health checks
+  * Firewall rules for the health checks
+* KMS resources
+  * Key encryption key (KEK)
+  * IAM decrypter and KMS member roles for the workload identity
+* Spanner
+  * Sequencer and antispam databases
+  * Instance (backups should be automatically deleted)
+  * IAM DB admin role for the workload identity
+* GCS
+  * IAM role for managing the GCS bucket for the workload identity
+* Monitoring
+  * IAM roles for timeseries and descriptors creation for the workload identity
 
 ### Prober
 
