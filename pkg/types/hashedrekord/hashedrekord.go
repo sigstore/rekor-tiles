@@ -21,11 +21,11 @@ import (
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor-tiles/internal/algorithmregistry"
-	"github.com/sigstore/rekor-tiles/internal/verifier"
-	"github.com/sigstore/rekor-tiles/internal/verifier/certificate"
-	"github.com/sigstore/rekor-tiles/internal/verifier/publickey"
 	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
 	pbverifier "github.com/sigstore/rekor-tiles/pkg/types/verifier"
+	"github.com/sigstore/rekor-tiles/pkg/verifier"
+	"github.com/sigstore/rekor-tiles/pkg/verifier/certificate"
+	"github.com/sigstore/rekor-tiles/pkg/verifier/publickey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
