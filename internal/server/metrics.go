@@ -63,44 +63,44 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 	f := promauto.With(m.reg)
 
 	m.newHashedRekordEntries = f.NewCounter(prometheus.CounterOpts{
-		Name: "rekor_new_hashedrekord_entries",
+		Name: "rekor_v2_new_hashedrekord_entries",
 		Help: "The total number of new dsse log entries",
 	})
 
 	m.newDsseEntries = f.NewCounter(prometheus.CounterOpts{
-		Name: "rekor_new_dsse_entries",
+		Name: "rekor_v2_new_dsse_entries",
 		Help: "The total number of new dsse log entries",
 	})
 
 	// grpc_packet_part should always be "payload" but we can measure "header" or "trailer" in the future
 	// if we so desire
 	m.grpcRequestSize = f.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "grpc_api_request_size",
+		Name: "rekor_v2_grpc_api_request_size",
 		Help: "API Request size on GRPC calls",
 	}, []string{"grpc_service", "grpc_method", "grpc_packet_part"})
 
 	m.httpLatency = f.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "rekor_http_api_latency",
+		Name: "rekor_v2_http_api_latency",
 		Help: "API Latency on HTTP calls",
 	}, []string{"code", "method"})
 
 	m.httpRequestsCount = f.NewCounterVec(prometheus.CounterOpts{
-		Name: "rekor_http_requests_total",
+		Name: "rekor_v2_http_requests_total",
 		Help: "Count all HTTP requests",
 	}, []string{"code", "method"})
 
 	m.httpRequestSize = f.NewHistogramVec(prometheus.HistogramOpts{
-		Name: "rekor_http_api_request_size",
+		Name: "rekor_v2_http_api_request_size",
 		Help: "API Request size on HTTP calls",
 	}, []string{"code", "method"})
 
 	m.panicsTotal = f.NewCounter(prometheus.CounterOpts{
-		Name: "grpc_req_panics_recovered_total",
+		Name: "rekor_v2_grpc_req_panics_recovered_total",
 		Help: "Total number of gRPC requests recovered from internal panic.",
 	})
 
 	m.inclusionProofFailureCount = f.NewCounter(prometheus.CounterOpts{
-		Name: "rekor_inclusion_proof_failure_total",
+		Name: "rekor_v2_inclusion_proof_failure_total",
 		Help: "Total number of inclusion proof verification failures, which should always be zero. Likely catastrophic failure if not zero.",
 	})
 
