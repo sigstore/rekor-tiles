@@ -29,7 +29,7 @@ require (
 	github.com/tink-crypto/tink-go/v2 v2.4.0
 	github.com/transparency-dev/formats v0.0.0-20250421220931-bb8ad4d07c26
 	github.com/transparency-dev/merkle v0.0.2
-	github.com/transparency-dev/tessera v1.0.0-rc2
+	github.com/transparency-dev/tessera v1.0.0-rc3
 	go.opentelemetry.io/contrib/detectors/gcp v1.38.0
 	go.opentelemetry.io/otel v1.38.0
 	go.opentelemetry.io/otel/sdk v1.38.0
