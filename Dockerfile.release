@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Debian 12 (Bookworm) image to build binary for distroless/static-debian12
-FROM --platform=$BUILDPLATFORM golang:1.25.0-bookworm@sha256:74908ad827a5849c557eeca81d46263acf788ead606102d83466f499f83e35b1 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.1-bookworm@sha256:6ad9415c04f1cdb7888141cb247cabb28fa74fcc597034494c65d5bc783246a0 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ENV APP_ROOT=/opt/app-root
