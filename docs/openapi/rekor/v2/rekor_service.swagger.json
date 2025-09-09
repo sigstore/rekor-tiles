@@ -1,13 +1,26 @@
 {
   "swagger": "2.0",
   "info": {
-    "title": "rekor/v2/rekor_service.proto",
-    "version": "version not set"
+    "title": "Rekor v2",
+    "version": "2.0",
+    "contact": {
+      "name": "Rekor v2 project",
+      "url": "https://github.com/sigstore/rekor-tiles",
+      "email": "sigstore-dev@googlegroups.com"
+    },
+    "license": {
+      "name": "Apache License 2.0",
+      "url": "https://github.com/sigstore/rekor-tiles/blob/main/LICENSE"
+    }
   },
   "tags": [
     {
       "name": "Rekor"
     }
+  ],
+  "host": "*.rekor.sigstore.dev",
+  "schemes": [
+    "http"
   ],
   "consumes": [
     "application/json"
@@ -532,5 +545,9 @@
         "keyDetails"
       ]
     }
+  },
+  "externalDocs": {
+    "description": "More about Rekor v2",
+    "url": "https://github.com/sigstore/rekor-tiles"
   }
 }

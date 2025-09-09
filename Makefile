@@ -89,9 +89,10 @@ ko-local: ## Build container images locally using ko
 # generate Go protobuf code
 protos:
 	@echo "Generating go protobuf files"
+	go install tool github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2
 	@mkdir -p ${OPENAPI_OUT}
 	${DOCKER_RUN} -v ${PWD}:${MOUNT_POINT} ${SIGSTORE_PROTO_BUILDER} \
-		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
+		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/third_party/googleapis -I${MOUNT_POINT}/api/proto \
 		--go_out=${MOUNT_POINT} \
 		--go_opt=module=${GO_MODULE} \
 		--go-grpc_opt=module=${GO_MODULE} --go-grpc_out=${MOUNT_POINT} \
