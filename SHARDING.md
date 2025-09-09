@@ -447,6 +447,17 @@ Make a post on Slack letting the community know we'll be freezing
 and turning down the log. Include that the turndown should cause
 no issues for anyone using Sigstore clients.
 
+### Update monitor for status page
+
+Log into [Betterstack](https://betterstack.com/), which hosts Sigstore's status page
+([prod](https://status.sigstore.dev/), [staging](https://status.sigstage.dev/)). You'll
+need to work with someone in the oncall rotation to login with the magic link, using
+`oncall@sigstore.dev` to email a login link to the oncall group.
+
+Update the Rekor v2 [monitor](https://uptime.betterstack.com/team/t59712/monitors) for
+either staging or prod. Click the three dots on the right side and click "Configure".
+Change the "URL to monitor" to be for the new shard, and click "Save changes".
+
 ### WIP: Disable alerts for old shard
 
 Make sure to either disable or remove via Terraform alerts for the old shard
