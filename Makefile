@@ -91,7 +91,7 @@ protos:
 	@echo "Generating go protobuf files"
 	@mkdir -p ${OPENAPI_OUT}
 	${DOCKER_RUN} -v ${PWD}:${MOUNT_POINT} ${SIGSTORE_PROTO_BUILDER} \
-		-I/opt/include -I/googleapis -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
+		-I/opt/include -I/googleapis -I/grpc-gateway -I/protobuf-specs -I${MOUNT_POINT}/api/proto \
 		--go_out=${MOUNT_POINT} \
 		--go_opt=module=${GO_MODULE} \
 		--go-grpc_opt=module=${GO_MODULE} --go-grpc_out=${MOUNT_POINT} \

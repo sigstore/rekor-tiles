@@ -19,6 +19,7 @@ import "google/api/annotations.proto";
 import "google/api/httpbody.proto";
 import "google/protobuf/empty.proto";
 import "sigstore_rekor.proto";
+import "protoc-gen-openapiv2/options/annotations.proto";
 
 import "rekor/v2/entry.proto";
 
@@ -28,6 +29,32 @@ option java_package = "dev.sigstore.proto.rekor.v2";
 option java_multiple_files = true;
 option java_outer_classname = "RekorV2Service";
 option ruby_package = "Sigstore::Rekor::V2";
+
+option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
+  info: {
+    title: "Rekor v2";
+    version: "2.0";
+    contact: {
+      name: "Rekor v2 project";
+      url: "https://github.com/sigstore/rekor-tiles";
+      email: "sigstore-dev@googlegroups.com";
+    };
+    license: {
+      name: "Apache License 2.0";
+      url: "https://github.com/sigstore/rekor-tiles/blob/main/LICENSE";
+    };
+  };
+
+  host: "*.rekor.sigstore.dev";
+  external_docs: {
+    url: "https://github.com/sigstore/rekor-tiles";
+    description: "More about Rekor v2";
+  };
+  schemes: HTTP;
+  consumes: "application/json";
+  produces: "application/json";
+};
+
 
 // A service for sigstore clients to connect to to create log entries
 // and for log monitors and witnesses to audit/inspect the log
