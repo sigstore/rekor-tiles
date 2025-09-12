@@ -134,6 +134,7 @@ var serveCmd = &cobra.Command{
 		// if in read-only mode, don't start the appender, because we don't want new checkpoints being published.
 		if !readOnly {
 			driverConfig := tessera.DriverConfiguration{
+				Hostname:            viper.GetString("hostname"),
 				GCPBucket:           viper.GetString("gcp-bucket"),
 				GCPSpannerDB:        viper.GetString("gcp-spanner"),
 				PersistentAntispam:  viper.GetBool("persistent-antispam"),

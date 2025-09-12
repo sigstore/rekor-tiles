@@ -99,6 +99,9 @@ func WithAntispamOptions(opts *tessera.AppendOptions, as tessera.Antispam) *tess
 
 // DriverConfiguration contains storage-specific configuration for each supported storage backend.
 type DriverConfiguration struct {
+	// Server origin
+	Hostname string
+
 	// GCP configuration
 	GCPBucket    string
 	GCPSpannerDB string
@@ -113,7 +116,7 @@ type DriverConfiguration struct {
 func NewDriver(ctx context.Context, config DriverConfiguration) (tessera.Driver, tessera.Antispam, error) {
 	switch {
 	case config.GCPBucket != "" && config.GCPSpannerDB != "":
-		driver, err := NewGCPDriver(ctx, config.GCPBucket, config.GCPSpannerDB)
+		driver, err := NewGCPDriver(ctx, config.GCPBucket, config.GCPSpannerDB, config.Hostname)
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to initialize GCP driver: %v", err.Error())
 		}
