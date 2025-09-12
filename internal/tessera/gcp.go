@@ -18,17 +18,33 @@ package tessera
 import (
 	"context"
 	"fmt"
+	"runtime"
 
+	"cloud.google.com/go/spanner"
+	gcs "cloud.google.com/go/storage"
 	"github.com/transparency-dev/tessera"
 	"github.com/transparency-dev/tessera/storage/gcp"
 	antispam "github.com/transparency-dev/tessera/storage/gcp/antispam"
+	"google.golang.org/api/option"
+	"sigs.k8s.io/release-utils/version"
 )
 
 // NewGCPDriver returns a GCP Tessera Driver for the given bucket and spanner URI.
-func NewGCPDriver(ctx context.Context, bucket, spanner string) (tessera.Driver, error) {
+func NewGCPDriver(ctx context.Context, bucket, spannerDB, hostname string) (tessera.Driver, error) {
+	userAgent := userAgent(hostname)
+	gcsClient, err := gcs.NewClient(ctx, gcs.WithJSONReads(), option.WithUserAgent(userAgent))
+	if err != nil {
+		return nil, fmt.Errorf("creating storage client: %w", err)
+	}
+	spannerClient, err := spanner.NewClient(ctx, spannerDB, option.WithUserAgent(userAgent))
+	if err != nil {
+		return nil, fmt.Errorf("creating spanner client: %w", err)
+	}
 	cfg := gcp.Config{
-		Bucket:  bucket,
-		Spanner: spanner,
+		Bucket:        bucket,
+		Spanner:       spannerDB,
+		GCSClient:     gcsClient,
+		SpannerClient: spannerClient,
 	}
 	driver, err := gcp.New(ctx, cfg)
 	if err != nil {
@@ -45,4 +61,8 @@ func NewGCPAntispam(ctx context.Context, spannerDb string, maxBatchSize, pushbac
 	}
 	dbName := fmt.Sprintf("%s-antispam", spannerDb)
 	return antispam.NewAntispam(ctx, dbName, asOpts)
+}
+
+func userAgent(hostname string) string {
+	return fmt.Sprintf("rekor-tiles/%s (%s; %s) %s", version.GetVersionInfo().GitVersion, runtime.GOOS, runtime.GOARCH, hostname)
 }
