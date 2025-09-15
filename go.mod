@@ -40,8 +40,8 @@ require (
 	golang.org/x/sync v0.17.0
 	google.golang.org/api v0.248.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20250818200422-3122310a409c
-	google.golang.org/grpc v1.75.0
-	google.golang.org/protobuf v1.36.8
+	google.golang.org/grpc v1.75.1
+	google.golang.org/protobuf v1.36.9
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/release-utils v0.12.1
 )
