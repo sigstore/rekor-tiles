@@ -215,6 +215,7 @@ require (
 
 tool (
 	github.com/google/addlicense
+	github.com/grpc-ecosystem/grpc-gateway/v2/protoc-gen-openapiv2
 	golang.org/x/tools/cmd/goimports
 )
 
