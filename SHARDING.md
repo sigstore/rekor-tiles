@@ -90,6 +90,8 @@ if we declare the zones but the NEGs haven't been created by GKE through the Hel
 Update `production.tf` or `staging.tf` based on the example. Make sure to update
 the `module` names, `shard_name` variables, and the name of the map key for `var.rekor_tiles_shards`.
 
+Ignore the code scanning and defsec alerts for the public bucket and load balancer, as that's expected.
+
 After merging, run `terraform plan` through the GitHub Actions workflow
 for [staging](https://github.com/sigstore/public-good-instance/actions/workflows/env-staging.yml)
 or [prod](https://github.com/sigstore/public-good-instance/actions/workflows/env-prod.yml).
