@@ -137,11 +137,11 @@ Request a review from an infrastructure maintainer and merge.
 
 ```
 go run ./cmd/create-tink-keyset \
-  --origin <log origin, e.g. schemeless URL>
+  --origin <log origin, e.g. schemeless URL> \
   --key-template ED25519 \
   --out enc-keyset.cfg \
   --key-encryption-key-uri gcp-kms://projects/<project name>/locations/<region>/keyRings/<key-ring>/cryptoKeys/checkpoint-signer-key-encryption-key \
-  --public-key-out public.b64
+  --public-key-out public.b64 \
   --key-id-out keyid.b64
 ```
 
@@ -149,11 +149,11 @@ Example:
 
 ```
 go run ./cmd/create-tink-keyset \
-  --origin log2026-1.rekor.sigstore.dev
+  --origin log2026-1.rekor.sigstore.dev \
   --key-template ED25519 \
   --out enc-keyset.cfg \
   --key-encryption-key-uri gcp-kms://projects/projectsigstore-staging/locations/global/keyRings/log2026-1-rekor-tiles-keyring/cryptoKeys/checkpoint-signer-key-encryption-key \
-  --public-key-out public.b64
+  --public-key-out public.b64 \
   --key-id-out keyid.b64
 ```
 
