@@ -3,7 +3,7 @@ module github.com/sigstore/rekor-tiles
 go 1.24.0
 
 require (
-	cloud.google.com/go/spanner v1.84.1
+	cloud.google.com/go/spanner v1.85.1
 	cloud.google.com/go/storage v1.56.1
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/exporter/metric v0.53.0
 	github.com/chainguard-dev/clog v1.7.0
