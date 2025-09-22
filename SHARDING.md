@@ -61,6 +61,9 @@ will create the required resources and monitoring.
 Note: You should omit `key_name`, which will be set to a default value of
 `checkpoint-signer-key-encryption-key`.
 
+Note: You should omit `bucket_id_length`, which will append a random UUID to the bucket
+name to make it unguessable, so that read traffic must go through the load balancer.
+
 Modules should be named based on the year and how many shards
 have been created in the year. For example, the module should
 be named `tiles_tlog_log2026_1` for the first shard in 2026. We'll
