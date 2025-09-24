@@ -56,12 +56,15 @@ or
 [`production.tf`](https://github.com/sigstore/public-good-instance/blob/main/terraform/environments/production/1-infrastructure/production.tf).
 
 Follow the [example PR](https://github.com/sigstore/public-good-instance/pull/3144), which
-will create the required resources and monitoring.
+will create the required resources.
+
+Note: Do not include the monitoring module `gcp/modules/monitoring/rekorv2` from the example. This will be added
+in a later step. The service must be deployed before creating metrics.
 
 Note: You should omit `key_name`, which will be set to a default value of
 `checkpoint-signer-key-encryption-key`.
 
-Note: You should omit `bucket_id_length`, which will append a random UUID to the bucket
+Note: You should omit `bucket_id_length`, which will append a random ID to the bucket
 name to make it unguessable, so that read traffic must go through the load balancer.
 
 Modules should be named based on the year and how many shards
@@ -169,7 +172,7 @@ that requires a Java runtime environment and won't output the public key.
 Save the output file `enc-keyset.cfg`, which will be used as a value in the Helm chart,
 and `public.b64` and `keyid.b64`, which will be distributed in the TUF repo.
 
-6. Revoke IAM access by reverting the PR and removing `google_kms_key_ring_iam_member`, and run `terraform plan` and `terraform apply`.
+6. **Revoke IAM access** by reverting the PR and removing `google_kms_key_ring_iam_member`, and run `terraform plan` and `terraform apply`.
 
 ### Create Kubernetes namespace
 
@@ -206,10 +209,15 @@ Follow the [example PR](https://github.com/sigstore/public-good-instance/pull/31
 which will set up the deployment, pod monitoring, and gRPC secret. More information is below.
 
 Under `rekorTiles.shards`, copy the previous shard instantiation, and update
-the values accordingly based on the Terraform resource names. In particular, update the `shardName`.
-For `keyset`, copy the contents of `enc-keyset.cfg` (Since this value is encrypted, it's safe to include
+the values accordingly based on the Terraform resource names. In particular:
+
+* Update `shardName`
+* For `signer.tink.keyset`, copy the contents of `enc-keyset.cfg` (Since this value is encrypted, it's safe to include
 it in the config rather than use GCP Secrets). Make sure `signer.tink.key` is set to either the KMS `key_name`
 or the default value `checkpoint-signer-key-encryption-key`.
+* Update `gcp.bucket` to be the name of the bucket without the `shardName` prefix. Note that this will have a random ID
+appended to it, e.g. `sigstore-dev-rekor-tiles-7dd04f40ece69668c26c`. You'll need to retrieve the random ID by looking
+at the bucket name on GCP.
 
 Additionally, create the `PodMonitoring` collector for gathering metrics from the pod. Add a new
 [`PodMonitoring` collector](https://github.com/sigstore/public-good-instance/blob/main/argocd/utilities/manifest/staging/prometheus-monitoring/rekor-tiles.yaml),
@@ -221,6 +229,9 @@ shards, as its only purpose is to allow the load balancer to send encrypted traf
 (a requirement imposed by the load balancer for HTTP2/gRPC traffic).
 Create an ExternalSecret configuration based on the example. Update the name of the
 file and `metadata.namespace`. All other values will remain the same.
+
+Note: If this is the first time you're deploying a shard in an environment, you'll need to do a
+[one time initialization of the GCP secret](#one-time-grpc-gcp-secret-initialization).
 
 Merge, and wait for ArgoCD to create the resources and spin up the service. You can monitor the GKE UI,
 or view the ArgoCD dashboard. To get access, follow the
@@ -256,6 +267,15 @@ Finally, reapply the org restriction to prevent public buckets.
 
 Run `terraform apply` using
 [Provision sigstore.dev organization](https://github.com/sigstore/public-good-instance/actions/workflows/iam-resource-hierarchy.yml).
+
+### Create GCP Monitoring resources
+
+Now that the service is deployed, create the metrics, alerts and dashboards for the service.
+Follow the example below, updating the `shard_name`.
+
+[Example PR](https://github.com/sigstore/public-good-instance/pull/3282)
+
+Merge, `terraform plan`, and `terraform apply`.
 
 ## Verify Shard Health
 
@@ -444,7 +464,7 @@ Verify write traffic to the previous shard has gone down to ~0 QPS.
 If there is significant traffic, look at the user agent and see if you
 can figure out who's calling the service.
 
-[Example link](https://console.cloud.google.com/monitoring/metrics-explorer;duration=P1D?pageState=%7B%22xyChart%22:%7B%22constantLines%22:%5B%5D,%22dataSets%22:%5B%7B%22plotType%22:%22LINE%22,%22pointConnectionMethod%22:%22GAP_DETECTION%22,%22targetAxis%22:%22Y1%22,%22timeSeriesFilter%22:%7B%22aggregations%22:%5B%7B%22alignmentPeriod%22:%2260s%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%5D,%22apiSource%22:%22DEFAULT_CLOUD%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22filter%22:%22metric.type%3D%5C%22prometheus.googleapis.com%2Frekor_new_hashedrekord_entries%2Fcounter%5C%22%20resource.type%3D%5C%22prometheus_target%5C%22%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22minAlignmentPeriod%22:%2260s%22,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%7D,%7B%22plotType%22:%22LINE%22,%22pointConnectionMethod%22:%22GAP_DETECTION%22,%22targetAxis%22:%22Y1%22,%22timeSeriesFilter%22:%7B%22aggregations%22:%5B%7B%22alignmentPeriod%22:%2260s%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%5D,%22apiSource%22:%22DEFAULT_CLOUD%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22filter%22:%22metric.type%3D%5C%22prometheus.googleapis.com%2Frekor_new_dsse_entries%2Fcounter%5C%22%20resource.type%3D%5C%22prometheus_target%5C%22%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22minAlignmentPeriod%22:%2260s%22,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%7D%5D,%22options%22:%7B%22mode%22:%22COLOR%22%7D,%22y1Axis%22:%7B%22label%22:%22%22,%22scale%22:%22LINEAR%22%7D%7D%7D&project=projectsigstore-staging)
+[Example link](https://console.cloud.google.com/monitoring/metrics-explorer;duration=P1D?pageState=%7B%22xyChart%22:%7B%22constantLines%22:%5B%5D,%22dataSets%22:%5B%7B%22plotType%22:%22LINE%22,%22pointConnectionMethod%22:%22GAP_DETECTION%22,%22targetAxis%22:%22Y1%22,%22timeSeriesFilter%22:%7B%22aggregations%22:%5B%7B%22alignmentPeriod%22:%2260s%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%5D,%22apiSource%22:%22DEFAULT_CLOUD%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22filter%22:%22metric.type%3D%5C%22prometheus.googleapis.com%2Frekor_v2_new_hashedrekord_entries%2Fcounter%5C%22%20resource.type%3D%5C%22prometheus_target%5C%22%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22minAlignmentPeriod%22:%2260s%22,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%7D,%7B%22plotType%22:%22LINE%22,%22pointConnectionMethod%22:%22GAP_DETECTION%22,%22targetAxis%22:%22Y1%22,%22timeSeriesFilter%22:%7B%22aggregations%22:%5B%7B%22alignmentPeriod%22:%2260s%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%5D,%22apiSource%22:%22DEFAULT_CLOUD%22,%22crossSeriesReducer%22:%22REDUCE_SUM%22,%22filter%22:%22metric.type%3D%5C%22prometheus.googleapis.com%2Frekor_v2_new_dsse_entries%2Fcounter%5C%22%20resource.type%3D%5C%22prometheus_target%5C%22%22,%22groupByFields%22:%5B%22resource.label.%5C%22namespace%5C%22%22%5D,%22minAlignmentPeriod%22:%2260s%22,%22perSeriesAligner%22:%22ALIGN_RATE%22%7D%7D%5D,%22options%22:%7B%22mode%22:%22COLOR%22%7D,%22y1Axis%22:%7B%22label%22:%22%22,%22scale%22:%22LINEAR%22%7D%7D%7D&project=projectsigstore-staging)
 
 ### Post on Slack
 
@@ -488,6 +508,8 @@ still in use, which throws a resource-in-use error.
 In the Terraform configuration `staging.tf` or `production.tf` for the respective `tiles_tlog` module,
 set `lb_backend_turndown = true`. Merge the PR, and `terraform plan` and `terraform apply`.
 
+[Example PR](https://github.com/sigstore/public-good-instance/pull/3284)
+
 ### Delete Kubernetes backends from backend services
 
 Kubernetes manages the creation and deletion of network endpoint groups (NEGs),
@@ -499,6 +521,9 @@ since there will still be a reference to an existing Kubernetes object.
 In the Terraform configuration `staging.tf` or `production.tf` for the respective `tiles_tlog` module,
 comment out `network_endpoint_group_zones` or set it to `[]`, effectively reverting
 this [example PR](https://github.com/sigstore/public-good-instance/pull/2955).
+
+[Example PR](https://github.com/sigstore/public-good-instance/pull/3285/) commenting out NEG zones
+
 Merge, `terraform plan` and `terraform apply`.
 
 After this is merged, there will still be Kubernetes backend service resources
@@ -529,19 +554,10 @@ You'll need to sync and prune three applications. The recommended order is:
 * `prometheus-monitoring`, to clean up the pod monitor
 * `private-key-secret`, to clean up the gRPC TLS secret
 * `bootstrap-utilities`, which should kick off the removal of `rekor-tiles-<log shard name>`
+  * Note: If deletion stalls, under the `rekor-tiles-<log shard name>` application, you may need to manually sync the namespace to trigger it to be pruned. This may be due to the namespace getting recreated.
 
 To sync and prune, for each application, click "SYNC", select the "PRUNE" checkbox, and
 click "SYNCHRONIZE".
-
-TODO: Delete this TODO once we've verified this procedure works. Previously, deletion of the
-log application stalled since the NEGs were referenced by backend services. ArgoCD couldn't
-delete the namespace since there was a reference to the namespace still present. Now
-that we delete NEG references via Terraform before this step, ArgoCD should be able
-to prune the log application without issue.
-
-TODO: Delete this TODO once we've verified that `bootstrap-utilities` can be synced
-and pruned, rather than syncing and pruning the specific log application. There
-might be an issue with a namespace getting recreated.
 
 ### Delete GCP resources
 
@@ -549,11 +565,16 @@ We only need a subset of GCP resources to serve read traffic. To save costs,
 we can turn down the databases and destroy the KEK (indirectly destroying the signing key),
 along with deleting the Compute backend services for routing to the deleted pods.
 
+#### Remove database protection
+
 First, remove the protection bit on the databases. In the Terraform configuration `staging.tf`
 or `production.tf` for the respective `tiles_tlog` module,
 set `spanner_database_sequencer_deletion_protection` and `spanner_database_antispam_deletion_protection`
 to `false`. Create a PR, merge, `terraform plan`, and `terraform apply`.
+
 [Example PR](https://github.com/sigstore/public-good-instance/pull/3177)
+
+#### Delete resources
 
 To delete the KEK, databases, and Compute resources, set `freeze_shard` to `true`.
 Leave all variables as they are - even though their values won't be used, most are
@@ -585,3 +606,26 @@ show deletion of:
 The prober should have stopped writing to the shard already since the SigningConfig
 will specify the new shard. The prober will continue testing read traffic, discovering
 the shard path via the TrustedRoot.
+
+# Appendix
+
+## One-time gRPC GCP secret initialization
+
+gRPC traffic between the load balancer and the K8s backend service is encrypted
+over TLS. Since we'd prefer to have TLS terminate at the load balancer, we can
+create a single TLS certificate and key to be shared across all shards. It can
+even expire as per the documentation.
+
+We create a GCP secret once per environment, which is mounted by
+[External Secrets Operator](https://external-secrets.io/latest/).
+To create the secret, grant yourself `roles/secretmanager.admin`, and run:
+
+```
+openssl req -new -newkey rsa:2048 -days 1825 -nodes -x509 -keyout rekor-grpc.key -out rekor-grpc.crt -subj "/C=US/ST=WA/L=Kirkland/O=Sigstore/OU=Rekor/CN=localhost" -addext "subjectAltName = IP:127.0.0.1" -addext "keyUsage = critical,digitalSignature,keyEncipherment"
+
+openssl pkcs12 -passout "pass:" -export -certpbe PBE-SHA1-3DES -keypbe PBE-SHA1-3DES -macalg sha1 -out rekor-grpc.p12 -inkey rekor-grpc.key -in rekor-grpc.crt
+
+gcloud secrets create rekor-grpc-tls --replication-policy="automatic" --data-file="rekor-grpc.p12" --project projectsigstore-staging
+```
+
+This will generate a TLS key and self-signed certificate, merge them into a PKCS #12 archive, and upload that archive.
