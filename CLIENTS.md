@@ -560,7 +560,7 @@ Post an entry:
 ```bash
 curl  -H \
  "Accept: application/json" -X \
-POST http://localhost:3003/api/v2/log/entries -o rekor_response -d "{ \"hashedRekordRequestV002\":{ \"digest\":\"$(cat artifact_dgst|base64)\", \"signature\":{ \"content\": \"$(cat artifact.sig | base64)\", \"verifier\": { \"key_details\": \"PKIX_ECDSA_P256_SHA_256\", \"public_key\": { \"raw_bytes\": \"$(openssl base64 -d -in ec_public.pem | base64)\" } } } } }"
+POST http://localhost:3003/api/v2/log/entries -o rekor_response -d "{ \"hashedRekordRequestV002\":{ \"digest\":\"$(cat artifact_dgst | base64 | tr -d '\n')\", \"signature\":{ \"content\": \"$(cat artifact.sig | base64 | tr -d '\n')\", \"verifier\": { \"key_details\": \"PKIX_ECDSA_P256_SHA_256\", \"public_key\": { \"raw_bytes\": \"$(openssl base64 -d -in ec_public.pem | base64 | tr -d '\n')\" } } } } }"
 ```
 
 View the response with `cat rekor_response | jq .` Example:
