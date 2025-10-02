@@ -452,6 +452,16 @@ Follow the playbooks in https://github.com/sigstore/root-signing and
 https://github.com/sigstore/root-signing-staging to orchestrate a new
 signing event.
 
+### Update transparency-dev configuration
+
+We need to manually update the witness under the transparency-dev
+organization so that the shard will be monitored.
+
+Update [omniwitness](https://github.com/transparency-dev/witness/blob/main/omniwitness/logs.yaml),
+whose list is used by [Armored Witness](https://github.com/transparency-dev/armored-witness).
+
+[Example PR](https://github.com/transparency-dev/witness/pull/424/)
+
 ## Turn Down Old Shard
 
 Wait a week, until all clients have received updated SigningConfigs
