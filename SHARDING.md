@@ -452,7 +452,7 @@ Follow the playbooks in https://github.com/sigstore/root-signing and
 https://github.com/sigstore/root-signing-staging to orchestrate a new
 signing event.
 
-### Update transparency-dev configuration
+## Update transparency-dev configuration
 
 We need to manually update the witness under the transparency-dev
 organization so that the shard will be monitored.
