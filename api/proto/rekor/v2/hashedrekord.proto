@@ -20,7 +20,7 @@ import "sigstore_common.proto";
 
 import "rekor/v2/verifier.proto";
 
-option go_package = "github.com/sigstore/rekor-tiles/pkg/generated/protobuf";
+option go_package = "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf";
 
 option java_package = "dev.sigstore.proto.rekor.v2";
 option java_multiple_files = true;

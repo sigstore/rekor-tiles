@@ -17,7 +17,7 @@ package verifier
 import (
 	"fmt"
 
-	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 )
 
 // Validate validates there are no missing field in a Verifier protobuf

@@ -28,8 +28,8 @@ import (
 
 	gcs "cloud.google.com/go/storage"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	"github.com/sigstore/rekor-tiles/internal/signerverifier"
-	rekornote "github.com/sigstore/rekor-tiles/pkg/note"
+	"github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
+	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	"github.com/spf13/cobra"

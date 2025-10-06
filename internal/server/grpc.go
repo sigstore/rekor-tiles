@@ -39,7 +39,7 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
-	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"

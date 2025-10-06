@@ -22,7 +22,7 @@ import (
 	"testing"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	rekornote "github.com/sigstore/rekor-tiles/pkg/note"
+	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	f_log "github.com/transparency-dev/formats/log"

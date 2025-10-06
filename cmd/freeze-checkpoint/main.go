@@ -15,7 +15,7 @@
 
 package main
 
-import "github.com/sigstore/rekor-tiles/cmd/freeze-checkpoint/app"
+import "github.com/sigstore/rekor-tiles/v2/cmd/freeze-checkpoint/app"
 
 func main() {
 	app.Execute()

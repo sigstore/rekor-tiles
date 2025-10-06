@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sigstore/rekor-tiles/pkg/client"
+	"github.com/sigstore/rekor-tiles/v2/pkg/client"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 )

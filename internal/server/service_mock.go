@@ -37,7 +37,7 @@ import (
 
 	pbsc "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/transparency-dev/tessera/api/layout"
 	"google.golang.org/genproto/googleapis/api/httpbody"
 	"google.golang.org/grpc/health/grpc_health_v1"

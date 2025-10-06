@@ -21,9 +21,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sigstore/rekor-tiles/internal/signerverifier"
-	"github.com/sigstore/rekor-tiles/pkg/client/read"
-	"github.com/sigstore/rekor-tiles/pkg/client/write"
+	"github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
+	"github.com/sigstore/rekor-tiles/v2/pkg/client/read"
+	"github.com/sigstore/rekor-tiles/v2/pkg/client/write"
 	"github.com/stretchr/testify/assert"
 )
 
