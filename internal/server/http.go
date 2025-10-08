@@ -33,7 +33,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"

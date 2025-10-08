@@ -21,8 +21,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/sigstore/rekor-tiles/pkg/client"
-	rekornote "github.com/sigstore/rekor-tiles/pkg/note"
+	"github.com/sigstore/rekor-tiles/v2/pkg/client"
+	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/transparency-dev/formats/log"
 	tclient "github.com/transparency-dev/tessera/client"

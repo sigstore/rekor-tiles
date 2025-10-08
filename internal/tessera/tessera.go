@@ -22,7 +22,7 @@ import (
 	"time"
 
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/pkg/note"
+	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	logformat "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/proof"

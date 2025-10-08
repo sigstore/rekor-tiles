@@ -26,7 +26,7 @@ import (
 	dsset "github.com/secure-systems-lab/go-securesystemslib/dsse"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
-	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/encoding/protojson"

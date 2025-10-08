@@ -23,7 +23,7 @@ import (
 
 	"github.com/go-test/deep"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 )

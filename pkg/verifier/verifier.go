@@ -17,7 +17,7 @@ package verifier
 import (
 	"crypto"
 
-	"github.com/sigstore/rekor-tiles/pkg/verifier/identity"
+	"github.com/sigstore/rekor-tiles/v2/pkg/verifier/identity"
 )
 
 // Verifier represents a structure that can verify a signature, e.g. a public key or certificate

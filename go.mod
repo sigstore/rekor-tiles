@@ -1,4 +1,4 @@
-module github.com/sigstore/rekor-tiles
+module github.com/sigstore/rekor-tiles/v2
 
 go 1.24.0
 
@@ -176,6 +176,7 @@ require (
 	github.com/segmentio/ksuid v1.0.4 // indirect
 	github.com/shibumi/go-pathspec v1.3.0 // indirect
 	github.com/sigstore/rekor v1.4.2 // indirect
+	github.com/sigstore/rekor-tiles v0.1.11 // indirect
 	github.com/sigstore/timestamp-authority v1.2.9 // indirect
 	github.com/skratchdot/open-golang v0.0.0-20200116055534-eef842397966 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
@@ -215,9 +216,4 @@ require (
 tool (
 	github.com/google/addlicense
 	golang.org/x/tools/cmd/goimports
-)
-
-retract (
-	v0.99.1 // Contains only retractions
-	v0.99.0 // Accidental tag
 )

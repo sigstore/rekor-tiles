@@ -39,7 +39,7 @@ PROTO_SRC = $(shell find $(PROTO_DIRS))
 SIGSTORE_PROTO_BUILDER = $(shell grep FROM Dockerfile.protobuf-specs | cut -d' ' -f 2)
 
 # for docker protobuf build
-GO_MODULE = github.com/sigstore/rekor-tiles
+GO_MODULE = github.com/sigstore/rekor-tiles/v2
 PROTOS = $(shell find api/proto/ -iname "*.proto" | sed 's|^|/project_dir/|')
 PROTO_OUT = pkg/generated/protobuf
 OPENAPI_OUT = docs/openapi
@@ -84,7 +84,7 @@ ko-local: ## Build container images locally using ko
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
 		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
-		github.com/sigstore/rekor-tiles/cmd/rekor-server
+		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server
 
 # generate Go protobuf code
 protos:

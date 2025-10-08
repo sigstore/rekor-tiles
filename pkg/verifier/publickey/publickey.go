@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/sigstore/rekor-tiles/pkg/verifier/identity"
+	"github.com/sigstore/rekor-tiles/v2/pkg/verifier/identity"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 )
 

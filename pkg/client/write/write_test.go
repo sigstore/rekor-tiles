@@ -30,8 +30,8 @@ import (
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/pkg/client"
-	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
+	"github.com/sigstore/rekor-tiles/v2/pkg/client"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/stretchr/testify/assert"
 )
 

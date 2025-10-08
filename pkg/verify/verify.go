@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/internal/tessera"
+	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	f_log "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"

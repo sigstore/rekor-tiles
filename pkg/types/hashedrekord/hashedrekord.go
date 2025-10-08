@@ -20,12 +20,12 @@ import (
 	"fmt"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	"github.com/sigstore/rekor-tiles/internal/algorithmregistry"
-	pb "github.com/sigstore/rekor-tiles/pkg/generated/protobuf"
-	pbverifier "github.com/sigstore/rekor-tiles/pkg/types/verifier"
-	"github.com/sigstore/rekor-tiles/pkg/verifier"
-	"github.com/sigstore/rekor-tiles/pkg/verifier/certificate"
-	"github.com/sigstore/rekor-tiles/pkg/verifier/publickey"
+	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
+	pbverifier "github.com/sigstore/rekor-tiles/v2/pkg/types/verifier"
+	"github.com/sigstore/rekor-tiles/v2/pkg/verifier"
+	"github.com/sigstore/rekor-tiles/v2/pkg/verifier/certificate"
+	"github.com/sigstore/rekor-tiles/v2/pkg/verifier/publickey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
