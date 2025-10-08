@@ -83,3 +83,8 @@ jobs:
     uses: ./.github/workflows/build_container.yml
     secrets: inherit
     needs: approval
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
