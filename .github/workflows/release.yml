@@ -31,6 +31,8 @@ jobs:
     # Require deployment review
     environment: release
     runs-on: ubuntu-latest
+    steps:
+      - run: echo "approved!"
 
   release:
     name: Create GitHub release
