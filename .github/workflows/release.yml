@@ -30,6 +30,7 @@ jobs:
   approval:
     # Require deployment review
     environment: release
+    runs-on: ubuntu-latest
 
   release:
     name: Create GitHub release
