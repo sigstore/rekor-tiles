@@ -25,7 +25,7 @@ and will fetch both active and inactive shard public keys from the
 
 As of October 2025, we have not yet distributed the current Rekor v2 URL in the SigningConfig, to give users
 adequate time to update their clients to support verifying entries from Rekor v2. We are planning to distribute
-the latest Rekor v2 URL by end of 2025/early 2026 to give users adequate time to update their verification clients.
+the latest Rekor v2 URL by end of 2025/early 2026.
 
 If you want to start using Rekor v2, construct a signing config, using the
 [TUF-distributed signing config](https://github.com/sigstore/root-signing/blob/main/targets/signing_config.v0.2.json)
