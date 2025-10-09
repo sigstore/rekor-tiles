@@ -23,10 +23,13 @@ Sigstore clients will pull the latest log shard URL from the TUF-distributed
 and will fetch both active and inactive shard public keys from the
 [TrustedRoot](https://github.com/sigstore/root-signing/blob/main/targets/trusted_root.json).
 
-We have not yet distributed the current Rekor v2 URL in the SigningConfig, to give users
-adequate time to update their clients to support verifying entries from Rekor v2.
-If you want to start using Rekor v2, construct a signing config, adding the following
-instance as the first entry in the `rekorTlogUrls` list:
+As of October 2025, we have not yet distributed the current Rekor v2 URL in the SigningConfig, to give users
+adequate time to update their clients to support verifying entries from Rekor v2. We are planning to distribute
+the latest Rekor v2 URL by end of 2025/early 2026 to give users adequate time to update their verification clients.
+
+If you want to start using Rekor v2, construct a signing config, using the
+[TUF-distributed signing config](https://github.com/sigstore/root-signing/blob/main/targets/signing_config.v0.2.json)
+as a base, and adding the following instance as the first entry in the `rekorTlogUrls` list:
 
 ```
     {
@@ -38,6 +41,9 @@ instance as the first entry in the `rekorTlogUrls` list:
       "operator": "sigstore.dev"
     },
 ```
+
+**Note**: We will eventually turn down the 2025 Rekor v2 instance when we deploy a 2026 instance. We strongly
+advise against hardcoding this URL into any pipelines that cannot be easily updated.
 
 ## Installation
 
