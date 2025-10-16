@@ -145,6 +145,18 @@ var serveCmd = &cobra.Command{
 			}
 			appendOptions = tessera.WithLifecycleOptions(appendOptions, viper.GetUint("batch-max-size"), viper.GetDuration("batch-max-age"), viper.GetDuration("checkpoint-interval"), viper.GetUint("pushback-max-outstanding"))
 			appendOptions = tessera.WithAntispamOptions(appendOptions, persistentAntispam)
+			if wpf := viper.GetString("witness-policy-path"); wpf != "" {
+				f, err := os.ReadFile(wpf)
+				if err != nil {
+					slog.Error("failed to read witness policy file", "file", wpf, "error", err)
+					os.Exit(1)
+				}
+				appendOptions, err = tessera.WithWitnessing(appendOptions, f)
+				if err != nil {
+					slog.Error("failed to initialize witnessing", "error", err)
+					os.Exit(1)
+				}
+			}
 			tesseraStorage, shutdownFn, err = tessera.NewStorage(ctx, viper.GetString("hostname"), tesseraDriver, appendOptions)
 			if err != nil {
 				slog.Error("failed to initialize tessera storage", "error", err)
@@ -234,6 +246,9 @@ func init() {
 	serveCmd.Flags().Bool("persistent-antispam", false, "whether to enable persistent antispam measures; only available for GCP storage backend and not supported by the Spanner storage emulator")
 	serveCmd.Flags().Uint("antispam-max-batch-size", 0, "maximum batch size for deduplication operations; will default to Tessera recommendation if unset; for Spanner, recommend around 1500 with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
 	serveCmd.Flags().Uint("antispam-pushback-threshold", 0, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back; will default to Tessera recommendation if unset")
+
+	// witness configs
+	serveCmd.Flags().String("witness-policy-path", "", "optional path to witness policy file")
 
 	// allowed entry signing algorithms
 	keyAlgorithmTypes, err := defaultKeyAlgorithms()
