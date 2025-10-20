@@ -155,7 +155,11 @@ func TestAppendOptions(t *testing.T) {
 	assert.Equal(t, 42*time.Millisecond, ao.BatchMaxAge())
 	assert.Equal(t, 42*time.Second, ao.CheckpointInterval())
 	assert.Equal(t, uint(42), ao.PushbackMaxOutstanding())
-	_ = WithAntispamOptions(ao, nil) // initializes non-persistent antispam
+	ao = WithAntispamOptions(ao, nil) // initializes non-persistent antispam
+	examplePolicy := `witness o1 transparency.dev/DEV:witness-little-garden+4b7fca75+AStusOxINQNUTN5Oj8HObRkh2yHf/MwYaGX4CPdiVEPM https://api.transparency.dev/dev/witness/little-garden 
+quorum o1`
+	_, err = WithWitnessing(ao, []byte(examplePolicy))
+	assert.NoError(t, err)
 }
 
 func hexDecodeOrDie(t *testing.T, text string) []byte {

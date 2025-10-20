@@ -34,7 +34,7 @@ jobs:
       - name: Check license headers
         run: |
           set -e
-          go tool addlicense -check -l apache -c 'The Sigstore Authors' -ignore "third_party/**" -v *
+          go tool addlicense -check -l apache -c 'The Sigstore Authors' -ignore "third_party/**" -ignore "tests/testdata/**" -v *
 
   dependency-license-review:
     name: License and Vulnerability Scan
