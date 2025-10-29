@@ -48,6 +48,16 @@ func VerifyCheckpoint(unverifiedCp string, verifier sumdb_note.Verifier) (*f_log
 	return cp, nil
 }
 
+// VerifyWitnessedCheckpoint verifies the signature on the entry's inclusion proof checkpoint in addition to witness cosignatures.
+// This returns the underlying note which contains all verified signatures.
+func VerifyWitnessedCheckpoint(unverifiedCp string, verifier sumdb_note.Verifier, otherVerifiers ...sumdb_note.Verifier) (*f_log.Checkpoint, *sumdb_note.Note, error) { //nolint: revive
+	cp, _, n, err := f_log.ParseCheckpoint([]byte(unverifiedCp), verifier.Name(), verifier, otherVerifiers...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unverified checkpoint signature: %v", err)
+	}
+	return cp, n, nil
+}
+
 // VerifyLogEntry verifies the log entry. This includes verifying the signature on the entry's
 // inclusion proof checkpoint and verifying the entry inclusion proof
 func VerifyLogEntry(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier) error { //nolint: revive

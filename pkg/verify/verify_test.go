@@ -17,8 +17,10 @@ package verify
 
 import (
 	"context"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"log"
 	"testing"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
@@ -26,6 +28,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	f_log "github.com/transparency-dev/formats/log"
+	f_note "github.com/transparency-dev/formats/note"
 	note "golang.org/x/mod/sumdb/note"
 )
 
@@ -108,7 +111,7 @@ func TestVerifyInclusionProof(t *testing.T) {
 	}
 }
 
-func getTestEntry(t *testing.T, signer signature.Signer, hostname string) *pbs.TransparencyLogEntry {
+func getTestEntry(t *testing.T, signer signature.Signer, hostname string, otherSigners ...note.Signer) *pbs.TransparencyLogEntry {
 	noteSigner, err := rekornote.NewNoteSigner(context.Background(), hostname, signer)
 	if err != nil {
 		t.Fatal(err)
@@ -120,7 +123,7 @@ func getTestEntry(t *testing.T, signer signature.Signer, hostname string) *pbs.T
 		Hash:   rootHash[:],
 	}.Marshal()
 
-	n, err := note.Sign(&note.Note{Text: string(cpRaw)}, noteSigner)
+	n, err := note.Sign(&note.Note{Text: string(cpRaw)}, append([]note.Signer{noteSigner}, otherSigners...)...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,6 +179,77 @@ func TestVerifyCheckpoint(t *testing.T) {
 			_, gotErr := VerifyCheckpoint(test.checkpoint, noteVerifier)
 			if (gotErr != nil) != test.wantErr {
 				t.Fatalf("VerifyCheckpoint = %t, wantErr %t", gotErr, test.wantErr)
+			}
+		})
+	}
+}
+
+func TestVerifyWitnessedCheckpoint(t *testing.T) {
+	hostname := "rekor.localhost"
+	sv, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	witnessOrigin := "test-witness"
+	privKey, pubKey, err := note.GenerateKey(rand.Reader, witnessOrigin)
+	if err != nil {
+		log.Fatalf("error generating key: %v", err)
+	}
+	witnessSigner, err := f_note.NewSignerForCosignatureV1(privKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	witnessVerifier, err := f_note.NewVerifierForCosignatureV1(pubKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	otherSigner, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+	otherNoteSigner, err := rekornote.NewNoteSigner(context.Background(), hostname, otherSigner)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noteVerifier, err := rekornote.NewNoteVerifier(hostname, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, test := range []struct {
+		name       string
+		checkpoint string
+		wantErr    bool
+		wantLength int
+	}{
+		{
+			name:       "valid witnessed checkpoint",
+			checkpoint: getTestEntry(t, sv, hostname, witnessSigner).GetInclusionProof().GetCheckpoint().GetEnvelope(),
+			wantErr:    false,
+			wantLength: 2,
+		},
+		{
+			name:       "mismatched log verifier with witness",
+			checkpoint: getTestEntry(t, otherSigner, hostname, witnessSigner).GetInclusionProof().GetCheckpoint().GetEnvelope(),
+			wantErr:    true,
+		},
+		{
+			name:       "only one valid signature, from log",
+			checkpoint: getTestEntry(t, sv, hostname, otherNoteSigner).GetInclusionProof().GetCheckpoint().GetEnvelope(),
+			wantErr:    false,
+			wantLength: 1,
+		},
+	} {
+		t.Run(string(test.name), func(t *testing.T) {
+			_, note, gotErr := VerifyWitnessedCheckpoint(test.checkpoint, noteVerifier, witnessVerifier)
+			if (gotErr != nil) != test.wantErr {
+				t.Fatalf("VerifyCheckpoint = %t, wantErr %t", gotErr, test.wantErr)
+			}
+			if gotErr == nil {
+				assert.Len(t, note.Sigs, test.wantLength)
 			}
 		})
 	}
