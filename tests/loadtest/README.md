@@ -8,8 +8,14 @@ This directory contains a [k6](https://k6.io) script for load testing a Rekor v2
 
 2.  **Running Rekor v2 Instance**: The load test requires a running instance of `rekor-tiles`. You can start a local instance using Docker Compose from the root of this repository:
 
+    **GCP Backend (default):**
     ```sh
     docker compose up --wait --build
+    ```
+
+    **AWS Backend:**
+    ```sh
+    docker compose -f docker-compose-aws.yml up --wait --build
     ```
 
     The services will be available at their default ports, which the k6 script is pre-configured to use.
@@ -18,16 +24,22 @@ This directory contains a [k6](https://k6.io) script for load testing a Rekor v2
 
 To execute the load test, navigate to this directory (`tests/loadtest`) and run the following command:
 
+**GCP Backend (default):**
 ```sh
 k6 run k6_rekor_load_test.js
+```
+
+**AWS Backend:**
+```sh
+REKOR_URL=http://localhost:3004/api/v2 GCS_URL=http://localhost:9000/tiles k6 run k6_rekor_load_test.js
 ```
 
 ### Configuration
 
 The test can be configured using environment variables if you need to target a non-default deployment:
 
-*   `REKOR_URL`: The URL for the Rekor write API. Defaults to `http://localhost:3003/api/v2`.
-*   `GCS_URL`: The URL for the Rekor read API, which is used for the initial health check against the `/checkpoint` endpoint. Defaults to `http://localhost:7080/tiles`.
+*   `REKOR_URL`: The URL for the Rekor write API. Defaults to `http://localhost:3003/api/v2` (GCP) or use `http://localhost:3004/api/v2` for AWS.
+*   `GCS_URL`: The URL for the Rekor read API, which is used for the initial health check against the `/checkpoint` endpoint. Defaults to `http://localhost:7080/tiles` (GCP) or use `http://localhost:9000/tiles` for AWS (MinIO).
 
 ## Test Scenario
 
