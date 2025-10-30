@@ -106,6 +106,10 @@ type DriverConfiguration struct {
 	GCPBucket    string
 	GCPSpannerDB string
 
+	// AWS configuration
+	AWSBucket   string
+	AWSMySQLDSN string
+
 	// Antispam configuration
 	PersistentAntispam  bool
 	ASMaxBatchSize      uint
@@ -125,6 +129,20 @@ func NewDriver(ctx context.Context, config DriverConfiguration) (tessera.Driver,
 			as, err := NewGCPAntispam(ctx, config.GCPSpannerDB, config.ASMaxBatchSize, config.ASPushbackThreshold)
 			if err != nil {
 				return nil, nil, fmt.Errorf("failed to initialize GCP antispam: %v", err.Error())
+			}
+			persistentAntispam = as
+		}
+		return driver, persistentAntispam, nil
+	case config.AWSBucket != "" && config.AWSMySQLDSN != "":
+		driver, err := NewAWSDriver(ctx, config.AWSBucket, config.AWSMySQLDSN, config.Hostname)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize AWS driver: %v", err.Error())
+		}
+		var persistentAntispam tessera.Antispam
+		if config.PersistentAntispam {
+			as, err := NewAWSAntispam(ctx, config.AWSMySQLDSN, config.ASMaxBatchSize, config.ASPushbackThreshold)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to initialize AWS antispam: %v", err.Error())
 			}
 			persistentAntispam = as
 		}
