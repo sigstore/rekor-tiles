@@ -137,6 +137,8 @@ var serveCmd = &cobra.Command{
 				Hostname:            viper.GetString("hostname"),
 				GCPBucket:           viper.GetString("gcp-bucket"),
 				GCPSpannerDB:        viper.GetString("gcp-spanner"),
+				AWSBucket:           viper.GetString("aws-bucket"),
+				AWSMySQLDSN:         viper.GetString("aws-mysql-dsn"),
 				PersistentAntispam:  viper.GetBool("persistent-antispam"),
 				ASMaxBatchSize:      viper.GetUint("antispam-max-batch-size"),
 				ASPushbackThreshold: viper.GetUint("antispam-pushback-threshold"),
@@ -216,6 +218,10 @@ func init() {
 	serveCmd.Flags().String("gcp-bucket", "", "GCS bucket for tile and checkpoint storage")
 	serveCmd.Flags().String("gcp-spanner", "", "Spanner database URI")
 
+	// aws configs
+	serveCmd.Flags().String("aws-bucket", "", "S3 bucket for tile and checkpoint storage")
+	serveCmd.Flags().String("aws-mysql-dsn", "", "MySQL DSN for Aurora/RDS (e.g., user:pass@tcp(host:3306)/dbname)")
+
 	// checkpoint signing configs
 	serveCmd.Flags().String("signer-filepath", "", "path to the signing key")
 	serveCmd.Flags().String("signer-password", "", "password to decrypt the signing key")
@@ -234,7 +240,7 @@ func init() {
 	serveCmd.Flags().Duration("tlog-timeout", 30*time.Second, "timeout for terminating the tiles log queue")
 
 	// antispam configs
-	serveCmd.Flags().Bool("persistent-antispam", false, "whether to enable persistent antispam measures; only available for GCP storage backend and not supported by the Spanner storage emulator")
+	serveCmd.Flags().Bool("persistent-antispam", false, "whether to enable persistent antispam measures; available for GCP (Spanner) and AWS (MySQL) storage backends; not supported by the Spanner storage emulator")
 	serveCmd.Flags().Uint("antispam-max-batch-size", 0, "maximum batch size for deduplication operations; will default to Tessera recommendation if unset; for Spanner, recommend around 1500 with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
 	serveCmd.Flags().Uint("antispam-pushback-threshold", 0, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back; will default to Tessera recommendation if unset")
 
