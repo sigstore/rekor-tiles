@@ -58,14 +58,78 @@ We provide prebuilt binaries and containers for private deployments.
 If you find any issues, follow Sigstore's [security policy](https://github.com/sigstore/rekor-tiles/security/policy)
 to report them.
 
+## Storage Backends
+
+Rekor v2 supports multiple storage backends for flexibility in deployment:
+
+### Google Cloud Platform (GCP)
+- **Object Storage**: Google Cloud Storage (GCS)
+- **Database**: Cloud Spanner
+- **Use case**: Preferred for global deployments requiring strong consistency and automatic scaling
+
+### Amazon Web Services (AWS)
+- **Object Storage**: Amazon S3
+- **Database**: Aurora MySQL (or RDS MySQL)
+- **Use case**: Cost-effective option for regional deployments with MySQL compatibility
+
 ## Local Development
 
-### Deployment
+### Deployment with GCP Emulators (Default)
 
 Run `docker compose up --build --wait` to start the service along with emulated Google Cloud Storage and Spanner instances.
 
 Run `docker compose down` to turn down the service, or `docker compose down --volumes` to turn down the service and delete
 persisted tiles.
+
+### Deployment with AWS Emulators
+
+Run `docker compose -f docker-compose-aws.yml up --build --wait` to start the service with MinIO (S3-compatible) and MySQL.
+
+Run `docker compose -f docker-compose-aws.yml down` to turn down the service, or add `--volumes` to delete persisted data.
+
+### Server Configuration
+
+When deploying your own instance, configure the storage backend using command-line flags:
+
+**GCP Backend:**
+```bash
+rekor-server serve \
+  --hostname=your-hostname \
+  --gcp-bucket=your-gcs-bucket \
+  --gcp-spanner=projects/PROJECT/instances/INSTANCE/databases/DATABASE \
+  --signer-filepath=/path/to/key.pem
+```
+
+**AWS Backend:**
+```bash
+rekor-server serve \
+  --hostname=your-hostname \
+  --aws-bucket=your-s3-bucket \
+  --aws-mysql-dsn="user:password@tcp(host:3306)/database?parseTime=true" \
+  --signer-filepath=/path/to/key.pem
+```
+
+**AWS Environment Variables:**
+
+The AWS backend requires standard AWS SDK environment variables for authentication and configuration:
+
+Required:
+- `AWS_ACCESS_KEY_ID`: AWS access key ID for authentication
+- `AWS_SECRET_ACCESS_KEY`: AWS secret access key for authentication
+- `AWS_REGION`: AWS region for S3 bucket (e.g., `us-east-1`)
+
+Optional (for S3-compatible storage like MinIO):
+- `AWS_ENDPOINT_URL`: Custom S3 endpoint URL (e.g., `http://localhost:9000`)
+- `AWS_S3_FORCE_PATH_STYLE`: Set to `true` to use path-style addressing instead of virtual-hosted-style
+
+The `--aws-mysql-dsn` format is `user:password@tcp(host:port)/database?parseTime=true`. The `parseTime=true` parameter is required for proper timestamp handling.
+
+Optional flags for both backends:
+- `--persistent-antispam`: Enable persistent deduplication (requires Spanner or MySQL)
+- `--checkpoint-interval`: Frequency of checkpoint publishing (default: 30s)
+- `--batch-max-size`: Maximum entries per batch (default: 1024)
+
+See `rekor-server serve --help` for all available options.
 
 ### Making a request
 
