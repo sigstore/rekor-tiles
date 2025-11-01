@@ -19,7 +19,6 @@ import (
 	"fmt"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	f_log "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
@@ -29,11 +28,10 @@ import (
 // VerifyInclusionProof verifies an entry's inclusion proof
 func VerifyInclusionProof(entry *pbs.TransparencyLogEntry, cp *f_log.Checkpoint) error { //nolint: revive
 	leafHash := rfc6962.DefaultHasher.HashLeaf(entry.CanonicalizedBody)
-	index, err := tessera.NewSafeInt64(entry.LogIndex)
-	if err != nil {
-		return fmt.Errorf("invalid index: %w", err)
+	if entry.LogIndex < 0 {
+		return fmt.Errorf("invalid negative index: %d", entry.LogIndex)
 	}
-	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, index.U(), cp.Size, leafHash, entry.InclusionProof.Hashes, cp.Hash); err != nil {
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, uint64(entry.LogIndex), cp.Size, leafHash, entry.InclusionProof.Hashes, cp.Hash); err != nil {
 		return fmt.Errorf("verifying inclusion: %w", err)
 	}
 	return nil
