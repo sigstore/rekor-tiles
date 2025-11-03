@@ -81,7 +81,8 @@ jobs:
   build-container:
     name: Build and push container image
     uses: ./.github/workflows/build_container.yml
-    secrets: inherit
+    secrets:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     needs: approval
     permissions:
       contents: read
