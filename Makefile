@@ -37,6 +37,7 @@ SRC = $(shell find . -iname "*.go" | grep -v -e $(subst $() $(), -e ,$(strip $(P
 PROTO_SRC = $(shell find $(PROTO_DIRS))
 
 SIGSTORE_PROTO_BUILDER = $(shell grep FROM Dockerfile.protobuf-specs | cut -d' ' -f 2)
+ZIZMOR = $(shell grep FROM Dockerfile.zizmor | cut -d' ' -f 2)
 
 # for docker protobuf build
 GO_MODULE = github.com/sigstore/rekor-tiles/v2
@@ -67,6 +68,7 @@ lint:
 		-v $(shell go env GOMODCACHE):/.cache/mod -e GOMODCACHE=/.cache/mod \
 		-v ~/.cache/golangci-lint:/.cache/golangci-lint -e GOLANGCI_LINT_CACHE=/.cache/golangci-lint \
 		$(shell awk -F '[ @]' '/FROM golangci\/golangci-lint/{print $$2; exit}' Dockerfile.golangci-lint) golangci-lint run -v ./...
+	docker run -t --rm -v $(PWD):/source $(ZIZMOR) /source
 
 gosec: ## Run gosec security scanner
 	$(GOBIN)/gosec ./...

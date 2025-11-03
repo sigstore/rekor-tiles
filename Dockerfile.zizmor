@@ -1,0 +1,2 @@
+# Not built, only used to get dependabot to update the version
+FROM ghcr.io/zizmorcore/zizmor:1.16.2@sha256:f49ba23d190f90cb837e7e117803cbf96f5632bc65417d7e2fdb04f606e19c17 AS zizmor
