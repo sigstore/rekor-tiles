@@ -13,10 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//go:build e2e
+
 package main
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -27,28 +30,57 @@ type BackendConfig struct {
 	RekorURL     string
 	Hostname     string
 	ServerPubKey string
+	ComposeFile  string // Path to docker compose file for this backend
 }
 
 // GetBackendConfigs returns the list of backend configurations to test
+// The TEST_BACKENDS environment variable controls which backends to test:
+//   - "gcp" (default): test only GCP backend
+//   - "aws": test only AWS backend
+//   - "gcp,aws" or "all": test both backends
 func GetBackendConfigs(_ *testing.T) []BackendConfig {
-	configs := []BackendConfig{
-		{
+	// Get requested backends from environment variable
+	backendsEnv := os.Getenv("TEST_BACKENDS")
+	if backendsEnv == "" {
+		backendsEnv = "gcp" // default to GCP only
+	}
+
+	// Parse comma-separated list
+	requestedBackends := make(map[string]bool)
+	if backendsEnv == "all" {
+		requestedBackends["gcp"] = true
+		requestedBackends["aws"] = true
+	} else {
+		for _, backend := range strings.Split(backendsEnv, ",") {
+			backend = strings.TrimSpace(strings.ToLower(backend))
+			if backend != "" {
+				requestedBackends[backend] = true
+			}
+		}
+	}
+
+	// Build list of backend configs
+	var configs []BackendConfig
+
+	if requestedBackends["gcp"] {
+		configs = append(configs, BackendConfig{
 			Name:         "GCP",
 			StorageURL:   "http://localhost:7080/tiles",
 			RekorURL:     "http://localhost:3003",
 			Hostname:     "rekor-local",
 			ServerPubKey: "./testdata/pki/ed25519-pub-key.pem",
-		},
+			ComposeFile:  "compose.yml",
+		})
 	}
 
-	// Add AWS backend if environment variable is set
-	if os.Getenv("TEST_AWS_BACKEND") == "true" {
+	if requestedBackends["aws"] {
 		configs = append(configs, BackendConfig{
 			Name:         "AWS",
 			StorageURL:   "http://localhost:9000/tiles", // MinIO default port
 			RekorURL:     "http://localhost:3004",       // Different port from GCP
 			Hostname:     "rekor-local-aws",
 			ServerPubKey: "./testdata/pki/ed25519-pub-key.pem",
+			ComposeFile:  "docker-compose-aws.yml",
 		})
 	}
 

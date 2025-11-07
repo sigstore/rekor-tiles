@@ -111,10 +111,24 @@ jobs:
       - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
         with:
           persist-credentials: false
-      - name: Run docker compose
+
+      # Test GCP backend
+      - name: Run docker compose for GCP
         run: docker compose -f compose.yml up -d --build --wait --wait-timeout 60
-      - name: Run e2e tests
-        run: go test -v -tags=e2e ./tests/
+      - name: Run GCP e2e tests
+        run: TEST_BACKENDS=gcp go test -v -tags=e2e ./tests/
+      - name: Stop GCP docker compose
+        if: always()
+        run: docker compose -f compose.yml down
+
+      # Test AWS backend
+      - name: Run docker compose for AWS
+        run: docker compose -f docker-compose-aws.yml up -d --build --wait --wait-timeout 60
+      - name: Run AWS e2e tests
+        run: TEST_BACKENDS=aws go test -v -tags=e2e ./tests/
+      - name: Stop AWS docker compose
+        if: always()
+        run: docker compose -f docker-compose-aws.yml down
 
   sharding-freeze:
     name: Run freeze log tests
