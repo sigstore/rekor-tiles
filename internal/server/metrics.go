@@ -31,6 +31,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/otel"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"sigs.k8s.io/release-utils/version"
 )
 
@@ -46,6 +49,7 @@ type metrics struct {
 	panicsTotal                prometheus.Counter
 	inclusionProofFailureCount prometheus.Counter
 	grpcRequestSize            *prometheus.HistogramVec
+	otelShutdown               func(context.Context) error
 }
 
 // Metrics provides the singleton metrics instance
@@ -118,12 +122,26 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 		},
 		func() float64 { return 1 },
 	)
+
+	otelExporter, err := otelprom.New(
+		otelprom.WithRegisterer(m.reg),
+	)
+	if err != nil {
+		slog.Error("failed to register opentelemetry metrics for prometheus:", "errors", err)
+		os.Exit(1)
+	}
+
+	provider := metric.NewMeterProvider(metric.WithReader(otelExporter))
+	otel.SetMeterProvider(provider)
+	m.otelShutdown = provider.Shutdown
+
 	return &m
 })
 
 type httpMetrics struct {
 	*http.Server
 	serverEndpoint string
+	otelShutdown   func(context.Context) error
 }
 
 func newHTTPMetrics(_ context.Context, config *HTTPConfig) *httpMetrics {
@@ -144,6 +162,7 @@ func newHTTPMetrics(_ context.Context, config *HTTPConfig) *httpMetrics {
 			IdleTimeout:       config.timeout,
 		},
 		serverEndpoint: endpoint,
+		otelShutdown:   getMetrics().otelShutdown,
 	}
 }
 
@@ -159,6 +178,8 @@ func (hp *httpMetrics) start(wg *sync.WaitGroup) {
 
 	slog.Info("starting http metrics", "address", hp.serverEndpoint)
 
+	ctx := context.Background()
+
 	waitToClose := make(chan struct{})
 	go func() {
 		// capture interrupts and shutdown Server
@@ -166,7 +187,7 @@ func (hp *httpMetrics) start(wg *sync.WaitGroup) {
 		signal.Notify(sigint, syscall.SIGINT, syscall.SIGTERM)
 		<-sigint
 
-		if err := hp.Shutdown(context.Background()); err != nil {
+		if err := hp.Shutdown(ctx); err != nil {
 			slog.Info("http metrics Server Shutdown error", "errors", err)
 		}
 		close(waitToClose)
@@ -182,6 +203,7 @@ func (hp *httpMetrics) start(wg *sync.WaitGroup) {
 		}
 		<-waitToClose
 		wg.Done()
+		_ = hp.otelShutdown(ctx)
 		slog.Info("http metrics Server shutdown")
 	}()
 }
