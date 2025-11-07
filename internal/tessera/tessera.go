@@ -22,6 +22,7 @@ import (
 	"time"
 
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
+	"github.com/sigstore/rekor-tiles/v2/internal/safeint"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	logformat "github.com/transparency-dev/formats/log"
@@ -182,19 +183,19 @@ func (s *storage) ReadTile(ctx context.Context, level, index uint64, p uint8) ([
 	return tile, nil
 }
 
-func (s *storage) addEntry(ctx context.Context, entry *tessera.Entry) (*SafeInt64, bool, []byte, error) {
+func (s *storage) addEntry(ctx context.Context, entry *tessera.Entry) (*safeint.SafeInt64, bool, []byte, error) {
 	idx, checkpointBody, err := s.awaiter.Await(ctx, s.addFn(ctx, entry))
 	if err != nil {
 		return nil, false, nil, fmt.Errorf("await: %w", err)
 	}
-	safeIdx, err := NewSafeInt64(idx.Index)
+	safeIdx, err := safeint.NewSafeInt64(idx.Index)
 	if err != nil {
 		return nil, false, nil, fmt.Errorf("invalid index: %w", err)
 	}
 	return safeIdx, idx.IsDup, checkpointBody, nil
 }
 
-func (s *storage) buildProof(ctx context.Context, idx *SafeInt64, signedCheckpoint, leafHash []byte) (*rekor_pb.InclusionProof, error) {
+func (s *storage) buildProof(ctx context.Context, idx *safeint.SafeInt64, signedCheckpoint, leafHash []byte) (*rekor_pb.InclusionProof, error) {
 	checkpoint, err := unmarshalCheckpoint(signedCheckpoint)
 	if err != nil {
 		return nil, fmt.Errorf("unmarshalling checkpoint: %w", err)
@@ -207,7 +208,7 @@ func (s *storage) buildProof(ctx context.Context, idx *SafeInt64, signedCheckpoi
 	if err != nil {
 		return nil, fmt.Errorf("generating inclusion proof: %w", err)
 	}
-	safeCheckpointSize, err := NewSafeInt64(checkpoint.Size)
+	safeCheckpointSize, err := safeint.NewSafeInt64(checkpoint.Size)
 	if err != nil {
 		return nil, fmt.Errorf("invalid tree size: %d", checkpoint.Size)
 	}

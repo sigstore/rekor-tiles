@@ -19,7 +19,7 @@ import (
 	"fmt"
 
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
+	"github.com/sigstore/rekor-tiles/v2/internal/safeint"
 	f_log "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
@@ -29,7 +29,7 @@ import (
 // VerifyInclusionProof verifies an entry's inclusion proof
 func VerifyInclusionProof(entry *pbs.TransparencyLogEntry, cp *f_log.Checkpoint) error { //nolint: revive
 	leafHash := rfc6962.DefaultHasher.HashLeaf(entry.CanonicalizedBody)
-	index, err := tessera.NewSafeInt64(entry.LogIndex)
+	index, err := safeint.NewSafeInt64(entry.LogIndex)
 	if err != nil {
 		return fmt.Errorf("invalid index: %w", err)
 	}
