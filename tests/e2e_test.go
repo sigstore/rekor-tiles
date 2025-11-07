@@ -110,7 +110,9 @@ func TestReadWrite(t *testing.T) {
 
 			// Get the current checkpoint
 			checkpoint, note, err := clients.reader.ReadCheckpoint(ctx)
-			assert.NoError(t, err)
+			if err != nil {
+				t.Fatalf("Failed to read checkpoint (is docker compose running?): %v", err)
+			}
 			assert.NotNil(t, checkpoint)
 			assert.NotNil(t, note)
 			initialTreeSize := checkpoint.Size
@@ -268,56 +270,63 @@ func TestPersistentDeduplication(t *testing.T) {
 	if err != nil {
 		t.Skip("skipping persistent deduplication test because docker is not installed")
 	}
-	output, err := exec.Command(path, "compose", "ps", "rekor").Output()
-	if err != nil || !strings.Contains(string(output), "rekor-tiles-rekor-1") {
-		t.Skip("skipping persistent deduplication test because rekor-tiles is not running as a local docker container")
-	}
 
-	// writer client
-	writer, err := write.NewWriter(defaultRekorURL)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Test each configured backend
+	for _, backend := range GetBackendConfigs(t) {
+		t.Run(backend.Name, func(t *testing.T) {
+			// Check if docker compose services are running for this backend
+			output, err := exec.Command(path, "compose", "-f", backend.ComposeFile, "ps", "rekor").Output()
+			if err != nil || !strings.Contains(string(output), "rekor") {
+				t.Skipf("skipping persistent deduplication test for %s because rekor-tiles is not running as a local docker container", backend.Name)
+			}
 
-	clientPrivKey, clientPubKey, err := genKeys()
-	if err != nil {
-		t.Fatal(err)
-	}
+			// writer client
+			writer, err := write.NewWriter(backend.RekorURL)
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// add one entry
-	hr, err := newHashedRekordRequest(clientPrivKey, clientPubKey, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = writer.Add(ctx, hr)
-	assert.NoError(t, err)
+			clientPrivKey, clientPubKey, err := genKeys()
+			if err != nil {
+				t.Fatal(err)
+			}
 
-	// add the same entry and check for in-memory deduplication
-	_, err = writer.Add(ctx, hr)
-	assert.Error(t, err)
-	assert.ErrorContains(t, err, "unexpected response: 409")
-	assert.ErrorContains(t, err, "an equivalent entry already exists in the transparency log with index")
+			// add one entry
+			hr, err := newHashedRekordRequest(clientPrivKey, clientPubKey, 0)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = writer.Add(ctx, hr)
+			assert.NoError(t, err)
 
-	// restart rekor-tiles and check for persistent deduplication
-	err = exec.Command(path, "compose", "restart", "rekor").Run()
-	if err != nil {
-		t.Fatal(err)
+			// add the same entry and check for in-memory deduplication
+			_, err = writer.Add(ctx, hr)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "unexpected response: 409")
+			assert.ErrorContains(t, err, "an equivalent entry already exists in the transparency log with index")
+
+			// restart rekor-tiles and check for persistent deduplication
+			err = exec.Command(path, "compose", "-f", backend.ComposeFile, "restart", "rekor").Run()
+			if err != nil {
+				t.Fatal(err)
+			}
+			for i := 0; i <= 3; i++ {
+				out, err := exec.Command(path, "compose", "-f", backend.ComposeFile, "ps", "rekor", "--format='{{print .Status}}'").Output()
+				if err != nil {
+					t.Fatal(err)
+				}
+				if strings.Contains(string(out), "(healthy)") {
+					break
+				}
+				if i == 3 {
+					t.Fatalf("docker container for %s took too long to restart", backend.Name)
+				}
+				time.Sleep(1 * time.Second)
+			}
+			_, err = writer.Add(ctx, hr)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, "unexpected response: 409")
+			assert.ErrorContains(t, err, "an equivalent entry already exists in the transparency log with index")
+		})
 	}
-	for i := 0; i <= 3; i++ {
-		out, err := exec.Command(path, "compose", "ps", "rekor", "--format='{{print .Status}}'").Output()
-		if err != nil {
-			t.Fatal(err)
-		}
-		if strings.Contains(string(out), "(healthy)") {
-			break
-		}
-		if i == 3 {
-			t.Fatal("docker container took too long to restart")
-		}
-		time.Sleep(1 * time.Second)
-	}
-	_, err = writer.Add(ctx, hr)
-	assert.Error(t, err)
-	assert.ErrorContains(t, err, "unexpected response: 409")
-	assert.ErrorContains(t, err, "an equivalent entry already exists in the transparency log with index")
 }
