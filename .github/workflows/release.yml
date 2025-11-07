@@ -80,9 +80,8 @@ jobs:
 
   build-container:
     name: Build and push container image
-    uses: ./.github/workflows/build_container.yml
-    secrets:
-      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    uses: ./.github/workflows/build_container.yml # zizmor: ignore[secrets-inherit]
+    secrets: inherit
     needs: approval
     permissions:
       contents: read
