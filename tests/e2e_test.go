@@ -35,7 +35,7 @@ import (
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
+	"github.com/sigstore/rekor-tiles/v2/internal/safeint"
 	"github.com/sigstore/rekor-tiles/v2/pkg/client/read"
 	"github.com/sigstore/rekor-tiles/v2/pkg/client/write"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
@@ -194,7 +194,7 @@ func TestReadWrite(t *testing.T) {
 	assert.NoError(t, err)
 	assertDSSETLE(t, tle, initialTreeSize+numNewEntries-1, logID, noteVerifier, dr)
 
-	safeLogSize, err := tessera.NewSafeInt64(tle.InclusionProof.TreeSize)
+	safeLogSize, err := safeint.NewSafeInt64(tle.InclusionProof.TreeSize)
 	if err != nil {
 		t.Fatal(err)
 	}
