@@ -22,17 +22,21 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var rootCmd = &cobra.Command{
-	Use:   "rekor-server",
-	Short: "Rekor signature transparency log server",
-	Long: `Rekor fulfills the signature transparency role of sigstore's software
-	signing infrastructure. It can also be run on its own and is designed to be
-	extensible to work with different manifest schemas and PKI tooling`,
-}
+var rootCmd = &cobra.Command{}
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
-func Execute() {
+func Execute(backend BackendConfig) {
+	// Configure root command based on backend
+	rootCmd.Use = "rekor-server-" + backend.Name()
+	rootCmd.Short = "Rekor signature transparency log server (" + backend.Name() + ")"
+	rootCmd.Long = `Rekor fulfills the signature transparency role of sigstore's software
+	signing infrastructure. This is the ` + backend.Name() + `-specific binary that only includes
+	` + backend.Description() + ` dependencies.`
+
+	// Initialize the serve command with the backend
+	initServeCmd(backend)
+
 	if err := rootCmd.Execute(); err != nil {
 		slog.Error("failed to execute root command", "error", err)
 		os.Exit(1)

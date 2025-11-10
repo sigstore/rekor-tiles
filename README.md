@@ -60,14 +60,19 @@ to report them.
 
 ## Storage Backends
 
-Rekor v2 supports multiple storage backends for flexibility in deployment:
+Rekor v2 supports multiple storage backends. To avoid binary bloat from unused dependencies, separate binaries for each backend are provided:
+
+- `rekor-server-gcp`: GCP-specific binary (includes only Google Cloud dependencies)
+- `rekor-server-aws`: AWS-specific binary (includes only AWS dependencies)
 
 ### Google Cloud Platform (GCP)
+- **Binary**: `rekor-server-gcp`
 - **Object Storage**: Google Cloud Storage (GCS)
 - **Database**: Cloud Spanner
 - **Use case**: Preferred for global deployments requiring strong consistency and automatic scaling
 
 ### Amazon Web Services (AWS)
+- **Binary**: `rekor-server-aws`
 - **Object Storage**: Amazon S3
 - **Database**: Aurora MySQL (or RDS MySQL)
 - **Use case**: Cost-effective option for regional deployments with MySQL compatibility
@@ -93,7 +98,7 @@ When deploying your own instance, configure the storage backend using command-li
 
 **GCP Backend:**
 ```bash
-rekor-server serve \
+rekor-server-gcp serve \
   --hostname=your-hostname \
   --gcp-bucket=your-gcs-bucket \
   --gcp-spanner=projects/PROJECT/instances/INSTANCE/databases/DATABASE \
@@ -102,7 +107,7 @@ rekor-server serve \
 
 **AWS Backend:**
 ```bash
-rekor-server serve \
+rekor-server-aws serve \
   --hostname=your-hostname \
   --aws-bucket=your-s3-bucket \
   --aws-mysql-dsn="user:password@tcp(host:3306)/database?parseTime=true" \
@@ -129,7 +134,7 @@ Optional flags for both backends:
 - `--checkpoint-interval`: Frequency of checkpoint publishing (default: 30s)
 - `--batch-max-size`: Maximum entries per batch (default: 1024)
 
-See `rekor-server serve --help` for all available options.
+See `rekor-server-gcp serve --help` or `rekor-server-aws serve --help` for all available options.
 
 ### Making a request
 
