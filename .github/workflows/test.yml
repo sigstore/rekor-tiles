@@ -80,8 +80,10 @@ jobs:
         with:
           go-version-file: './go.mod'
           check-latest: true
-      - name: Run Go tests
-        run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
+      - name: Run Go tests (AWS backend)
+        run: go test -tags aws -covermode atomic -coverprofile coverage.txt $(go list -tags aws ./... | grep -v third_party/)
+      - name: Run Go tests (GCP backend)
+        run: go test -tags gcp $(go list -tags gcp ./... | grep -v third_party/)
       - name: Workaround buggy Codecov OIDC auth
         run: |
           # only set CODECOV_TOKEN if OIDC token is available
@@ -98,9 +100,12 @@ jobs:
           # When github.com/codecov/codecov-action/issues/1791 is fixed,
           # remove workaround step above and uncomment:
           # use_oidc: true
-      - name: Run Go tests w/ `-race`
+      - name: Run Go tests w/ `-race` (AWS backend)
         if: ${{ runner.os == 'Linux' }}
-        run: go test -race $(go list ./... | grep -v third_party/)
+        run: go test -tags aws -race $(go list -tags aws ./... | grep -v third_party/)
+      - name: Run Go tests w/ `-race` (GCP backend)
+        if: ${{ runner.os == 'Linux' }}
+        run: go test -tags gcp -race $(go list -tags gcp ./... | grep -v third_party/)
 
   e2e-tests:
     name: Run E2E tests
