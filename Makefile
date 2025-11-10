@@ -87,7 +87,10 @@ ldflags: ## Print ldflags
 	@echo $(SERVER_LDFLAGS)
 
 test: ## Run all tests
-	go test ./...
+	@echo "Running tests with AWS backend..."
+	go test -tags aws ./...
+	@echo "Running tests with GCP backend..."
+	go test -tags gcp ./...
 
 ko-local: ## Build container images locally using ko
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
