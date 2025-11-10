@@ -98,6 +98,17 @@ func WithAntispamOptions(opts *tessera.AppendOptions, as tessera.Antispam) *tess
 	return opts
 }
 
+func WithWitnessing(opts *tessera.AppendOptions, witnessPolicy []byte) (*tessera.AppendOptions, error) {
+	wg, err := tessera.NewWitnessGroupFromPolicy(witnessPolicy)
+	if err != nil {
+		return nil, fmt.Errorf("creating witness group from policy: %w", err)
+	}
+	// Don't block if witnesses are unavailable.
+	wOpts := &tessera.WitnessOptions{FailOpen: true}
+	opts.WithWitnesses(wg, wOpts)
+	return opts, nil
+}
+
 // DriverConfiguration contains storage-specific configuration for each supported storage backend.
 type DriverConfiguration struct {
 	// Server origin

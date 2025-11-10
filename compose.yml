@@ -65,6 +65,7 @@ services:
     - "--log-level=debug"
     - "--request-response-logging=true"
     - "--persistent-antispam"
+    - "--witness-policy-path=/witness/policy.yaml"
     ports:
     - "3003:3000" # http port
     - "3001:3001" # grpc port
@@ -81,9 +82,38 @@ services:
       # start_interval: 1s
     volumes:
     - ./tests/testdata/pki:/pki
+    - ./tests/testdata/witness:/witness
     depends_on:
       rekor_init:
         condition: service_completed_successfully
+      witness:
+        condition: service_healthy
+
+  witness:
+    build:
+      context: https://github.com/transparency-dev/witness.git#main
+      dockerfile: cmd/omniwitness/Dockerfile
+    volumes:
+      - witness_data:/witness_data:rw
+      - ./tests/testdata/witness:/witness_config
+    command:
+      - "--listen=:8100"
+      - "--db_file=/witness_data/witness.sqlite"
+      - "--private_key=PRIVATE+KEY+rekor-witness-test+a478f5cd+AT5yCADn4hz2PNT790E8q7VkAXuBdy+HFv9tP0qvKyFV"
+      - "--additional_logs=/witness_config/config.yaml"
+      - "--poll_interval=0"
+      - "--logtostderr"
+      - "--v=2"
+    restart: always
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget http://localhost:8081/metrics || exit 1
+      timeout: 30s
+      retries: 10
+      interval: 3s
+    ports:
+      - "8100:8100"
 
 # Launch with `docker compose up rekor-debug`
 # or  `docker compose up rekor-debug --watch`.
@@ -155,3 +185,4 @@ services:
         condition: service_completed_successfully
 volumes:
   bucket: {}
+  witness_data: {}

@@ -45,6 +45,7 @@ import (
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
+	f_note "github.com/transparency-dev/formats/note"
 	"github.com/transparency-dev/merkle/proof"
 	"github.com/transparency-dev/merkle/rfc6962"
 	"github.com/transparency-dev/tessera/api"
@@ -58,6 +59,7 @@ import (
 const (
 	defaultRekorURL        = "http://localhost:3003"
 	defaultRekorHostname   = "rekor-local"
+	defaultWitnessVKey     = "rekor-witness-test+a478f5cd+AUtKAvrTeY7srtAMfP5JCUOkZoU+A7F5VA094y5LGr89"
 	defaultGCSURL          = "http://localhost:7080/tiles"
 	defaultServerPublicKey = "./testdata/pki/ed25519-pub-key.pem"
 )
@@ -78,6 +80,12 @@ func TestReadWrite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// load witness verifier
+	witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(defaultWitnessVKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	noteVerifiers := []signednote.Verifier{noteVerifier, witnessNoteVerifier}
 
 	// reader client
 	reader, err := read.NewReader(defaultGCSURL, defaultRekorHostname, verifier)
@@ -123,7 +131,7 @@ func TestReadWrite(t *testing.T) {
 			}
 			tle, err := writer.Add(ctx, hr)
 			assert.NoError(t, err)
-			assertHashedRekordTLE(t, tle, initialTreeSize, numNewEntries, logID, noteVerifier, hr)
+			assertHashedRekordTLE(t, tle, initialTreeSize, numNewEntries, logID, noteVerifiers, hr)
 			return nil
 		})
 	}
@@ -138,7 +146,7 @@ func TestReadWrite(t *testing.T) {
 	}
 	tle, err := writer.Add(ctx, hr)
 	assert.NoError(t, err)
-	assertHashedRekordTLE(t, tle, initialTreeSize, numNewEntries, logID, noteVerifier, hr)
+	assertHashedRekordTLE(t, tle, initialTreeSize, numNewEntries, logID, noteVerifiers, hr)
 
 	// Check the checkpoint again
 	checkpoint, note, err = reader.ReadCheckpoint(ctx)
@@ -192,7 +200,7 @@ func TestReadWrite(t *testing.T) {
 	}
 	tle, err = writer.Add(ctx, dr)
 	assert.NoError(t, err)
-	assertDSSETLE(t, tle, initialTreeSize+numNewEntries-1, logID, noteVerifier, dr)
+	assertDSSETLE(t, tle, initialTreeSize+numNewEntries-1, logID, noteVerifiers, dr)
 
 	safeLogSize, err := safeint.NewSafeInt64(tle.InclusionProof.TreeSize)
 	if err != nil {
@@ -388,7 +396,7 @@ func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV0
 	}, nil
 }
 
-func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialTreeSize, numNewEntries uint64, logID []byte, verifier signednote.Verifier, hr *pb.HashedRekordRequestV002) {
+func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialTreeSize, numNewEntries uint64, logID []byte, verifiers []signednote.Verifier, hr *pb.HashedRekordRequestV002) {
 	assert.NotNil(t, tle)
 
 	// Check server does not set deprecated fields
@@ -406,7 +414,7 @@ func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialT
 	assert.Equal(t, tle.KindVersion.Kind, "hashedrekord")
 	assert.Equal(t, tle.KindVersion.Version, "0.0.2")
 	// Verify checkpoint and inclusion proof
-	verifyInclusionProof(t, tle, verifier)
+	verifyInclusionProof(t, tle, verifiers)
 	// Parse canonicalized body and assert entry matches request
 	e := &pb.Entry{}
 	assert.NotNil(t, tle.CanonicalizedBody)
@@ -421,7 +429,7 @@ func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialT
 	assert.Equal(t, hrEntry.Data.Digest, hr.Digest)
 }
 
-func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, logID []byte, verifier signednote.Verifier, dr *pb.DSSERequestV002) {
+func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, logID []byte, verifiers []signednote.Verifier, dr *pb.DSSERequestV002) {
 	assert.NotNil(t, tle)
 
 	// Check server does not set deprecated fields
@@ -437,7 +445,7 @@ func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, lo
 	assert.Equal(t, tle.KindVersion.Kind, "dsse")
 	assert.Equal(t, tle.KindVersion.Version, "0.0.2")
 	// Verify checkpoint and inclusion proof
-	verifyInclusionProof(t, tle, verifier)
+	verifyInclusionProof(t, tle, verifiers)
 	// Parse canonicalized body and assert entry matches request
 	e := &pb.Entry{}
 	assert.NotNil(t, tle.CanonicalizedBody)
@@ -457,13 +465,15 @@ func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, lo
 	assert.Equal(t, dsseEntry.Signatures[0].Verifier, dr.Verifiers[0])
 }
 
-func verifyInclusionProof(t *testing.T, tle *pbs.TransparencyLogEntry, verifier signednote.Verifier) {
+func verifyInclusionProof(t *testing.T, tle *pbs.TransparencyLogEntry, verifiers []signednote.Verifier) {
 	// Server also verifies inclusion proof before returning response
 	assert.NotNil(t, tle.InclusionProof)
 
-	// Verify checkpoint signature
-	checkpoint, err := verify.VerifyCheckpoint(tle.InclusionProof.Checkpoint.Envelope, verifier)
+	// Verify checkpoint signature, assuming the first verifier in the list is for the log and the remaining verifiers are for witnesses
+	checkpoint, note, err := verify.VerifyWitnessedCheckpoint(tle.InclusionProof.Checkpoint.Envelope, verifiers[0], verifiers[1:]...)
 	assert.NoError(t, err)
+	// Expect 2 valid signatures, from the log and witness
+	assert.Len(t, note.Sigs, 2)
 
 	// Verify duplicated tle.inclusion_proof fields match bundle and parsed checkpoint values
 	assert.Equal(t, tle.InclusionProof.LogIndex, tle.LogIndex)
