@@ -1,3 +1,5 @@
+//go:build aws
+
 //
 // Copyright 2025 The Sigstore Authors.
 //
@@ -25,6 +27,27 @@ import (
 	"github.com/transparency-dev/tessera/storage/aws"
 	antispam "github.com/transparency-dev/tessera/storage/aws/antispam"
 )
+
+// NewDriver creates a Tessera driver and optional persistent antispam for AWS storage backend.
+func NewDriver(ctx context.Context, config DriverConfiguration) (tessera.Driver, tessera.Antispam, error) {
+	if config.AWSBucket == "" || config.AWSMySQLDSN == "" {
+		return nil, nil, fmt.Errorf("AWS backend requires --aws-bucket and --aws-mysql-dsn flags")
+	}
+
+	driver, err := NewAWSDriver(ctx, config.AWSBucket, config.AWSMySQLDSN, config.Hostname)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialize AWS driver: %v", err.Error())
+	}
+	var persistentAntispam tessera.Antispam
+	if config.PersistentAntispam {
+		as, err := NewAWSAntispam(ctx, config.AWSMySQLDSN, config.ASMaxBatchSize, config.ASPushbackThreshold)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize AWS antispam: %v", err.Error())
+		}
+		persistentAntispam = as
+	}
+	return driver, persistentAntispam, nil
+}
 
 // NewAWSDriver returns an AWS Tessera Driver for the given S3 bucket and MySQL DSN.
 func NewAWSDriver(ctx context.Context, bucket, mysqlDSN, _ string) (tessera.Driver, error) {
