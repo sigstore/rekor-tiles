@@ -15,8 +15,11 @@
 
 package main
 
-import "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/app"
+import (
+	sharedapp "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/app"
+	"github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-gcp/app"
+)
 
 func main() {
-	app.Execute()
+	sharedapp.Execute(&app.GCPBackend{})
 }

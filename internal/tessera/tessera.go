@@ -129,40 +129,7 @@ type DriverConfiguration struct {
 }
 
 // NewDriver creates a Tessera driver and optional persistent antispam for a given storage backend.
-func NewDriver(ctx context.Context, config DriverConfiguration) (tessera.Driver, tessera.Antispam, error) {
-	switch {
-	case config.GCPBucket != "" && config.GCPSpannerDB != "":
-		driver, err := NewGCPDriver(ctx, config.GCPBucket, config.GCPSpannerDB, config.Hostname)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to initialize GCP driver: %v", err.Error())
-		}
-		var persistentAntispam tessera.Antispam
-		if config.PersistentAntispam {
-			as, err := NewGCPAntispam(ctx, config.GCPSpannerDB, config.ASMaxBatchSize, config.ASPushbackThreshold)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to initialize GCP antispam: %v", err.Error())
-			}
-			persistentAntispam = as
-		}
-		return driver, persistentAntispam, nil
-	case config.AWSBucket != "" && config.AWSMySQLDSN != "":
-		driver, err := NewAWSDriver(ctx, config.AWSBucket, config.AWSMySQLDSN, config.Hostname)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to initialize AWS driver: %v", err.Error())
-		}
-		var persistentAntispam tessera.Antispam
-		if config.PersistentAntispam {
-			as, err := NewAWSAntispam(ctx, config.AWSMySQLDSN, config.ASMaxBatchSize, config.ASPushbackThreshold)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to initialize AWS antispam: %v", err.Error())
-			}
-			persistentAntispam = as
-		}
-		return driver, persistentAntispam, nil
-	default:
-		return nil, nil, fmt.Errorf("no flags provided to initialize Tessera driver")
-	}
-}
+// The implementation is provided by driver_gcp.go or driver_aws.go based on build tags.
 
 // NewStorage creates a Tessera storage object for the provided driver and signer.
 // Returns the storage object and a function that must be called when shutting down the server.
