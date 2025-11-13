@@ -11,7 +11,8 @@ Roughly, the steps are:
 4. Verify the health of the infrastructure with manual testing
 5. Run prober tests
 6. Update TrustedRoot with the new key material and SigningConfig with the new shard URL
-7. Turn down the old shard
+7. Update the in-cluster prober
+8. Turn down the old shard
 
 ## Terraform Module Changes
 
@@ -321,17 +322,16 @@ Following
 test the write path for the new shard. This will sign an entry with a private key and upload
 the signing event to the log.
 
-## WIP: Update Prober
+## Run prober tests
 
-We will need a mechanism for running prober tests against a new deployment before we've
-distributed an updated SigningConfig and TrustedRoot. Assuming this is a parameter to
-a GitHub Actions workflow, a deployer should provide the URL to the new shard and run
-prober tests.
+We can manually run prober tests using the URL and public key of the new shard before 
+their being distributed by TUF.
 
-Tracked in https://github.com/sigstore/rekor-tiles/issues/46. The prober will pick up
-new shards from the SigningConfig, with the latest active shard having no end date.
-Only the active shard will be used to test write traffic. All other shards in the SigningConfig
-will still support read traffic.
+To run the GitHub Actions prober, both in 
+[production](https://github.com/sigstore/sigstore-probers/actions/workflows/prober-prod.yml) and 
+[staging](https://github.com/sigstore/sigstore-probers/actions/workflows/prober-staging.yml), the URL and the base64-encoded  public key (from `public.b64`) of the new shard must be be provided as parameters to the workflow. 
+
+Without these parameters, the prober will pick up new shards from the SigningConfig fetched from the TUF, with the latest active shard having no end date. Only the active shard will be used to test write traffic. All other shards in the SigningConfig will still support read traffic.
 
 ## Update TUF Verification Material
 
@@ -451,6 +451,14 @@ shard added to the **beginning** of the list:
 Follow the playbooks in https://github.com/sigstore/root-signing and
 https://github.com/sigstore/root-signing-staging to orchestrate a new
 signing event.
+
+## Update the in-cluster prober
+
+The in-cluster prober, both in 
+[production](https://github.com/sigstore/public-good-instance/blob/e1c0302fdcde4212696abc3d3a5023a54a39f031/argocd/bootstrap-utilities/production/values.yaml#L752) 
+and 
+[staging](https://github.com/sigstore/public-good-instance/blob/e1c0302fdcde4212696abc3d3a5023a54a39f031/argocd/bootstrap-utilities/staging/values.yaml#L814), 
+uses a hardcoded SigningConfig and TrustedRoot, which must be updated to include the URL and public key of the new shard.
 
 ## Update transparency-dev configuration
 
