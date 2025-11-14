@@ -15,7 +15,7 @@
 
 .PHONY: all test clean lint gosec ko-local tools ldflags
 
-all: protos rekor-server
+all: protos rekor-server-gcp rekor-server-aws
 
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
@@ -73,20 +73,35 @@ lint:
 gosec: ## Run gosec security scanner
 	$(GOBIN)/gosec ./...
 
-rekor-server: $(SRC) $(PROTO_SRC)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/rekor-server
+rekor-server-gcp: $(SRC) $(PROTO_SRC)
+	CGO_ENABLED=0 go build -trimpath -tags gcp -ldflags "$(SERVER_LDFLAGS)" -o rekor-server-gcp ./cmd/rekor-server-gcp
+
+rekor-server-aws: $(SRC) $(PROTO_SRC)
+	CGO_ENABLED=0 go build -trimpath -tags aws -ldflags "$(SERVER_LDFLAGS)" -o rekor-server-aws ./cmd/rekor-server-aws
+
+# Legacy target for backwards compatibility - builds GCP version
+rekor-server: rekor-server-gcp
+	cp rekor-server-gcp rekor-server
 
 ldflags: ## Print ldflags
 	@echo $(SERVER_LDFLAGS)
 
 test: ## Run all tests
-	go test ./...
+	@echo "Running tests with AWS backend..."
+	go test -tags aws ./...
+	@echo "Running tests with GCP backend..."
+	go test -tags gcp ./...
 
 ko-local: ## Build container images locally using ko
-	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GOFLAGS="-tags=gcp" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
-		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server
+		--tags $(GIT_VERSION)-gcp --tags $(GIT_HASH) --image-refs rekorImagerefs-gcp \
+		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-gcp
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GOFLAGS="-tags=aws" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths \
+		--tags $(GIT_VERSION)-aws --tags $(GIT_HASH) --image-refs rekorImagerefs-aws \
+		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-aws
+	cat rekorImagerefs-gcp rekorImagerefs-aws > rekorImagerefs
 
 # generate Go protobuf code
 protos:
@@ -106,7 +121,7 @@ clean: ## Remove built binaries and artifacts
 	rm -rf pkg/generated/protobuf/*
 	rm -rf dist
 	rm -rf hack/tools/bin
-	rm -rf rekor-server
+	rm -rf rekor-server rekor-server-gcp rekor-server-aws
 
 ##################
 # help

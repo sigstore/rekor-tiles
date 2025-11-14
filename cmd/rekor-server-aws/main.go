@@ -15,8 +15,11 @@
 
 package main
 
-import "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/app"
+import (
+	"github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-aws/app"
+	sharedapp "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/app"
+)
 
 func main() {
-	app.Execute()
+	sharedapp.Execute(&app.AWSBackend{})
 }

@@ -21,83 +21,108 @@ import (
 	"context"
 	"testing"
 
-	"github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/sigstore/rekor-tiles/v2/pkg/client/read"
 	"github.com/sigstore/rekor-tiles/v2/pkg/client/write"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
+	"go.step.sm/crypto/pemutil"
 )
 
-const (
-	defaultServerPrivateKey = "./testdata/pki/ed25519-priv-key.pem"
-)
+func setupFreeze(t *testing.T, backend BackendConfig) (read.Client, write.Client, signature.Verifier, error) {
+	t.Helper()
 
-func setup(ctx context.Context) (read.Client, write.Client, error) {
-	// get verifier needed for both read and write
-	verifier, err := signerverifier.New(ctx, signerverifier.WithFile(defaultServerPrivateKey, ""))
+	serverPubKey, err := pemutil.Read(backend.ServerPubKey)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+
+	verifier, err := signature.LoadDefaultVerifier(serverPubKey)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
 	// reader client
-	reader, err := read.NewReader(defaultGCSURL, defaultRekorHostname, verifier)
+	reader, err := read.NewReader(backend.StorageURL, backend.Hostname, verifier)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
 
 	// writer client
-	writer, err := write.NewWriter(defaultRekorURL)
+	writer, err := write.NewWriter(backend.RekorURL)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
 	}
-	return reader, writer, nil
+	return reader, writer, verifier, nil
 }
 
 func TestPreFreeze(t *testing.T) {
 	ctx := context.Background()
-	reader, writer, err := setup(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	checkpoint, note, err := reader.ReadCheckpoint(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, checkpoint)
-	assert.NotNil(t, note)
-	assert.NotContains(t, string(note.Text), "Log frozen —")
+	backends := GetBackendConfigs(t)
 
-	clientPrivKey, clientPubKey, err := genKeys()
-	if err != nil {
-		t.Fatal(err)
+	for _, backend := range backends {
+		t.Run(backend.Name, func(t *testing.T) {
+			reader, writer, _, err := setupFreeze(t, backend)
+			if err != nil {
+				t.Fatal(err)
+			}
+			checkpoint, note, err := reader.ReadCheckpoint(ctx)
+			if err != nil {
+				t.Fatalf("Failed to read checkpoint (is docker compose running?): %v", err)
+			}
+			assert.NotNil(t, checkpoint)
+			assert.NotNil(t, note)
+			if note != nil {
+				assert.NotContains(t, string(note.Text), "Log frozen —")
+			}
+
+			clientPrivKey, clientPubKey, err := genKeys()
+			if err != nil {
+				t.Fatal(err)
+			}
+			hr, err := newHashedRekordRequest(clientPrivKey, clientPubKey, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			_, err = writer.Add(ctx, hr)
+			assert.NoError(t, err)
+		})
 	}
-	hr, err := newHashedRekordRequest(clientPrivKey, clientPubKey, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = writer.Add(ctx, hr)
-	assert.NoError(t, err)
 }
 
 func TestPostFreeze(t *testing.T) {
 	ctx := context.Background()
-	reader, writer, err := setup(ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	checkpoint, note, err := reader.ReadCheckpoint(ctx)
-	assert.NoError(t, err)
-	assert.NotNil(t, checkpoint)
-	assert.NotNil(t, note)
-	assert.Contains(t, string(note.Text), "Log frozen —")
+	backends := GetBackendConfigs(t)
 
-	clientPrivKey, clientPubKey, err := genKeys()
-	if err != nil {
-		t.Fatal(err)
+	for _, backend := range backends {
+		t.Run(backend.Name, func(t *testing.T) {
+			reader, writer, _, err := setupFreeze(t, backend)
+			if err != nil {
+				t.Fatal(err)
+			}
+			checkpoint, note, err := reader.ReadCheckpoint(ctx)
+			if err != nil {
+				t.Fatalf("Failed to read checkpoint (is docker compose running?): %v", err)
+			}
+			assert.NotNil(t, checkpoint)
+			assert.NotNil(t, note)
+			if note != nil {
+				assert.Contains(t, string(note.Text), "Log frozen —")
+			}
+
+			clientPrivKey, clientPubKey, err := genKeys()
+			if err != nil {
+				t.Fatal(err)
+			}
+			hr, err := newHashedRekordRequest(clientPrivKey, clientPubKey, 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+			tle, err := writer.Add(ctx, hr)
+			assert.Nil(t, tle)
+			assert.Error(t, err)
+			if err != nil {
+				assert.Contains(t, err.Error(), "unexpected response: 405 This log has been frozen, please switch to the latest log.")
+			}
+		})
 	}
-	hr, err := newHashedRekordRequest(clientPrivKey, clientPubKey, 1)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tle, err := writer.Add(ctx, hr)
-	assert.Nil(t, tle)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unexpected response: 405 This log has been frozen, please switch to the latest log.")
 }
