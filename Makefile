@@ -93,11 +93,15 @@ test: ## Run all tests
 	go test -tags gcp ./...
 
 ko-local: ## Build container images locally using ko
-	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GOFLAGS="-tags=gcp" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
-		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-gcp \
+		--tags $(GIT_VERSION)-gcp --tags $(GIT_HASH) --image-refs rekorImagerefs-gcp \
+		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-gcp
+	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GOFLAGS="-tags=aws" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
+	ko publish --base-import-paths \
+		--tags $(GIT_VERSION)-aws --tags $(GIT_HASH) --image-refs rekorImagerefs-aws \
 		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-aws
+	cat rekorImagerefs-gcp rekorImagerefs-aws > rekorImagerefs
 
 # generate Go protobuf code
 protos:

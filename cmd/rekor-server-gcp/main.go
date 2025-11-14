@@ -16,8 +16,8 @@
 package main
 
 import (
-	sharedapp "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/app"
 	"github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-gcp/app"
+	sharedapp "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/app"
 )
 
 func main() {
