@@ -1,3 +1,5 @@
+//go:build aws || gcp
+
 //
 // Copyright 2025 The Sigstore Authors.
 //
