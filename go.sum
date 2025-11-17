@@ -689,8 +689,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.2 h1:xtuxji5
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.2/go.mod h1:zxwi0DIR0rcRcgdbl7E2MSOvxDyyXGBlScvBkARFaLQ=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.12 h1:MM8imH7NZ0ovIVX7D2RxfMDv7Jt9OiUXkcQ+GqywA7M=
 github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.12/go.mod h1:gf4OGwdNkbEsb7elw2Sy76odfhwNktWII3WgvQgQQ6w=
-github.com/aws/aws-sdk-go-v2/service/kms v1.46.2 h1:hz2rJseQXnVQtVbByFpeSCNJBBU7oFN+yenW4biJtvs=
-github.com/aws/aws-sdk-go-v2/service/kms v1.46.2/go.mod h1:E4ink1KCQgqIe2pHFD9E+b5CNXovm50rQbWFuh0cM+I=
+github.com/aws/aws-sdk-go-v2/service/kms v1.47.0 h1:A97YCVyGz19rRs3+dWf3GpMPflCswgETA9r6/Q0JNSY=
+github.com/aws/aws-sdk-go-v2/service/kms v1.47.0/go.mod h1:ZJ1ghBt9gQM8JoNscUua1siIgao8w74o3kvdWUU6N/Q=
 github.com/aws/aws-sdk-go-v2/service/sso v1.30.0 h1:xHXvxst78wBpJFgDW07xllOx0IAzbryrSdM4nMVQ4Dw=
 github.com/aws/aws-sdk-go-v2/service/sso v1.30.0/go.mod h1:/e8m+AO6HNPPqMyfKRtzZ9+mBF5/x1Wk8QiDva4m07I=
 github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.4 h1:tBw2Qhf0kj4ZwtsVpDiVRU3zKLvjvjgIjHMKirxXg8M=
@@ -1337,8 +1337,8 @@ go.opentelemetry.io/otel/trace v1.38.0/go.mod h1:j1P9ivuFsTceSWe1oY+EeW3sc+Pp42s
 go.opentelemetry.io/proto/otlp v0.7.0/go.mod h1:PqfVotwruBrMGOCsRd/89rSnXhoiJIqeYNgFYFoEGnI=
 go.opentelemetry.io/proto/otlp v0.15.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
 go.opentelemetry.io/proto/otlp v0.19.0/go.mod h1:H7XAot3MsfNsj7EXtrA2q5xSNQ10UqI405h3+duxN4U=
-go.step.sm/crypto v0.73.0 h1:SNFpslZJa+kTNADpWYJJeMsQqzwDiuxFq0ei5OPLIUg=
-go.step.sm/crypto v0.73.0/go.mod h1:pw2MKw7aPgx3bVjVwYrKbpMIawLRwth/5cyhZf6QnBM=
+go.step.sm/crypto v0.74.0 h1:/APBEv45yYR4qQFg47HA8w1nesIGcxh44pGyQNw6JRA=
+go.step.sm/crypto v0.74.0/go.mod h1:UoXqCAJjjRgzPte0Llaqen7O9P7XjPmgjgTHQGkKCDk=
 go.uber.org/atomic v1.7.0/go.mod h1:fEN4uk6kAWBTFdckzkM89CLk9XfWZrxpCo0nPH17wJc=
 go.uber.org/goleak v1.1.10/go.mod h1:8a7PlsEVH3e/a/GLqe5IIrQx6GzcnRmZEufDUTk4A7A=
 go.uber.org/goleak v1.3.0 h1:2K3zAYmnTNqV73imy9J1T3WC+gmCePx2hEGkimedGto=
