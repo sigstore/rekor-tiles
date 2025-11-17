@@ -1,5 +1,3 @@
-//go:build aws || gcp
-
 //
 // Copyright 2025 The Sigstore Authors.
 //
@@ -15,12 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package app
+package main
 
 import (
-	"sigs.k8s.io/release-utils/version"
+	"github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-gcp/app"
+	sharedapp "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/app"
 )
 
-func init() {
-	rootCmd.AddCommand(version.Version())
+func main() {
+	sharedapp.Execute(&app.GCPBackend{})
 }

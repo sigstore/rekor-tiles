@@ -80,8 +80,10 @@ jobs:
         with:
           go-version-file: './go.mod'
           check-latest: true
-      - name: Run Go tests
-        run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
+      - name: Run Go tests (AWS backend)
+        run: go test -tags aws -covermode atomic -coverprofile coverage.txt $(go list -tags aws ./... | grep -v third_party/)
+      - name: Run Go tests (GCP backend)
+        run: go test -tags gcp $(go list -tags gcp ./... | grep -v third_party/)
       - name: Workaround buggy Codecov OIDC auth
         run: |
           # only set CODECOV_TOKEN if OIDC token is available
@@ -98,9 +100,12 @@ jobs:
           # When github.com/codecov/codecov-action/issues/1791 is fixed,
           # remove workaround step above and uncomment:
           # use_oidc: true
-      - name: Run Go tests w/ `-race`
+      - name: Run Go tests w/ `-race` (AWS backend)
         if: ${{ runner.os == 'Linux' }}
-        run: go test -race $(go list ./... | grep -v third_party/)
+        run: go test -tags aws -race $(go list -tags aws ./... | grep -v third_party/)
+      - name: Run Go tests w/ `-race` (GCP backend)
+        if: ${{ runner.os == 'Linux' }}
+        run: go test -tags gcp -race $(go list -tags gcp ./... | grep -v third_party/)
 
   e2e-tests:
     name: Run E2E tests
@@ -111,10 +116,24 @@ jobs:
       - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
         with:
           persist-credentials: false
-      - name: Run docker compose
+
+      # Test GCP backend
+      - name: Run docker compose for GCP
         run: docker compose -f compose.yml up -d --build --wait --wait-timeout 60
-      - name: Run e2e tests
-        run: go test -v -tags=e2e ./tests/
+      - name: Run GCP e2e tests
+        run: TEST_BACKENDS=gcp go test -v -tags=e2e ./tests/
+      - name: Stop GCP docker compose
+        if: always()
+        run: docker compose -f compose.yml down
+
+      # Test AWS backend
+      - name: Run docker compose for AWS
+        run: docker compose -f docker-compose-aws.yml up -d --build --wait --wait-timeout 60
+      - name: Run AWS e2e tests
+        run: TEST_BACKENDS=aws go test -v -tags=e2e ./tests/
+      - name: Stop AWS docker compose
+        if: always()
+        run: docker compose -f docker-compose-aws.yml down
 
   sharding-freeze:
     name: Run freeze log tests
