@@ -101,7 +101,7 @@ ko-local: ## Build container images locally using ko
 	ko publish --base-import-paths \
 		--tags $(GIT_VERSION)-aws --tags $(GIT_HASH) --image-refs rekorImagerefs-aws \
 		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server-aws
-	cat rekorImagerefs-gcp rekorImagerefs-aws > rekorImagerefs
+	cp rekorImagerefs-gcp rekorImagerefs
 
 # generate Go protobuf code
 protos:

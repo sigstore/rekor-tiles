@@ -49,6 +49,8 @@ services:
     build:
       context: .
       target: deploy
+      args:
+        CLOUD_PROVIDER: gcp
     environment:
     - SPANNER_EMULATOR_HOST=spanner:9010
     - STORAGE_EMULATOR_HOST=gcs:7080
