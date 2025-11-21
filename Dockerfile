@@ -31,9 +31,9 @@ ADD ./internal/ $APP_ROOT/src/internal/
 
 ARG SERVER_LDFLAGS
 # Build server for deployment
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" -o rekor-server ./cmd/rekor-server-${CLOUD_PROVIDER}
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -tags ${CLOUD_PROVIDER} -ldflags "${SERVER_LDFLAGS}" -o rekor-server ./cmd/rekor-server-${CLOUD_PROVIDER}
 # Build server for debugger
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug ./cmd/rekor-server-${CLOUD_PROVIDER}
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -tags ${CLOUD_PROVIDER} -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug ./cmd/rekor-server-${CLOUD_PROVIDER}
 
 # Multi-stage deployment build
 FROM golang:1.25.3@sha256:6d4e5e74f47db00f7f24da5f53c1b4198ae46862a47395e30477365458347bf2 AS deploy

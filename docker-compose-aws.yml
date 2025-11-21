@@ -74,6 +74,8 @@ services:
     build:
       context: .
       target: deploy
+      args:
+        CLOUD_PROVIDER: aws
     environment:
       - AWS_ACCESS_KEY_ID=minioadmin
       - AWS_SECRET_ACCESS_KEY=minioadmin
