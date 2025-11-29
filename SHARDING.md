@@ -274,7 +274,9 @@ Run `terraform apply` using
 Now that the service is deployed, create the metrics, alerts and dashboards for the service.
 Follow the example below, updating the `shard_name`.
 
-[Example PR](https://github.com/sigstore/public-good-instance/pull/3282)
+[Example PR](https://github.com/sigstore/public-good-instance/pull/3282), see [source changed PR](https://github.com/sigstore/public-good-instance/commit/638fc9953997cc22ccb66008a0bff2259b3bc97b#diff-ec1861c7f7eb84faa3fdda00bb1ea76a656007a9c218cbc7076f628518023114L360-R360) for updated module path.
+
+Additionally, add the new shard as an active shard in the load balancer metrics [Initial PR](https://github.com/sigstore/public-good-instance/pull/3311/files#diff-ec1861c7f7eb84faa3fdda00bb1ea76a656007a9c218cbc7076f628518023114R379)
 
 Merge, `terraform plan`, and `terraform apply`.
 
@@ -508,9 +510,16 @@ for failing healthchecks for the write path or missing metrics. As we turn down 
 and delete resources, we expect that healthchecks will start to fail.
 
 Remove the monitoring module from Terraform, either from `staging.tf` or `production.tf`.
-Merge and run `terraform plan` and `terraform apply`.
 
 [Example PR](https://github.com/sigstore/public-good-instance/pull/3175)
+
+Move the shard to the frozen_shard section of loadbalancer metrics in `staging.tf` or
+`production.tf`. 
+
+[Initial PR](https://github.com/sigstore/public-good-instance/pull/3311/files#diff-ec1861c7f7eb84faa3fdda00bb1ea76a656007a9c218cbc7076f628518023114R379)
+
+Merge and run `terraform plan` and `terraform apply`.
+
 
 As we create more alerting, we'll finalize this section with specific alerts to remove.
 We may need to add a `freeze_shard` variable that disables write-only metrics.
