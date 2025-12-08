@@ -1196,8 +1196,8 @@ github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.0 h1:UOHpiyezCj5RuixgIv
 github.com/sigstore/sigstore/pkg/signature/kms/aws v1.10.0/go.mod h1:U0CZmA2psabDa8DdiV7yXab0AHODzfKqvD2isH7Hrvw=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.0 h1:fq4+8Y4YadxeF8mzhoMRPZ1mVvDYXmI3BfS0vlkPT7M=
 github.com/sigstore/sigstore/pkg/signature/kms/azure v1.10.0/go.mod h1:u05nqPWY05lmcdHhv2lPaWTH3FGUhJzO7iW2hbboK3Q=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.6-0.20250729224751-181c5d3339b3 h1:a7Yz8C0aBa/LjeiTa9ZLYi9B74GNhFRnUIUdvN6ddVk=
-github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.9.6-0.20250729224751-181c5d3339b3/go.mod h1:tRtJzSZ48MXJV9bmS8pkb3mP36PCad/Cs+BmVJ3Z4O4=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.0 h1:iUEf5MZYOuXGnXxdF/WrarJrk0DTVHqeIOjYdtpVXtc=
+github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.10.0/go.mod h1:i6vg5JfEQix46R1rhQlrKmUtJoeH91drltyYOJEk1T4=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.0 h1:dUvPv/MP23ZPIXZUW45kvCIgC0ZRfYxEof57AB6bAtU=
 github.com/sigstore/sigstore/pkg/signature/kms/hashivault v1.10.0/go.mod h1:fR/gDdPvJWGWL70/NgBBIL1O0/3Wma6JHs3tSSYg3s4=
 github.com/sigstore/timestamp-authority v1.2.9 h1:L9Fj070/EbMC8qUk8BchkrYCS1BT5i93Bl6McwydkFs=
