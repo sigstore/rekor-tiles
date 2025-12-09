@@ -27,6 +27,8 @@ import (
 	"time"
 
 	gcs "cloud.google.com/go/storage"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	"github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
@@ -48,12 +50,19 @@ const (
 var rootCmd = &cobra.Command{
 	Use:   "freeze-checkpoint",
 	Short: "Freeze the log checkpoint",
-	Long:  `Add an extension line to the final checkpoint to indicate to consumers that no more checkpoints are going to be published. Only supported for GCP.`,
+	Long:  `Add an extension line to the final checkpoint to indicate to consumers that no more checkpoints are going to be published. Supports both GCP (GCS) and AWS (S3) backends.`,
 	Run: func(cmd *cobra.Command, _ []string) {
 		ctx := cmd.Context()
 
-		if viper.GetString("gcp-bucket") == "" {
-			slog.Error("must provide --gcs-bucket")
+		gcpBucket := viper.GetString("gcp-bucket")
+		awsBucket := viper.GetString("aws-bucket")
+
+		if gcpBucket == "" && awsBucket == "" {
+			slog.Error("must provide either --gcp-bucket or --aws-bucket")
+			os.Exit(1)
+		}
+		if gcpBucket != "" && awsBucket != "" {
+			slog.Error("cannot provide both --gcp-bucket and --aws-bucket")
 			os.Exit(1)
 		}
 		if viper.GetString("hostname") == "" {
@@ -77,13 +86,13 @@ var rootCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		objReader, objWriter, err := objectAccess(ctx)
+		storage, err := objectAccess(ctx)
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)
 		}
 
-		checkpoint, err := getCheckpoint(objReader, noteVerifier)
+		checkpoint, err := getCheckpoint(ctx, storage, noteVerifier)
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)
@@ -93,16 +102,12 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		err = updateCheckpoint(objWriter, noteSigner, checkpoint)
+		err = updateCheckpoint(ctx, storage, noteSigner, checkpoint)
 		if err != nil {
 			slog.Error(err.Error())
 			os.Exit(1)
 		}
 
-		if err := objWriter.Close(); err != nil {
-			slog.Error("closing object writer", "error", err.Error())
-			os.Exit(1)
-		}
 		slog.Info("Log frozen")
 	},
 }
@@ -116,6 +121,7 @@ func Execute() {
 
 func init() {
 	rootCmd.Flags().String("gcp-bucket", "", "GCS bucket for tile and checkpoint storage")
+	rootCmd.Flags().String("aws-bucket", "", "S3 bucket for tile and checkpoint storage")
 	rootCmd.Flags().String("hostname", "", "public hostname, used as the checkpoint origin")
 	rootCmd.Flags().String("signer-filepath", "", "path to the signing key")
 	rootCmd.Flags().String("signer-password", "", "password to decrypt the signing key")
@@ -183,27 +189,105 @@ func getNoteVerifier(verifier signature.Verifier) (note.Verifier, error) {
 	return noteVerifier, nil
 }
 
-func objectAccess(ctx context.Context) (*gcs.Reader, *gcs.Writer, error) {
-	client, err := gcs.NewClient(ctx, gcs.WithJSONReads())
-	if err != nil {
-		return nil, nil, fmt.Errorf("getting GCS client: %w", err)
-	}
-	bucketName := viper.GetString("gcp-bucket")
-	object := client.Bucket(bucketName).Object(layout.CheckpointPath)
-	objReader, err := object.NewReader(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("getting object reader: %w", err)
-	}
-	contentType := "text/plain; charset=utf-8"
-	objWriter := object.NewWriter(ctx)
-	objWriter.ContentType = contentType
-	return objReader, objWriter, nil
+// objectStorage provides a backend-agnostic interface for reading and writing checkpoints
+type objectStorage interface {
+	Read(ctx context.Context) ([]byte, error)
+	Write(ctx context.Context, data []byte) error
 }
 
-func getCheckpoint(objReader *gcs.Reader, noteVerifier note.Verifier) (*logformat.Checkpoint, error) {
-	rawCheckpoint, err := io.ReadAll(objReader)
+// gcsStorage implements objectStorage for Google Cloud Storage
+type gcsStorage struct {
+	bucket string
+}
+
+func (g *gcsStorage) Read(ctx context.Context) ([]byte, error) {
+	client, err := gcs.NewClient(ctx, gcs.WithJSONReads())
 	if err != nil {
-		return nil, fmt.Errorf("reading object: %w", err)
+		return nil, fmt.Errorf("getting GCS client: %w", err)
+	}
+	object := client.Bucket(g.bucket).Object(layout.CheckpointPath)
+	objReader, err := object.NewReader(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting object reader: %w", err)
+	}
+	defer objReader.Close()
+	return io.ReadAll(objReader)
+}
+
+func (g *gcsStorage) Write(ctx context.Context, data []byte) error {
+	client, err := gcs.NewClient(ctx, gcs.WithJSONReads())
+	if err != nil {
+		return fmt.Errorf("getting GCS client: %w", err)
+	}
+	object := client.Bucket(g.bucket).Object(layout.CheckpointPath)
+	objWriter := object.NewWriter(ctx)
+	objWriter.ContentType = "text/plain; charset=utf-8"
+	if _, err := objWriter.Write(data); err != nil {
+		objWriter.Close()
+		return fmt.Errorf("writing checkpoint: %w", err)
+	}
+	return objWriter.Close()
+}
+
+// s3Storage implements objectStorage for AWS S3
+type s3Storage struct {
+	bucket string
+}
+
+func (s *s3Storage) Read(ctx context.Context) ([]byte, error) {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("loading AWS config: %w", err)
+	}
+	client := s3.NewFromConfig(cfg)
+	result, err := client.GetObject(ctx, &s3.GetObjectInput{
+		Bucket: &s.bucket,
+		Key:    stringPtr(layout.CheckpointPath),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("getting object from S3: %w", err)
+	}
+	defer result.Body.Close()
+	return io.ReadAll(result.Body)
+}
+
+func (s *s3Storage) Write(ctx context.Context, data []byte) error {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		return fmt.Errorf("loading AWS config: %w", err)
+	}
+	client := s3.NewFromConfig(cfg)
+	contentType := "text/plain; charset=utf-8"
+	_, err = client.PutObject(ctx, &s3.PutObjectInput{
+		Bucket:      &s.bucket,
+		Key:         stringPtr(layout.CheckpointPath),
+		Body:        bytes.NewReader(data),
+		ContentType: &contentType,
+	})
+	if err != nil {
+		return fmt.Errorf("writing checkpoint to S3: %w", err)
+	}
+	return nil
+}
+
+func stringPtr(s string) *string {
+	return &s
+}
+
+func objectAccess(_ context.Context) (objectStorage, error) {
+	if gcpBucket := viper.GetString("gcp-bucket"); gcpBucket != "" {
+		return &gcsStorage{bucket: gcpBucket}, nil
+	}
+	if awsBucket := viper.GetString("aws-bucket"); awsBucket != "" {
+		return &s3Storage{bucket: awsBucket}, nil
+	}
+	return nil, fmt.Errorf("no storage backend configured")
+}
+
+func getCheckpoint(ctx context.Context, storage objectStorage, noteVerifier note.Verifier) (*logformat.Checkpoint, error) {
+	rawCheckpoint, err := storage.Read(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("reading checkpoint: %w", err)
 	}
 	noteObj, err := note.Open(rawCheckpoint, note.VerifierList(noteVerifier))
 	if err != nil {
@@ -221,8 +305,8 @@ func getCheckpoint(objReader *gcs.Reader, noteVerifier note.Verifier) (*logforma
 }
 
 // updateCheckpoint writes an extension line to the checkpoint note to indicate the checkpoint is frozen,
-// re-signs it and re-uploads it to the GCS backend.
-func updateCheckpoint(objWriter *gcs.Writer, noteSigner note.Signer, checkpoint *logformat.Checkpoint) error {
+// re-signs it and re-uploads it to the storage backend.
+func updateCheckpoint(ctx context.Context, storage objectStorage, noteSigner note.Signer, checkpoint *logformat.Checkpoint) error {
 	// Marshaled checkpoint contains the origin, size, and hash of the checkpoint, not the signatures.
 	// The final checkpoint object will contain the origin, size, hash, extension line, and signature.
 	buf := bytes.NewBuffer(checkpoint.Marshal())
@@ -234,8 +318,5 @@ func updateCheckpoint(objWriter *gcs.Writer, noteSigner note.Signer, checkpoint 
 	if err != nil {
 		return fmt.Errorf("re-signing checkpoint: %w", err)
 	}
-	if _, err := objWriter.Write(signedNote); err != nil {
-		return fmt.Errorf("writing checkpoint: %w", err)
-	}
-	return nil
+	return storage.Write(ctx, signedNote)
 }
