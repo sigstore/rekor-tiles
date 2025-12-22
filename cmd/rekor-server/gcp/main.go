@@ -15,7 +15,7 @@
 
 package main
 
-import "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/app"
+import "github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/gcp/app"
 
 func main() {
 	app.Execute()

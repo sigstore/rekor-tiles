@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package tessera
+package gcp
 
 import (
 	"context"
@@ -28,6 +28,44 @@ import (
 	"google.golang.org/api/option"
 	"sigs.k8s.io/release-utils/version"
 )
+
+// DriverConfiguration contains storage-specific configuration for each supported storage backend.
+type DriverConfiguration struct {
+	// Server origin
+	Hostname string
+
+	// GCP configuration
+	GCPBucket    string
+	GCPSpannerDB string
+
+	// Antispam configuration
+	PersistentAntispam  bool
+	ASMaxBatchSize      uint
+	ASPushbackThreshold uint
+}
+
+// NewDriver creates a Tessera driver and optional persistent antispam for a given storage backend.
+func NewDriver(ctx context.Context, config DriverConfiguration) (tessera.Driver, tessera.Antispam, error) {
+	if config.GCPBucket == "" || config.GCPSpannerDB == "" {
+		return nil, nil, fmt.Errorf("required flags missing to initialize Tessera driver")
+	}
+
+	driver, err := NewGCPDriver(ctx, config.GCPBucket, config.GCPSpannerDB, config.Hostname)
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to initialize GCP driver: %v", err.Error())
+	}
+
+	var persistentAntispam tessera.Antispam
+	if config.PersistentAntispam {
+		as, err := NewGCPAntispam(ctx, config.GCPSpannerDB, config.ASMaxBatchSize, config.ASPushbackThreshold)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to initialize GCP antispam: %v", err.Error())
+		}
+		persistentAntispam = as
+	}
+
+	return driver, persistentAntispam, nil
+}
 
 // NewGCPDriver returns a GCP Tessera Driver for the given bucket and spanner URI.
 func NewGCPDriver(ctx context.Context, bucket, spannerDB, hostname string) (tessera.Driver, error) {
