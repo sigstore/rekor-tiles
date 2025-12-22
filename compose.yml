@@ -99,7 +99,7 @@ services:
     command:
       - "--listen=:8100"
       - "--db_file=/witness_data/witness.sqlite"
-      - "--private_key=PRIVATE+KEY+rekor-witness-test+a478f5cd+AT5yCADn4hz2PNT790E8q7VkAXuBdy+HFv9tP0qvKyFV"
+      - "--private_key_path=/witness_config/private.key"
       - "--additional_logs=/witness_config/config.yaml"
       - "--poll_interval=0"
       - "--logtostderr"
@@ -108,7 +108,7 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - wget http://localhost:8081/metrics || exit 1
+      - wget --spider --tries=1 http://localhost:8081/metrics || exit 1
       timeout: 30s
       retries: 10
       interval: 3s
