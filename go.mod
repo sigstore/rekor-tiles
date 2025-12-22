@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	cloud.google.com/go/spanner v1.86.1
 	cloud.google.com/go/storage v1.58.0
-	github.com/chainguard-dev/clog v1.7.0
+	github.com/chainguard-dev/clog v1.8.0
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	github.com/go-test/deep v1.1.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
