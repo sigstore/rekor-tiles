@@ -17,6 +17,7 @@
 FROM --platform=$BUILDPLATFORM golang:1.25.5-trixie@sha256:8e8f9c84609b6005af0a4a8227cee53d6226aab1c6dcb22daf5aeeb8b05480e1 AS builder
 ARG TARGETOS
 ARG TARGETARCH
+ARG STORAGE_BACKEND
 ENV APP_ROOT=/opt/app-root
 ENV GOPATH=$APP_ROOT
 
@@ -31,7 +32,7 @@ ADD ./internal/ $APP_ROOT/src/internal/
 
 ARG SERVER_LDFLAGS
 # Build server for deployment. Build without cgo since distroless/static-debian12 doesn't include lib/cgo
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
+RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" -o rekor-server ./cmd/rekor-server/${STORAGE_BACKEND}
 
 # Multi-stage deployment build
 FROM gcr.io/distroless/static-debian13:nonroot@sha256:b5b9fd04c8dcf72a173183c0b7dee47e053e002246b308a59f3441db7b8b9cc4 AS deploy
