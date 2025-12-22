@@ -31,7 +31,15 @@ const (
 	defaultServerPrivateKey = "./testdata/pki/ed25519-priv-key.pem"
 )
 
-func setup(ctx context.Context) (read.Client, write.Client, error) {
+func TestGCPPreFreeze(t *testing.T) {
+	testPreFreeze(t, gcpConfig)
+}
+
+func TestGCPPostFreeze(t *testing.T) {
+	testPostFreeze(t, gcpConfig)
+}
+
+func setup(ctx context.Context, config backendConfig) (read.Client, write.Client, error) {
 	// get verifier needed for both read and write
 	verifier, err := signerverifier.New(ctx, signerverifier.WithFile(defaultServerPrivateKey, ""))
 	if err != nil {
@@ -39,22 +47,22 @@ func setup(ctx context.Context) (read.Client, write.Client, error) {
 	}
 
 	// reader client
-	reader, err := read.NewReader(defaultGCSURL, defaultRekorHostname, verifier)
+	reader, err := read.NewReader(config.StorageURL, defaultRekorHostname, verifier)
 	if err != nil {
 		return nil, nil, err
 	}
 
 	// writer client
-	writer, err := write.NewWriter(defaultRekorURL)
+	writer, err := write.NewWriter(config.ServerURL)
 	if err != nil {
 		return nil, nil, err
 	}
 	return reader, writer, nil
 }
 
-func TestPreFreeze(t *testing.T) {
+func testPreFreeze(t *testing.T, config backendConfig) {
 	ctx := context.Background()
-	reader, writer, err := setup(ctx)
+	reader, writer, err := setup(ctx, config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,9 +84,9 @@ func TestPreFreeze(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func TestPostFreeze(t *testing.T) {
+func testPostFreeze(t *testing.T, config backendConfig) {
 	ctx := context.Background()
-	reader, writer, err := setup(ctx)
+	reader, writer, err := setup(ctx, config)
 	if err != nil {
 		t.Fatal(err)
 	}
