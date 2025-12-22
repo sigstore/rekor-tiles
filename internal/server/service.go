@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"strconv"
 
 	"github.com/prometheus/client_golang/prometheus"
 
@@ -38,6 +39,10 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/emptypb"
+)
+
+const (
+	duplicateEntryHeader = "x-log-index"
 )
 
 // rekorServer is the collection of methods that our grpc server must implement.
@@ -133,6 +138,9 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		return nil, status.Error(codes.Canceled, err.Error())
 	}
 	if errors.As(err, &tessera.DuplicateError{}) {
+		_ = grpc.SetHeader(ctx, metadata.Pairs(
+			duplicateEntryHeader,
+			strconv.FormatUint(err.(tessera.DuplicateError).Index(), 10)))
 		return nil, status.Error(codes.AlreadyExists, err.Error())
 	}
 	if errors.As(err, &tessera.InclusionProofVerificationError{}) {

@@ -17,6 +17,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"crypto/ecdsa"
@@ -26,6 +27,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"os/exec"
 	"strings"
 	"testing"
@@ -290,6 +292,17 @@ func TestPersistentDeduplication(t *testing.T) {
 	assert.Error(t, err)
 	assert.ErrorContains(t, err, "unexpected response: 409")
 	assert.ErrorContains(t, err, "an equivalent entry already exists in the transparency log with index")
+	// verify custom response header is set
+	payload, err := protojson.Marshal(&pb.CreateEntryRequest{
+		Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
+			HashedRekordRequestV002: hr,
+		},
+	})
+	resp, err := http.Post(defaultRekorURL+"/api/v2/log/entries", "application/json", bytes.NewBuffer(payload))
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, resp.StatusCode, 409)
+	assert.NotEmpty(t, resp.Header.Get("x-log-index"))
 
 	// restart rekor-tiles and check for persistent deduplication
 	err = exec.Command(path, "compose", "restart", "rekor").Run()

@@ -84,6 +84,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		runtime.WithMarshalerOption(runtime.MIMEWildcard, &strictMarshaler),
 		runtime.WithErrorHandler(customHTTPErrorHandler),
 		runtime.WithForwardResponseOption(httpResponseModifier),
+		runtime.WithOutgoingHeaderMatcher(forwardHeaderHandler),
 		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)), // localhost:[port]/healthz
 	)
 
@@ -233,4 +234,13 @@ func customHTTPErrorHandler(ctx context.Context, mux *runtime.ServeMux, marshale
 	if err != nil {
 		runtime.DefaultHTTPErrorHandler(ctx, mux, marshaler, w, r, err)
 	}
+}
+
+// forwardHeaderHandler defines the list of gRPC response header metadata keys that should
+// be passed to the HTTP response.
+func forwardHeaderHandler(key string) (string, bool) {
+	if key == duplicateEntryHeader {
+		return key, true
+	}
+	return "", false
 }
