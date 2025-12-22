@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Debian 12 (Bookworm) image to build binary for distroless/static-debian12
-FROM --platform=$BUILDPLATFORM golang:1.25.3-bookworm@sha256:4f43b271f9673eb7bd0cb3a49cc17b08d8d6ee110277e26dbacc93c43a5a7793 AS builder
+# Debian 13 (Trixie) image to build binary for distroless/static-debian12
+FROM --platform=$BUILDPLATFORM golang:1.25.5-trixie@sha256:8e8f9c84609b6005af0a4a8227cee53d6226aab1c6dcb22daf5aeeb8b05480e1 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ENV APP_ROOT=/opt/app-root
@@ -34,7 +34,7 @@ ARG SERVER_LDFLAGS
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" ./cmd/rekor-server
 
 # Multi-stage deployment build
-FROM gcr.io/distroless/static-debian12:nonroot@sha256:2b7c93f6d6648c11f0e80a48558c8f77885eb0445213b8e69a6a0d7c89fc6ae4 AS deploy
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:b5b9fd04c8dcf72a173183c0b7dee47e053e002246b308a59f3441db7b8b9cc4 AS deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 # Set the binary as the entrypoint of the container
