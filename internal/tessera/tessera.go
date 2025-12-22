@@ -47,6 +47,10 @@ func (e DuplicateError) Error() string {
 	return fmt.Sprintf("an equivalent entry already exists in the transparency log with index %d", e.index)
 }
 
+func (e DuplicateError) Index() uint64 {
+	return e.index
+}
+
 type InclusionProofVerificationError struct {
 	index uint64
 	err   error
