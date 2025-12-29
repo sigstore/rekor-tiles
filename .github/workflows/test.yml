@@ -45,6 +45,9 @@ jobs:
   container-build:
     name: Build container
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        storage: [ 'gcp' ]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -60,7 +63,7 @@ jobs:
       - name: container
         run: |
           make ko-local
-          docker run --rm $(cat rekorImagerefs) version
+          docker run --rm $(cat rekorImagerefs-${{ matrix.storage }}) version
 
   unit-tests:
     name: Run unit tests
@@ -111,10 +114,12 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
-      - name: Run docker compose
+      - name: Run GCP docker compose
         run: docker compose -f compose.yml up -d --build --wait --wait-timeout 60
-      - name: Run e2e tests
-        run: go test -v -tags=e2e ./tests/
+      - name: Run GCP e2e tests
+        run: go test -v -tags=e2e -run TestGCP ./tests/
+      - name: Stop GCP docker compose
+        run: docker compose -f compose.yml down
 
   sharding-freeze:
     name: Run freeze log tests

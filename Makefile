@@ -15,7 +15,7 @@
 
 .PHONY: all test clean lint gosec ko-local tools ldflags
 
-all: protos rekor-server
+all: protos rekor-server-gcp
 
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
@@ -73,8 +73,8 @@ lint:
 gosec: ## Run gosec security scanner
 	$(GOBIN)/gosec ./...
 
-rekor-server: $(SRC) $(PROTO_SRC)
-	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server ./cmd/rekor-server
+rekor-server-gcp: $(SRC) $(PROTO_SRC)
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server-gcp ./cmd/rekor-server/gcp
 
 ldflags: ## Print ldflags
 	@echo $(SERVER_LDFLAGS)
@@ -85,8 +85,8 @@ test: ## Run all tests
 ko-local: ## Build container images locally using ko
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs \
-		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs-gcp \
+		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/gcp
 
 # generate Go protobuf code
 protos:

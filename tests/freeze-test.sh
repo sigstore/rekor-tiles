@@ -17,7 +17,7 @@ set -e
 
 export STORAGE_EMULATOR_HOST=localhost:7080
 
-docker compose up -d --build --wait --wait-timeout 60
+docker compose -f compose.yml up -d --build --wait --wait-timeout 60
 cleanup() {
 	echo "cleaning up"
 	docker compose down
@@ -25,7 +25,7 @@ cleanup() {
 trap cleanup EXIT
 
 echo "running pre-freeze tests"
-go test -v -tags=e2e,freeze -run TestPreFreeze ./tests
+go test -v -tags=e2e,freeze -run TestGCPPreFreeze ./tests
 
 echo "setting rekor to read-only"
 composefile=compose.yml.tmp
@@ -36,10 +36,10 @@ cleanup_tmp() {
 }
 trap cleanup_tmp EXIT
 
-docker compose down rekor && docker compose -f $composefile up -d rekor --wait --wait-timeout 60
+docker compose -f compose.yml down rekor && docker compose -f $composefile up -d rekor --wait --wait-timeout 60
 
 echo "freezing checkpoint"
-go run cmd/freeze-checkpoint/main.go --gcp-bucket "tiles" --signer-filepath tests/testdata/pki/ed25519-priv-key.pem --hostname rekor-local
+go run cmd/freeze-checkpoint/gcp/main.go --gcp-bucket "tiles" --signer-filepath tests/testdata/pki/ed25519-priv-key.pem --hostname rekor-local
 
 echo "running post-freeze tests"
-go test -v -tags=e2e,freeze -run TestPostFreeze ./tests
+go test -v -tags=e2e,freeze -run TestGCPPostFreeze ./tests

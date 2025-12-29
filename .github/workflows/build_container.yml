@@ -25,7 +25,7 @@ on:
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain, and a name for the Docker image that this workflow builds.
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_BASE_NAME: ${{ github.repository }}
 
 permissions: {}
 
@@ -46,6 +46,10 @@ jobs:
       attestations: write
       id-token: write
 
+    strategy:
+      matrix:
+        storage: [ 'gcp' ]
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
@@ -65,7 +69,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@c299e40c65443455700f0fdfc63efafe5b349051 # v5.10.0
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/${{ matrix.storage }}
 
       # Set up builder for multi-platform builds
       - name: Set up Docker Buildx
@@ -94,6 +98,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            STORAGE_BACKEND=${{ matrix.storage }}
       - name: Build and push per-tag Docker image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         id: push-per-tag
@@ -107,19 +112,20 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            STORAGE_BACKEND=${{ matrix.storage }}
       
       # This step generates an artifact attestation for the image, which is an unforgeable statement about where and how it was built. It increases supply chain security for people who consume the image. For more information, see [Using artifact attestations to establish provenance for builds](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds).
       - name: Generate artifact attestation
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v3.1.0
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/${{ matrix.storage }}
           subject-digest: ${{ steps.push-per-commit.outputs.digest }}
           push-to-registry: true
       - name: Generate artifact attestation
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: actions/attest-build-provenance@00014ed6ed5efc5b1ab7f7f34a39eb55d41aa4f8 # v3.1.0
         with:
-          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/${{ matrix.storage }}
           subject-digest: ${{ steps.push-per-tag.outputs.digest }}
           push-to-registry: true

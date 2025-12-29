@@ -27,9 +27,9 @@ sboms:
   - artifacts: binary
 
 builds:
-  - id: rekor-server
-    binary: rekor-server-{{ .Os }}-{{ .Arch }}
-    main: ./cmd/rekor-server
+  - id: rekor-server-gcp
+    binary: rekor-server-gcp-{{ .Os }}-{{ .Arch }}
+    main: ./cmd/rekor-server/gcp
     no_unique_dist_dir: true
     goos:
       - linux
