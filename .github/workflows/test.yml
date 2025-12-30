@@ -155,6 +155,11 @@ jobs:
           merge-multiple: true
       - name: Workaround buggy Codecov OIDC auth
         run: |
+          echo DEBUG coverage-unit.txt
+          cat coverage-unit.txt
+          echo DEBUG coverage-e2e.txt
+          cat coverage-e2e.txt
+
           # only set CODECOV_TOKEN if OIDC token is available
           [ -z $ACTIONS_ID_TOKEN_REQUEST_TOKEN ] && exit 0
 
