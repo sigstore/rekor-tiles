@@ -64,14 +64,7 @@ jobs:
 
   unit-tests:
     name: Run unit tests
-    permissions:
-      contents: read
-      id-token: write # to authenticate with codecov
     runs-on: ubuntu-latest
-
-    env:
-      OS: ubuntu-latest
-
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -81,23 +74,12 @@ jobs:
           go-version-file: './go.mod'
           check-latest: true
       - name: Run Go tests
-        run: go test -covermode atomic -coverprofile coverage.txt $(go list ./... | grep -v third_party/)
-      - name: Workaround buggy Codecov OIDC auth
-        run: |
-          # only set CODECOV_TOKEN if OIDC token is available
-          [ -z $ACTIONS_ID_TOKEN_REQUEST_TOKEN ] && exit 0
-
-          TOKEN_RESPONSE=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://codecov.io")
-          CODECOV_TOKEN=$(echo $TOKEN_RESPONSE | jq -r .value)
-          echo "CODECOV_TOKEN=$CODECOV_TOKEN" >> "$GITHUB_ENV"
-      - name: Upload Coverage Report
-        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        run: go test -covermode atomic -coverprofile coverage-unit.txt $(go list ./... | grep -v third_party/)
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          env_vars: OS
-          fail_ci_if_error: true
-          # When github.com/codecov/codecov-action/issues/1791 is fixed,
-          # remove workaround step above and uncomment:
-          # use_oidc: true
+          name: coverage-unit
+          path: coverage-unit.txt
       - name: Run Go tests w/ `-race`
         if: ${{ runner.os == 'Linux' }}
         run: go test -race $(go list ./... | grep -v third_party/)
@@ -111,10 +93,19 @@ jobs:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
+      - uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: './go.mod'
+          check-latest: true
       - name: Run docker compose
         run: docker compose -f compose.yml up -d --build --wait --wait-timeout 60
       - name: Run e2e tests
-        run: go test -v -tags=e2e ./tests/
+        run: go test -v -tags=e2e -coverpkg=./... -covermode=atomic -coverprofile=coverage-e2e.txt ./tests/
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        with:
+          name: coverage-e2e
+          path: coverage-e2e.txt
 
   sharding-freeze:
     name: Run freeze log tests
@@ -148,3 +139,31 @@ jobs:
       - name: Run tests
         working-directory: ./tests/sharding
         run: ./test.sh
+
+  upload-coverage:
+    name: Upload Coverage
+    needs: [unit-tests, e2e-tests]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write # to authenticate with codecov
+    env:
+      OS: ubuntu-latest
+    steps:
+      - name: Download coverage reports
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          merge-multiple: true
+      - name: Workaround buggy Codecov OIDC auth
+        run: |
+          # only set CODECOV_TOKEN if OIDC token is available
+          [ -z $ACTIONS_ID_TOKEN_REQUEST_TOKEN ] && exit 0
+
+          TOKEN_RESPONSE=$(curl -H "Authorization: bearer $ACTIONS_ID_TOKEN_REQUEST_TOKEN" "$ACTIONS_ID_TOKEN_REQUEST_URL&audience=https://codecov.io")
+          CODECOV_TOKEN=$(echo $TOKEN_RESPONSE | jq -r .value)
+          echo "CODECOV_TOKEN=$CODECOV_TOKEN" >> "$GITHUB_ENV"
+      - name: Upload Coverage Report
+        uses: codecov/codecov-action@5a1091511ad55cbe89839c7260b706298ca349f7 # v5.5.2
+        with:
+          files: ./coverage-unit.txt,./coverage-e2e.txt
+          env_vars: OS
+          fail_ci_if_error: true
