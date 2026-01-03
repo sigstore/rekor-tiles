@@ -57,8 +57,14 @@ func NewReader(readURL, origin string, verifier signature.Verifier, opts ...clie
 	if err != nil {
 		return nil, fmt.Errorf("creating note verifier: %w", err)
 	}
+	transport := http.DefaultTransport
+	if cfg.TLSConfig != nil {
+		transport = &http.Transport{
+			TLSClientConfig: cfg.TLSConfig,
+		}
+	}
 	httpClient := &http.Client{
-		Transport: client.CreateRoundTripper(http.DefaultTransport, cfg.UserAgent),
+		Transport: client.CreateRoundTripper(transport, cfg.UserAgent),
 		Timeout:   cfg.Timeout,
 	}
 	tileClient, err := tclient.NewHTTPFetcher(baseURL, httpClient)
