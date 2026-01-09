@@ -78,3 +78,27 @@ Run unit tests with `go test ./...`.
 
 Follow the [end-to-end test documentation](https://github.com/sigstore/rekor-tiles/blob/main/tests/README.md)
 for how to run integration tests against a local instance.
+
+## Adding a storage backend
+
+Tessera supports multiple [storage backends](https://github.com/transparency-dev/tessera/tree/main/storage) for
+different cloud providers and infrastructure. We will add support in Rekor for different storage backends with
+user demand.
+
+Rekor will produce different binaries and containers for each storage backend. Binaries will be named
+`rekor-server-<backend>` and containers `github.com/sigstore/rekor-tiles/pkgs/container/rekor-tiles/<backend>`.
+
+To add support for a new backend, with the example below for the `gcp` backend from [PR #630](https://github.com/sigstore/rekor-tiles/pull/630):
+
+* Create a [backend-specific driver](https://github.com/sigstore/rekor-tiles/blob/main/internal/tessera/gcp/gcp.go)
+* Create a [backend-specific main package](https://github.com/sigstore/rekor-tiles/tree/main/cmd/rekor-server/gcp)
+* Create a Docker compose file, and set the [`STORAGE_BACKEND`](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/compose.yml#L52-L53)
+  arg for building the containerized binary
+* Add an [end-to-end test configuration](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/tests/e2e_test.go#L77-L93)
+* Add the binary to [goreleaser](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.goreleaser.yaml#L30-L46)
+* Add the storage backend to the [matrix for container building](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.github/workflows/build_container.yml#L51)
+* Update the [test matrix](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.github/workflows/test.yml#L50)
+* Call the end-to-end test [in CI](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.github/workflows/test.yml#L108-L122)
+* Add a [Makefile target](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L76-L77), update
+  [`make all`](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L18), and add a
+  [`ko publish` step](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L87-L89)
