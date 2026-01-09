@@ -41,6 +41,7 @@ import (
 	"github.com/sigstore/rekor-tiles/v2/internal/server"
 	"github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
+	gcpDriver "github.com/sigstore/rekor-tiles/v2/internal/tessera/gcp"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
@@ -130,7 +131,7 @@ var serveCmd = &cobra.Command{
 		shutdownFn := func(_ context.Context) error { return nil }
 		// if in read-only mode, don't start the appender, because we don't want new checkpoints being published.
 		if !readOnly {
-			driverConfig := tessera.DriverConfiguration{
+			driverConfig := gcpDriver.DriverConfiguration{
 				Hostname:            viper.GetString("hostname"),
 				GCPBucket:           viper.GetString("gcp-bucket"),
 				GCPSpannerDB:        viper.GetString("gcp-spanner"),
@@ -138,7 +139,7 @@ var serveCmd = &cobra.Command{
 				ASMaxBatchSize:      viper.GetUint("antispam-max-batch-size"),
 				ASPushbackThreshold: viper.GetUint("antispam-pushback-threshold"),
 			}
-			tesseraDriver, persistentAntispam, err := tessera.NewDriver(ctx, driverConfig)
+			tesseraDriver, persistentAntispam, err := gcpDriver.NewDriver(ctx, driverConfig)
 			if err != nil {
 				slog.Error("failed to initialize driver", "error", err)
 				os.Exit(1)

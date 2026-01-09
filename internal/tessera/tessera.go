@@ -113,43 +113,6 @@ func WithWitnessing(opts *tessera.AppendOptions, witnessPolicy []byte) (*tessera
 	return opts, nil
 }
 
-// DriverConfiguration contains storage-specific configuration for each supported storage backend.
-type DriverConfiguration struct {
-	// Server origin
-	Hostname string
-
-	// GCP configuration
-	GCPBucket    string
-	GCPSpannerDB string
-
-	// Antispam configuration
-	PersistentAntispam  bool
-	ASMaxBatchSize      uint
-	ASPushbackThreshold uint
-}
-
-// NewDriver creates a Tessera driver and optional persistent antispam for a given storage backend.
-func NewDriver(ctx context.Context, config DriverConfiguration) (tessera.Driver, tessera.Antispam, error) {
-	switch {
-	case config.GCPBucket != "" && config.GCPSpannerDB != "":
-		driver, err := NewGCPDriver(ctx, config.GCPBucket, config.GCPSpannerDB, config.Hostname)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to initialize GCP driver: %v", err.Error())
-		}
-		var persistentAntispam tessera.Antispam
-		if config.PersistentAntispam {
-			as, err := NewGCPAntispam(ctx, config.GCPSpannerDB, config.ASMaxBatchSize, config.ASPushbackThreshold)
-			if err != nil {
-				return nil, nil, fmt.Errorf("failed to initialize GCP antispam: %v", err.Error())
-			}
-			persistentAntispam = as
-		}
-		return driver, persistentAntispam, nil
-	default:
-		return nil, nil, fmt.Errorf("no flags provided to initialize Tessera driver")
-	}
-}
-
 // NewStorage creates a Tessera storage object for the provided driver and signer.
 // Returns the storage object and a function that must be called when shutting down the server.
 func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appendOptions *tessera.AppendOptions) (Storage, func(context.Context) error, error) {

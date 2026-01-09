@@ -49,6 +49,8 @@ services:
     build:
       context: .
       target: deploy
+      args:
+        STORAGE_BACKEND: gcp
     environment:
     - SPANNER_EMULATOR_HOST=spanner:9010
     - STORAGE_EMULATOR_HOST=gcs:7080
@@ -141,6 +143,8 @@ services:
     build:
       context: .
       target: debug
+      args:
+        STORAGE_BACKEND: gcp
     environment:
     - SPANNER_EMULATOR_HOST=spanner:9010
     - STORAGE_EMULATOR_HOST=gcs:7080

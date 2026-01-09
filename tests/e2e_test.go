@@ -59,14 +59,40 @@ import (
 )
 
 const (
-	defaultRekorURL        = "http://localhost:3003"
 	defaultRekorHostname   = "rekor-local"
 	defaultWitnessVKey     = "rekor-witness-test+a478f5cd+AUtKAvrTeY7srtAMfP5JCUOkZoU+A7F5VA094y5LGr89"
-	defaultGCSURL          = "http://localhost:7080/tiles"
 	defaultServerPublicKey = "./testdata/pki/ed25519-pub-key.pem"
 )
 
-func TestReadWrite(t *testing.T) {
+// backendConfig contains per-storage-backend configuration
+type backendConfig struct {
+	// ServerURL is the write path for uploading entries
+	ServerURL string
+	// StorageURL is the read path for the tiles and entry bundles
+	StorageURL string
+	// ComposePath is the path to the docker compose file
+	ComposePath string
+}
+
+var gcpConfig = backendConfig{
+	ServerURL:   "http://localhost:3003",
+	StorageURL:  "http://localhost:7080/tiles",
+	ComposePath: "compose.yml",
+}
+
+func TestGCP(t *testing.T) {
+	t.Run("ReadWrite", func(t *testing.T) {
+		testReadWrite(t, gcpConfig)
+	})
+	t.Run("UnimplementedReadMethods", func(t *testing.T) {
+		testUnimplementedReadMethods(t, gcpConfig)
+	})
+	t.Run("PersistentDeduplication", func(t *testing.T) {
+		testPersistentDeduplication(t, gcpConfig)
+	})
+}
+
+func testReadWrite(t *testing.T, config backendConfig) {
 	ctx := context.Background()
 
 	// get verifier needed for both read and write
@@ -90,13 +116,13 @@ func TestReadWrite(t *testing.T) {
 	noteVerifiers := []signednote.Verifier{noteVerifier, witnessNoteVerifier}
 
 	// reader client
-	reader, err := read.NewReader(defaultGCSURL, defaultRekorHostname, verifier)
+	reader, err := read.NewReader(config.StorageURL, defaultRekorHostname, verifier)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	// writer client
-	writer, err := write.NewWriter(defaultRekorURL)
+	writer, err := write.NewWriter(config.ServerURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -232,7 +258,7 @@ func TestReadWrite(t *testing.T) {
 	assert.NotNil(t, dsseEntry)
 }
 
-func TestUnimplementedReadMethods(t *testing.T) {
+func testUnimplementedReadMethods(t *testing.T, config backendConfig) {
 	ctx := context.Background()
 
 	serverPubKey, err := pemutil.Read(defaultServerPublicKey)
@@ -243,7 +269,7 @@ func TestUnimplementedReadMethods(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reader, err := read.NewReader(defaultRekorURL+"/api/v2", defaultRekorHostname, verifier)
+	reader, err := read.NewReader(config.ServerURL+"/api/v2", defaultRekorHostname, verifier)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -256,7 +282,7 @@ func TestUnimplementedReadMethods(t *testing.T) {
 	assert.ErrorContains(t, err, "501")
 }
 
-func TestPersistentDeduplication(t *testing.T) {
+func testPersistentDeduplication(t *testing.T, config backendConfig) {
 	ctx := context.Background()
 
 	path, err := exec.LookPath("docker")
@@ -269,7 +295,7 @@ func TestPersistentDeduplication(t *testing.T) {
 	}
 
 	// writer client
-	writer, err := write.NewWriter(defaultRekorURL)
+	writer, err := write.NewWriter(config.ServerURL)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -298,7 +324,7 @@ func TestPersistentDeduplication(t *testing.T) {
 			HashedRekordRequestV002: hr,
 		},
 	})
-	resp, err := http.Post(defaultRekorURL+"/api/v2/log/entries", "application/json", bytes.NewBuffer(payload))
+	resp, err := http.Post(config.ServerURL+"/api/v2/log/entries", "application/json", bytes.NewBuffer(payload))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
 	assert.Equal(t, resp.StatusCode, 409)
