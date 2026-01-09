@@ -44,6 +44,23 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       - "{{ .Env.LDFLAGS }}"
+  - id: rekor-server-posix
+    binary: rekor-server-posix-{{ .Os }}-{{ .Arch }}
+    main: ./cmd/rekor-server/posix
+    no_unique_dist_dir: true
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
 
 archives:
   - formats: [ "binary" ]

@@ -92,6 +92,24 @@ func TestGCP(t *testing.T) {
 	})
 }
 
+var posixConfig = backendConfig{
+	ServerURL:   "http://localhost:3003",
+	StorageURL:  "http://localhost:8000",
+	ComposePath: "compose.yml",
+}
+
+func TestPOSIX(t *testing.T) {
+	t.Run("ReadWrite", func(t *testing.T) {
+		testReadWrite(t, posixConfig)
+	})
+	t.Run("UnimplementedReadMethods", func(t *testing.T) {
+		testUnimplementedReadMethods(t, posixConfig)
+	})
+	t.Run("PersistentDeduplication", func(t *testing.T) {
+		testPersistentDeduplication(t, posixConfig)
+	})
+}
+
 func testReadWrite(t *testing.T, config backendConfig) {
 	ctx := context.Background()
 
