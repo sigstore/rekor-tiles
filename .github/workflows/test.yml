@@ -62,7 +62,7 @@ jobs:
 
       - name: container
         run: |
-          make ko-local
+          make ko-local STORAGE_BACKEND=${{ matrix.storage }}
           docker run --rm $(cat rekorImagerefs-${{ matrix.storage }}) version
 
   unit-tests:
