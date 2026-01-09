@@ -82,11 +82,11 @@ ldflags: ## Print ldflags
 test: ## Run all tests
 	go test ./...
 
-ko-local: ## Build container images locally using ko
+ko-local: ## Build container images locally using ko, defaulting to the GCP container
 	KO_DOCKER_REPO=ko.local LDFLAGS="$(SERVER_LDFLAGS)" GIT_HASH=$(GIT_HASH) GIT_VERSION=$(GIT_VERSION) \
 	ko publish --base-import-paths \
-		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs-$(STORAGE_BACKEND) \
-		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/$(STORAGE_BACKEND)
+		--tags $(GIT_VERSION) --tags $(GIT_HASH) --image-refs rekorImagerefs-$(STORAGE_BACKEND:-gcp) \
+		github.com/sigstore/rekor-tiles/v2/cmd/rekor-server/$(STORAGE_BACKEND:-gcp)
 
 # generate Go protobuf code
 protos:
