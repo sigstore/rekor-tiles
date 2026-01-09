@@ -15,7 +15,7 @@
 
 .PHONY: all test clean lint gosec ko-local tools ldflags
 
-all: protos rekor-server-gcp
+all: protos rekor-server-gcp rekor-server-posix
 
 GIT_VERSION ?= $(shell git describe --tags --always --dirty)
 GIT_HASH ?= $(shell git rev-parse HEAD)
@@ -77,6 +77,9 @@ gosec: ## Run gosec security scanner
 
 rekor-server-gcp: $(SRC) $(PROTO_SRC)
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server-gcp ./cmd/rekor-server/gcp
+
+rekor-server-posix: $(SRC) $(PROTO_SRC)
+	CGO_ENABLED=0 go build -trimpath -ldflags "$(SERVER_LDFLAGS)" -o rekor-server-posix ./cmd/rekor-server/posix
 
 ldflags: ## Print ldflags
 	@echo $(SERVER_LDFLAGS)
