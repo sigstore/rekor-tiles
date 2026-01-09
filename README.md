@@ -90,8 +90,8 @@ Rekor will produce different binaries and containers for each storage backend. B
 
 To add support for a new backend, with the example below for the `gcp` backend from [PR #630](https://github.com/sigstore/rekor-tiles/pull/630):
 
-* Create a [backend-specific driver](https://github.com/sigstore/rekor-tiles/blob/main/internal/tessera/gcp/gcp.go)
-* Create a [backend-specific main package](https://github.com/sigstore/rekor-tiles/tree/main/cmd/rekor-server/gcp)
+* Create a [backend-specific driver](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/internal/tessera/gcp/gcp.go)
+* Create a [backend-specific main package](https://github.com/sigstore/rekor-tiles/tree/d596e236da3ce44024986f24c34005714430dda5/cmd/rekor-server/gcp)
 * Create a Docker compose file, and set the [`STORAGE_BACKEND`](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/compose.yml#L52-L53)
   arg for building the containerized binary
 * Add an [end-to-end test configuration](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/tests/e2e_test.go#L77-L93)
