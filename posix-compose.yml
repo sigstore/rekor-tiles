@@ -1,0 +1,94 @@
+# Copyright 2026 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+services:
+  rekor:
+    build:
+      context: .
+      target: deploy
+      args:
+        STORAGE_BACKEND: posix
+    command:
+    - "rekor-server"
+    - "serve"
+    - "--http-address=0.0.0.0"
+    - "--grpc-address=0.0.0.0"
+    - "--hostname=rekor-local"
+    - "--storage-dir=/tmp/posixlog"
+    - "--signer-filepath=/pki/ed25519-priv-key.pem"
+    - "--checkpoint-interval=2s"
+    - "--log-level=debug"
+    - "--request-response-logging=true"
+    - "--persistent-antispam=true"
+    - "--witness-policy-path=/witness/policy.yaml"
+    ports:
+    - "3003:3000" # http port
+    - "3001:3001" # grpc port
+    - "2114:2112" # metrics port
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl http://localhost:3000/healthz | grep '{"status":"SERVING"}'
+      timeout: 30s
+      retries: 10
+      interval: 3s
+    volumes:
+    - ./tests/testdata/pki:/pki
+    - ./tests/testdata/witness:/witness
+    - posix_storage:/tmp/posixlog
+    depends_on:
+      nginx:
+        condition: service_healthy
+      witness:
+        condition: service_healthy
+  nginx:
+    image: nginx:1.29.4@sha256:ca871a86d45a3ec6864dc45f014b11fe626145569ef0e74deaffc95a3b15b430
+    volumes:
+      - posix_storage:/usr/share/nginx/html
+    restart: always
+    ports:
+      - "8000:80"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost/"]
+      interval: 30s
+      retries: 10
+      timeout: 3s
+  witness:
+    build:
+      context: https://github.com/transparency-dev/witness.git#main
+      dockerfile: cmd/omniwitness/Dockerfile
+    volumes:
+      - witness_data:/witness_data:rw
+      - ./tests/testdata/witness:/witness_config
+    command:
+      - "--listen=:8100"
+      - "--db_file=/witness_data/witness.sqlite"
+      - "--private_key_path=/witness_config/private.key"
+      - "--additional_logs=/witness_config/config.yaml"
+      - "--poll_interval=0"
+      - "--logtostderr"
+      - "--v=2"
+    restart: always
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider --tries=1 http://localhost:8081/metrics || exit 1
+      timeout: 30s
+      retries: 10
+      interval: 3s
+    ports:
+      - "8100:8100"
+volumes:
+  posix_storage: {}
+  witness_data: {}

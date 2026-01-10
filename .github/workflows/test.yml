@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        storage: [ 'gcp' ]
+        storage: [ 'gcp', 'posix' ]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -119,7 +119,13 @@ jobs:
       - name: Run GCP e2e tests
         run: go test -v -tags=e2e -run TestGCP ./tests/
       - name: Stop GCP docker compose
-        run: docker compose -f compose.yml down
+        run: docker compose -f compose.yml down --volumes
+      - name: Run POSIX docker compose
+        run: docker compose -f posix-compose.yml up -d --build --wait --wait-timeout 60
+      - name: Run POSIX e2e tests
+        run: go test -v -tags=e2e -run TestPOSIX ./tests/
+      - name: Stop POSIX docker compose
+        run: docker compose -f posix-compose.yml down --volumes
 
   sharding-freeze:
     name: Run freeze log tests
