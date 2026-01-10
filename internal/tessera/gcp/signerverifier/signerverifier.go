@@ -24,15 +24,13 @@ import (
 	"fmt"
 	"strings"
 
+	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
 	"golang.org/x/exp/slices"
 
 	// these are imported to load the providers via init() calls
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/azure"
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/hashivault"
 )
 
 // New returns a SignerVerifier for the given KMS provider, Tink, or a private key file on disk.
@@ -50,7 +48,7 @@ func New(ctx context.Context, opts ...Option) (signature.SignerVerifier, error) 
 	case sc.tinkKEKURI != "":
 		return NewTinkSignerVerifier(ctx, sc.tinkKEKURI, sc.tinkKeysetPath)
 	case sc.filePath != "":
-		return NewFileSignerVerifier(sc.filePath, sc.password)
+		return sv.NewFileSignerVerifier(sc.filePath, sc.password)
 	default:
 		return nil, fmt.Errorf("insufficient signing parameters provided, must configure one of file, KMS, or Tink signer-verifiers")
 	}
