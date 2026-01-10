@@ -113,7 +113,7 @@ func TestKeyHash(t *testing.T) {
 			if err := os.WriteFile(keyFile, []byte(test.key), 0644); err != nil {
 				t.Fatal(err)
 			}
-			signer, err := signerverifier.New(ctx, signerverifier.WithFile(keyFile, ""))
+			signer, err := signerverifier.NewFileSignerVerifier(keyFile, "")
 			if err != nil {
 				t.Fatal(err)
 			}
