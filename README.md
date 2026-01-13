@@ -104,3 +104,4 @@ To add support for a new backend, with the example below for the `gcp` backend f
 * Call the end-to-end test [in CI](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.github/workflows/test.yml#L108-L122)
 * Add a [Makefile target](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L76-L77) and update
   [`make all`](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L18)
+* Once merged, update the list of [required tests](https://github.com/sigstore/community/blob/ff0761c37ab63c55f50609ed32c27e2bc9497572/github-sync/github-data/sigstore/repositories.yaml#L1513)
