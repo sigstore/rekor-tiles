@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Copied from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/tink.go
+// Modified from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/tink.go
 
 package signerverifier
 
@@ -25,7 +25,6 @@ import (
 	"strings"
 
 	tinkUtils "github.com/sigstore/sigstore/pkg/signature/tink"
-	"github.com/tink-crypto/tink-go-awskms/v2/integration/awskms"
 	"github.com/tink-crypto/tink-go-gcpkms/v2/integration/gcpkms"
 	"github.com/tink-crypto/tink-go/v2/core/registry"
 	"github.com/tink-crypto/tink-go/v2/keyset"
@@ -69,8 +68,7 @@ func NewTinkSignerVerifierWithHandle(kek tink.AEAD, keysetPath string) (signatur
 	return signature.LoadDefaultSignerVerifier(signer)
 }
 
-// getKeyEncryptionKey returns a Tink AEAD encryption key from KMS
-// Supports GCP and AWS
+// getKeyEncryptionKey returns a Tink AEAD encryption key from GCP KMS
 func getKeyEncryptionKey(ctx context.Context, kmsKey string) (tink.AEAD, error) {
 	switch {
 	case strings.HasPrefix(kmsKey, "gcp-kms://"):
@@ -80,13 +78,6 @@ func getKeyEncryptionKey(ctx context.Context, kmsKey string) (tink.AEAD, error) 
 		}
 		registry.RegisterKMSClient(gcpClient)
 		return gcpClient.GetAEAD(kmsKey)
-	case strings.HasPrefix(kmsKey, "aws-kms://"):
-		awsClient, err := awskms.NewClientWithOptions(kmsKey)
-		if err != nil {
-			return nil, err
-		}
-		registry.RegisterKMSClient(awsClient)
-		return awsClient.GetAEAD(kmsKey)
 	default:
 		return nil, errors.New("unsupported KMS key type")
 	}

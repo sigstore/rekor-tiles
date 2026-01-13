@@ -28,7 +28,7 @@ import (
 
 	gcs "cloud.google.com/go/storage"
 	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	"github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
+	"github.com/sigstore/rekor-tiles/v2/internal/tessera/gcp/signerverifier"
 	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
@@ -119,9 +119,9 @@ func init() {
 	rootCmd.Flags().String("hostname", "", "public hostname, used as the checkpoint origin")
 	rootCmd.Flags().String("signer-filepath", "", "path to the signing key")
 	rootCmd.Flags().String("signer-password", "", "password to decrypt the signing key")
-	rootCmd.Flags().String("signer-kmskey", "", "URI of the KMS key, in the form of awskms://keyname, azurekms://keyname, gcpkms://keyname, or hashivault://keyname")
+	rootCmd.Flags().String("signer-kmskey", "", "URI of the KMS key, in the form of gcpkms://keyname")
 	rootCmd.Flags().String("signer-kmshash", "sha256", "hash algorithm used by the KMS")
-	rootCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset. Valid options are [aws-kms://keyname, gcp-kms://keyname]")
+	rootCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset, in the form gcp-kms://keyname")
 	rootCmd.Flags().String("signer-tink-keyset-path", "", "path to encrypted Tink keyset")
 	rootCmd.Flags().Uint("gcp-kms-retries", 0, "number of retries for GCP KMS requests")
 	rootCmd.Flags().Uint32("gcp-kms-timeout", 0, "sets the RPC timeout per call for GCP KMS requests in seconds, defaults to 0 (no timeout)")

@@ -39,9 +39,9 @@ func TestGCPPostFreeze(t *testing.T) {
 	testPostFreeze(t, gcpConfig)
 }
 
-func setup(ctx context.Context, config backendConfig) (read.Client, write.Client, error) {
+func setup(config backendConfig) (read.Client, write.Client, error) {
 	// get verifier needed for both read and write
-	verifier, err := signerverifier.New(ctx, signerverifier.WithFile(defaultServerPrivateKey, ""))
+	verifier, err := signerverifier.NewFileSignerVerifier(defaultServerPrivateKey, "")
 	if err != nil {
 		return nil, nil, err
 	}
@@ -62,7 +62,7 @@ func setup(ctx context.Context, config backendConfig) (read.Client, write.Client
 
 func testPreFreeze(t *testing.T, config backendConfig) {
 	ctx := context.Background()
-	reader, writer, err := setup(ctx, config)
+	reader, writer, err := setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -86,7 +86,7 @@ func testPreFreeze(t *testing.T, config backendConfig) {
 
 func testPostFreeze(t *testing.T, config backendConfig) {
 	ctx := context.Background()
-	reader, writer, err := setup(ctx, config)
+	reader, writer, err := setup(config)
 	if err != nil {
 		t.Fatal(err)
 	}

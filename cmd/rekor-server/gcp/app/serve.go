@@ -39,9 +39,9 @@ import (
 
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/server"
-	"github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	gcpDriver "github.com/sigstore/rekor-tiles/v2/internal/tessera/gcp"
+	"github.com/sigstore/rekor-tiles/v2/internal/tessera/gcp/signerverifier"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
@@ -229,9 +229,9 @@ func init() {
 	// checkpoint signing configs
 	serveCmd.Flags().String("signer-filepath", "", "path to the signing key")
 	serveCmd.Flags().String("signer-password", "", "password to decrypt the signing key")
-	serveCmd.Flags().String("signer-kmskey", "", "URI of the KMS key, in the form of awskms://keyname, azurekms://keyname, gcpkms://keyname, or hashivault://keyname")
+	serveCmd.Flags().String("signer-kmskey", "", "URI of the KMS key, in the form of gcpkms://keyname")
 	serveCmd.Flags().String("signer-kmshash", "sha256", "hash algorithm used by the KMS")
-	serveCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset. Valid options are [aws-kms://keyname, gcp-kms://keyname]")
+	serveCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset, in the form gcp-kms://keyname")
 	serveCmd.Flags().String("signer-tink-keyset-path", "", "path to encrypted Tink keyset")
 	serveCmd.Flags().Uint("gcp-kms-retries", 0, "number of retries for GCP KMS requests")
 	serveCmd.Flags().Uint32("gcp-kms-timeout", 0, "sets the RPC timeout per call for GCP KMS requests in seconds, defaults to 0 (no timeout)")
