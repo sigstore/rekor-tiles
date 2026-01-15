@@ -91,6 +91,9 @@ Rekor will produce different binaries and containers for each storage backend. B
 To add support for a new backend, with the example below for the `gcp` backend from [PR #630](https://github.com/sigstore/rekor-tiles/pull/630):
 
 * Create a [backend-specific driver](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/internal/tessera/gcp/gcp.go)
+* If needed, create a [backend-specific signer/verifier](https://github.com/sigstore/rekor-tiles/blob/682236adf5e63118853b00c5bfa33ba36a381fce/internal/tessera/gcp/signerverifier/signerverifier.go).
+  At a minimum, you should support the file-based signer/verifier. To support a KMS-backed key, import the cloud provider-specific driver
+  ([example](https://github.com/sigstore/rekor-tiles/blob/682236adf5e63118853b00c5bfa33ba36a381fce/internal/tessera/gcp/signerverifier/signerverifier.go#L33)).
 * Create a [backend-specific main package](https://github.com/sigstore/rekor-tiles/tree/d596e236da3ce44024986f24c34005714430dda5/cmd/rekor-server/gcp)
 * Create a Docker compose file, and set the [`STORAGE_BACKEND`](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/compose.yml#L52-L53)
   arg for building the containerized binary
@@ -101,3 +104,4 @@ To add support for a new backend, with the example below for the `gcp` backend f
 * Call the end-to-end test [in CI](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.github/workflows/test.yml#L108-L122)
 * Add a [Makefile target](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L76-L77) and update
   [`make all`](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L18)
+* Once merged, update the list of [required tests](https://github.com/sigstore/community/blob/ff0761c37ab63c55f50609ed32c27e2bc9497572/github-sync/github-data/sigstore/repositories.yaml#L1513)
