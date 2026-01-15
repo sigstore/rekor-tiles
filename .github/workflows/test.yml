@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        storage: [ 'gcp' ]
+        storage: [ 'gcp', 'posix' ]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -106,20 +106,23 @@ jobs:
         run: go test -race $(go list ./... | grep -v third_party/)
 
   e2e-tests:
-    name: Run E2E tests
+    name: Run E2E tests - ${{ matrix.storage.name }}
     permissions:
       contents: read
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        storage: [ {name: 'GCP', compose: 'compose.yml', test: 'TestGCP'}, {name: 'POSIX', compose: 'posix-compose.yml', test: 'TestPOSIX'} ]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
           persist-credentials: false
-      - name: Run GCP docker compose
-        run: docker compose -f compose.yml up -d --build --wait --wait-timeout 60
-      - name: Run GCP e2e tests
-        run: go test -v -tags=e2e -run TestGCP ./tests/
-      - name: Stop GCP docker compose
-        run: docker compose -f compose.yml down
+      - name: Run ${{ matrix.storage.name }} docker compose
+        run: docker compose -f ${{ matrix.storage.compose }} up -d --build --wait --wait-timeout 60
+      - name: Run ${{ matrix.storage.name }} e2e tests
+        run: go test -v -tags=e2e -run ${{ matrix.storage.test }} ./tests/
+      - name: Stop ${{ matrix.storage.name }} docker compose
+        run: docker compose -f ${{ matrix.storage.compose }} down --volumes
 
   sharding-freeze:
     name: Run freeze log tests
