@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Debian 13 (Trixie) image to build binary for distroless/static-debian12
-FROM --platform=$BUILDPLATFORM golang:1.25.5-trixie@sha256:ef151f0384896831258e71065176f1e63f5a90bcbe6a98ec679a1990011a2655 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.5-trixie@sha256:1763926ff08117bdf4c76182c02fecbcfc3086771169b2a03574273dde17fcee AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG STORAGE_BACKEND
