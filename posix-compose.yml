@@ -53,7 +53,7 @@ services:
       witness:
         condition: service_healthy
   nginx:
-    image: nginx:1.29.4@sha256:ca871a86d45a3ec6864dc45f014b11fe626145569ef0e74deaffc95a3b15b430
+    image: nginx:1.29.4@sha256:c881927c4077710ac4b1da63b83aa163937fb47457950c267d92f7e4dedf4aec
     volumes:
       - posix_storage:/usr/share/nginx/html
     restart: always
