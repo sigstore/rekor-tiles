@@ -100,7 +100,7 @@ To add support for a new backend, with the example below for the `gcp` backend f
 * Add an [end-to-end test configuration](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/tests/e2e_test.go#L77-L93)
 * Add the binary to [goreleaser](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.goreleaser.yaml#L30-L46)
 * Add the storage backend to the [matrix for container building](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.github/workflows/build_container.yml#L51)
-* Update the [build test matrix](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/.github/workflows/test.yml#L50)
+* Update the [build test matrix](https://github.com/sigstore/rekor-tiles/blob/69bc24a7269a3a0b6d8df3f4938f6eb77c2194b9/.github/workflows/test.yml#L50)
 * Update the [end-to-end test matrix](https://github.com/sigstore/rekor-tiles/blob/69bc24a7269a3a0b6d8df3f4938f6eb77c2194b9/.github/workflows/test.yml#L115)
 * Add a [Makefile target](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L76-L77) and update
   [`make all`](https://github.com/sigstore/rekor-tiles/blob/d596e236da3ce44024986f24c34005714430dda5/Makefile#L18)
