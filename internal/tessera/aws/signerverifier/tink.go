@@ -17,13 +17,12 @@
 package signerverifier
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"strings"
 
 	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
-	"github.com/tink-crypto/tink-go-gcpkms/v2/integration/gcpkms"
+	"github.com/tink-crypto/tink-go-awskms/v2/integration/awskms"
 	"github.com/tink-crypto/tink-go/v2/core/registry"
 	"github.com/tink-crypto/tink-go/v2/tink"
 
@@ -33,28 +32,28 @@ import (
 const TinkScheme = "tink"
 
 // NewTinkSignerVerifier returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
-// Provide a path to the encrypted keyset and cloud KMS key URI for decryption
-func NewTinkSignerVerifier(ctx context.Context, kekURI, keysetPath string) (signature.SignerVerifier, error) {
+// Provide a path to the encrypted keyset and AWS KMS key URI for decryption
+func NewTinkSignerVerifier(kekURI, keysetPath string) (signature.SignerVerifier, error) {
 	if kekURI == "" || keysetPath == "" {
 		return nil, fmt.Errorf("key encryption key URI or keyset path unset")
 	}
-	kek, err := getKeyEncryptionKey(ctx, kekURI)
+	kek, err := getKeyEncryptionKey(kekURI)
 	if err != nil {
 		return nil, err
 	}
 	return sv.NewTinkSignerVerifierWithHandle(kek, keysetPath)
 }
 
-// getKeyEncryptionKey returns a Tink AEAD encryption key from GCP KMS
-func getKeyEncryptionKey(ctx context.Context, kmsKey string) (tink.AEAD, error) {
+// getKeyEncryptionKey returns a Tink AEAD encryption key from AWS KMS
+func getKeyEncryptionKey(kmsKey string) (tink.AEAD, error) {
 	switch {
-	case strings.HasPrefix(kmsKey, "gcp-kms://"):
-		gcpClient, err := gcpkms.NewClientWithOptions(ctx, kmsKey)
+	case strings.HasPrefix(kmsKey, "aws-kms://"):
+		awsClient, err := awskms.NewClientWithOptions(kmsKey)
 		if err != nil {
 			return nil, err
 		}
-		registry.RegisterKMSClient(gcpClient)
-		return gcpClient.GetAEAD(kmsKey)
+		registry.RegisterKMSClient(awsClient)
+		return awsClient.GetAEAD(kmsKey)
 	default:
 		return nil, errors.New("unsupported KMS key type")
 	}

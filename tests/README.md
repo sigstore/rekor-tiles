@@ -41,3 +41,23 @@ When finished, you can clean up the Docker containers if desired:
 ```sh
 docker compose -f posix-compose.yml down --volumes
 ```
+
+## AWS binary
+
+Start the Docker containers from the top level directory:
+
+```sh
+docker compose -f aws-compose.yml up -d --build --wait --wait-timeout 60
+```
+
+Run the tests:
+
+```sh
+go test -v -tags=e2e -run TestAWS ./tests/
+```
+
+When finished, you can clean up the Docker containers if desired:
+
+```sh
+docker compose -f aws-compose.yml down --volumes
+```

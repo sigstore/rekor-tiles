@@ -1,5 +1,5 @@
 Logs:
   - Origin: rekor-local
-    URL: http://gcs:7080/tiles
+    URL: http://ignored
     PublicKey: rekor-local+d80b4420+AURLycjWRo1+gdwwCLg9wU4PayMFdNBmPF4ORVPiBQ1E
     Feeder: tiles
