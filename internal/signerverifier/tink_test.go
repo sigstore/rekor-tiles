@@ -30,7 +30,7 @@ import (
 	"github.com/tink-crypto/tink-go/v2/signature"
 )
 
-func TestNewTinkCA(t *testing.T) {
+func TestNewTinkSV(t *testing.T) {
 	aeskh, err := keyset.NewHandle(aead.AES256GCMKeyTemplate())
 	if err != nil {
 		t.Fatalf("error creating AEAD key handle: %v", err)

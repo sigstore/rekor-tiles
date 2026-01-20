@@ -110,6 +110,24 @@ func TestPOSIX(t *testing.T) {
 	})
 }
 
+var awsConfig = backendConfig{
+	ServerURL:   "http://localhost:3004",
+	StorageURL:  "http://localhost:9000/tiles",
+	ComposePath: "aws-compose.yml",
+}
+
+func TestAWS(t *testing.T) {
+	t.Run("ReadWrite", func(t *testing.T) {
+		testReadWrite(t, awsConfig)
+	})
+	t.Run("UnimplementedReadMethods", func(t *testing.T) {
+		testUnimplementedReadMethods(t, awsConfig)
+	})
+	t.Run("PersistentDeduplication", func(t *testing.T) {
+		testPersistentDeduplication(t, awsConfig)
+	})
+}
+
 func testReadWrite(t *testing.T, config backendConfig) {
 	ctx := context.Background()
 

@@ -47,7 +47,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        storage: [ 'gcp', 'posix' ]
+        storage: [ 'gcp', 'posix', 'aws' ]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
@@ -112,7 +112,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        storage: [ {name: 'GCP', compose: 'compose.yml', test: 'TestGCP'}, {name: 'POSIX', compose: 'posix-compose.yml', test: 'TestPOSIX'} ]
+        storage: [ {name: 'GCP', compose: 'compose.yml', test: 'TestGCP'}, {name: 'POSIX', compose: 'posix-compose.yml', test: 'TestPOSIX'}, {name: 'AWS', compose: 'aws-compose.yml', test: 'TestAWS'} ]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
         with:
