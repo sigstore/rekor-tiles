@@ -48,7 +48,7 @@ jobs:
 
     strategy:
       matrix:
-        storage: [ 'gcp', 'posix' ]
+        storage: [ 'gcp', 'posix', 'aws' ]
 
     steps:
       - name: Checkout repository
