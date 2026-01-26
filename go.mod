@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	cloud.google.com/go/spanner v1.87.0
-	cloud.google.com/go/storage v1.59.0
+	cloud.google.com/go/storage v1.59.1
 	github.com/chainguard-dev/clog v1.8.0
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	github.com/go-test/deep v1.1.1
@@ -38,7 +38,7 @@ require (
 	google.golang.org/grpc v1.78.0
 	google.golang.org/protobuf v1.36.11
 	k8s.io/klog/v2 v2.130.1
-	sigs.k8s.io/release-utils v0.12.2
+	sigs.k8s.io/release-utils v0.12.3
 )
 
 require (
