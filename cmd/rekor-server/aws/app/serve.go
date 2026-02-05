@@ -1,5 +1,5 @@
 //
-// Copyright 2025 The Sigstore Authors.
+// Copyright 2026 The Sigstore Authors.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,10 +27,6 @@ import (
 	"strings"
 	"time"
 
-	clog "github.com/chainguard-dev/clog/gcp"
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
-	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 	"k8s.io/klog/v2"
 
 	"github.com/spf13/cobra"
@@ -40,11 +36,10 @@ import (
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/server"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
-	gcpDriver "github.com/sigstore/rekor-tiles/v2/internal/tessera/gcp"
-	"github.com/sigstore/rekor-tiles/v2/internal/tessera/gcp/signerverifier"
+	awsDriver "github.com/sigstore/rekor-tiles/v2/internal/tessera/aws"
+	"github.com/sigstore/rekor-tiles/v2/internal/tessera/aws/signerverifier"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	"github.com/sigstore/sigstore/pkg/signature/options"
 )
 
@@ -60,7 +55,7 @@ var serveCmd = &cobra.Command{
 			slog.Error("invalid log-level specified; must be one of 'debug', 'info', 'error', or 'warn'")
 			os.Exit(1)
 		}
-		slog.SetDefault(slog.New(clog.NewHandler(logLevel)))
+		slog.SetDefault(slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: logLevel})))
 
 		// tessera uses klog so pipe all klog messages to be written through slog
 		klog.SetSlogLogger(slog.Default())
@@ -78,12 +73,8 @@ var serveCmd = &cobra.Command{
 				slog.Error("invalid hash algorithm for --signer-kmshash", "algorithm", kmshash)
 				os.Exit(1)
 			}
-			// initialize optional RPC options for GCP KMS
-			rpcOpts := make([]signature.RPCOption, 0)
-			callOpts := []grpc_retry.CallOption{grpc_retry.WithMax(viper.GetUint("gcp-kms-retries")), grpc_retry.WithPerRetryTimeout(time.Duration(viper.GetUint32("gcp-kms-timeout")) * time.Second)}
-			rpcOpts = append(rpcOpts, gcp.WithGoogleAPIClientOption(option.WithGRPCDialOption(grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(callOpts...)))))
 
-			signerOpts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg, rpcOpts)}
+			signerOpts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg)}
 		case viper.GetString("signer-tink-kek-uri") != "":
 			signerOpts = []signerverifier.Option{signerverifier.WithTink(viper.GetString("signer-tink-kek-uri"), viper.GetString("signer-tink-keyset-path"))}
 		default:
@@ -131,15 +122,16 @@ var serveCmd = &cobra.Command{
 		shutdownFn := func(_ context.Context) error { return nil }
 		// if in read-only mode, don't start the appender, because we don't want new checkpoints being published.
 		if !readOnly {
-			driverConfig := gcpDriver.DriverConfiguration{
-				Hostname:            viper.GetString("hostname"),
-				GCPBucket:           viper.GetString("gcp-bucket"),
-				GCPSpannerDB:        viper.GetString("gcp-spanner"),
+			driverConfig := awsDriver.DriverConfiguration{
+				AWSBucket:           viper.GetString("aws-bucket"),
+				AWSMySQLDSN:         viper.GetString("aws-mysql-dsn"),
+				MaxOpenConns:        viper.GetInt("aws-max-open-conns"),
+				MaxIdleConns:        viper.GetInt("aws-max-idle-conns"),
 				PersistentAntispam:  viper.GetBool("persistent-antispam"),
 				ASMaxBatchSize:      viper.GetUint("antispam-max-batch-size"),
 				ASPushbackThreshold: viper.GetUint("antispam-pushback-threshold"),
 			}
-			tesseraDriver, persistentAntispam, err := gcpDriver.NewDriver(ctx, driverConfig)
+			tesseraDriver, persistentAntispam, err := awsDriver.NewDriver(ctx, driverConfig)
 			if err != nil {
 				slog.Error("failed to initialize driver", "error", err)
 				os.Exit(1)
@@ -182,7 +174,6 @@ var serveCmd = &cobra.Command{
 				server.WithHTTPMetricsPort(viper.GetInt("http-metrics-port")),
 				server.WithHTTPTLSCredentials(viper.GetString("http-tls-cert-file"), viper.GetString("http-tls-key-file")),
 				server.WithGRPCTLSCredentials(viper.GetString("grpc-tls-cert-file")),
-				server.WithGCPSupport(true),
 			),
 			server.NewGRPCConfig(
 				server.WithGRPCPort(viper.GetInt("grpc-port")),
@@ -223,19 +214,19 @@ func init() {
 	}
 	serveCmd.Flags().String("hostname", hostname, "public hostname, used as the checkpoint origin")
 
-	// gcp configs
-	serveCmd.Flags().String("gcp-bucket", "", "GCS bucket for tile and checkpoint storage")
-	serveCmd.Flags().String("gcp-spanner", "", "Spanner database URI")
+	// aws configs
+	serveCmd.Flags().String("aws-bucket", "", "S3 bucket for tile and checkpoint storage")
+	serveCmd.Flags().String("aws-mysql-dsn", "", "MySQL DSN for Aurora/RDS (e.g., user:pass@tcp(host:3306)/dbname)")
+	serveCmd.Flags().Int("aws-max-open-conns", 0, "[optional] maximum number of connections to the MySQL database")
+	serveCmd.Flags().Int("aws-max-idle-conns", 0, "[optional] maximum number of idle database connections in the connection pool")
 
 	// checkpoint signing configs
 	serveCmd.Flags().String("signer-filepath", "", "path to the signing key")
 	serveCmd.Flags().String("signer-password", "", "password to decrypt the signing key")
-	serveCmd.Flags().String("signer-kmskey", "", "URI of the KMS key, in the form of gcpkms://keyname")
+	serveCmd.Flags().String("signer-kmskey", "", "URI of the KMS key, in the form of awskms://keyname")
 	serveCmd.Flags().String("signer-kmshash", "sha256", "hash algorithm used by the KMS")
-	serveCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset, in the form gcp-kms://keyname")
+	serveCmd.Flags().String("signer-tink-kek-uri", "", "encryption key for decrypting Tink keyset, in the form aws-kms://keyname")
 	serveCmd.Flags().String("signer-tink-keyset-path", "", "path to encrypted Tink keyset")
-	serveCmd.Flags().Uint("gcp-kms-retries", 0, "number of retries for GCP KMS requests")
-	serveCmd.Flags().Uint32("gcp-kms-timeout", 0, "sets the RPC timeout per call for GCP KMS requests in seconds, defaults to 0 (no timeout)")
 
 	// tessera lifecycle configs
 	serveCmd.Flags().Uint("batch-max-size", tessera.DefaultBatchMaxSize, "the maximum number of entries that will accumulated before being sent to the sequencer")
@@ -245,7 +236,7 @@ func init() {
 	serveCmd.Flags().Duration("tlog-timeout", 30*time.Second, "timeout for terminating the tiles log queue")
 
 	// antispam configs
-	serveCmd.Flags().Bool("persistent-antispam", false, "whether to enable persistent antispam measures; only available for GCP storage backend and not supported by the Spanner storage emulator")
+	serveCmd.Flags().Bool("persistent-antispam", false, "whether to enable persistent antispam measures")
 	serveCmd.Flags().Uint("antispam-max-batch-size", 0, "maximum batch size for deduplication operations; will default to Tessera recommendation if unset; for Spanner, recommend around 1500 with 300 or more PU, or around 64 for smaller (e.g. 100 PU) instances")
 	serveCmd.Flags().Uint("antispam-pushback-threshold", 0, "maximum number of 'in-flight' add requests the antispam operator will allow before pushing back; will default to Tessera recommendation if unset")
 

@@ -15,6 +15,7 @@ More information (documents are shared with [sigstore-dev](https://groups.google
 Rekor v2 supports multiple storage backends. Separate binaries for each backend are provided:
 
 * `rekor-server-gcp`: GCP-specific binary (includes only Google Cloud dependencies)
+* `rekor-server-aws`: AWS-specific binary (includes only AWS dependencies)
 * `rekor-server-posix`: POSIX-based storage (lightweight, no cloud dependencies)
 
 ### Google Cloud Platform (GCP)
@@ -24,6 +25,14 @@ Rekor v2 supports multiple storage backends. Separate binaries for each backend 
 * Sequencing entries: Cloud Spanner
 * Tile storage: Google Cloud Storage (GCS)
 * Use case: Preferred deployment architecture for GCP, highly scalable
+
+### Amazon Web Services (AWS)
+
+* Binary: `rekor-server-aws`
+* Container `rekor-tiles/aws`
+* Sequencing: Aurora MySQL or RDS MySQL
+* Tile storage: Amazon S3
+* Use case: Deployment architecture for AWS
 
 ### POSIX
 

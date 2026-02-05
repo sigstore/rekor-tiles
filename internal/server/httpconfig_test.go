@@ -159,3 +159,14 @@ func TestWithGRPCTLSCredentials(t *testing.T) {
 		t.Error("expected HasGRPCTLS to return true when both certFile and keyFile are set")
 	}
 }
+
+func TestWithGCPSupport(t *testing.T) {
+	config := NewHTTPConfig()
+	if config.supportGCP {
+		t.Error("unexpected support for GCP")
+	}
+	config = NewHTTPConfig(WithGCPSupport(true))
+	if !config.supportGCP {
+		t.Error("expected GCP support")
+	}
+}

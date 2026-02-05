@@ -28,6 +28,7 @@ type HTTPConfig struct {
 	certFile           string
 	keyFile            string
 	grpcCertFile       string
+	supportGCP         bool
 }
 type HTTPOption func(config *HTTPConfig)
 
@@ -101,5 +102,11 @@ func (hc HTTPConfig) HasGRPCTLS() bool {
 func WithGRPCTLSCredentials(certFile string) HTTPOption {
 	return func(config *HTTPConfig) {
 		config.grpcCertFile = certFile
+	}
+}
+
+func WithGCPSupport(supportGCP bool) HTTPOption {
+	return func(config *HTTPConfig) {
+		config.supportGCP = supportGCP
 	}
 }
