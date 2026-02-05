@@ -24,10 +24,9 @@ import (
 
 var rootCmd = &cobra.Command{
 	Use:   "rekor-server",
-	Short: "Rekor signature transparency log server",
-	Long: `Rekor fulfills the signature transparency role of sigstore's software
-	signing infrastructure. It can also be run on its own and is designed to be
-	extensible to work with different manifest schemas and PKI tooling`,
+	Short: "Rekor signature transparency log server (AWS)",
+	Long: `Rekor provides signature transparency for Sigstore's software
+	signing infrastructure. Rekor stores log entries on AWS S3`,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
