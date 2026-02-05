@@ -78,6 +78,23 @@ builds:
       - CGO_ENABLED=0
     ldflags:
       - "{{ .Env.LDFLAGS }}"
+  - id: rekor-server-gcpcloudsql
+    binary: rekor-server-gcpcloudsql-{{ .Os }}-{{ .Arch }}
+    main: ./cmd/rekor-server/gcpcloudsql
+    no_unique_dist_dir: true
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+    flags:
+      - -trimpath
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    env:
+      - CGO_ENABLED=0
+    ldflags:
+      - "{{ .Env.LDFLAGS }}"
 
 archives:
   - formats: [ "binary" ]
