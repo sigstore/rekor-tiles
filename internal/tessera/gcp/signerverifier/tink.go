@@ -20,14 +20,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 
-	tinkUtils "github.com/sigstore/sigstore/pkg/signature/tink"
+	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/tink-crypto/tink-go-gcpkms/v2/integration/gcpkms"
 	"github.com/tink-crypto/tink-go/v2/core/registry"
-	"github.com/tink-crypto/tink-go/v2/keyset"
 	"github.com/tink-crypto/tink-go/v2/tink"
 
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -45,27 +42,7 @@ func NewTinkSignerVerifier(ctx context.Context, kekURI, keysetPath string) (sign
 	if err != nil {
 		return nil, err
 	}
-	return NewTinkSignerVerifierWithHandle(kek, keysetPath)
-}
-
-// NewTinkSignerVerifierWithHandle returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
-// Provide a path to the encrypted keyset and a key handle for decrypting the keyset
-func NewTinkSignerVerifierWithHandle(kek tink.AEAD, keysetPath string) (signature.SignerVerifier, error) {
-	f, err := os.Open(filepath.Clean(keysetPath))
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-
-	kh, err := keyset.Read(keyset.NewJSONReader(f), kek)
-	if err != nil {
-		return nil, err
-	}
-	signer, err := tinkUtils.KeyHandleToSigner(kh)
-	if err != nil {
-		return nil, err
-	}
-	return signature.LoadDefaultSignerVerifier(signer)
+	return sv.NewTinkSignerVerifierWithHandle(kek, keysetPath)
 }
 
 // getKeyEncryptionKey returns a Tink AEAD encryption key from GCP KMS

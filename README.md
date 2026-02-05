@@ -10,6 +10,29 @@ More information (documents are shared with [sigstore-dev](https://groups.google
 * [Proposal](https://docs.google.com/document/d/1Mi9OhzrucIyt-UCLk_FxO2_xSQZW9ow9U3Lv0ZB_PpM/edit?resourcekey=0-4rPbZPyCS7QDj26Hk0UyvA&tab=t.0#heading=h.bjitqo6lwsmn)
 * [Design doc](https://docs.google.com/document/d/1ZYlt_VFB-lxbZCcTZHN-6KVDox3h7-ePp85pNpOUF1U/edit?resourcekey=0-V3WqDB22nOJfI4lTs59RVQ&tab=t.0#heading=h.xzptrog8pyxf)
 
+## Storage Backends
+
+Rekor v2 supports multiple storage backends. Separate binaries for each backend are provided:
+
+* `rekor-server-gcp`: GCP-specific binary (includes only Google Cloud dependencies)
+* `rekor-server-posix`: POSIX-based storage (lightweight, no cloud dependencies)
+
+### Google Cloud Platform (GCP)
+
+* Binary: `rekor-server-gcp`
+* Container `rekor-tiles/gcp`
+* Sequencing entries: Cloud Spanner
+* Tile storage: Google Cloud Storage (GCS)
+* Use case: Preferred deployment architecture for GCP, highly scalable
+
+### POSIX
+
+* Binary: `rekor-server-posix`
+* Container `rekor-tiles/posix`
+* Sequencing: Atomic POSIX operations
+* Tile storage: POSIX-compliant filesystem
+* Use case: Lower cost, easy to serve
+
 ## Public-good instance
 
 The Sigstore community hosts a productionized instance of Rekor v2 with a 99.5% availability SLO.
@@ -31,7 +54,7 @@ If you want to start using Rekor v2, construct a signing config, using the
 [TUF-distributed signing config](https://github.com/sigstore/root-signing/blob/main/targets/signing_config.v0.2.json)
 as a base, and adding the following instance as the first entry in the `rekorTlogUrls` list:
 
-```
+```shell
     {
       "url": "https://log2025-1.rekor.sigstore.dev",
       "majorApiVersion": 2,
