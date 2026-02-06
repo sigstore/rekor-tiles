@@ -32,11 +32,11 @@ const (
 )
 
 func TestGCPPreFreeze(t *testing.T) {
-	testPreFreeze(t, gcpConfig)
+	testPreFreeze(t, gcpSpannerConfig)
 }
 
 func TestGCPPostFreeze(t *testing.T) {
-	testPostFreeze(t, gcpConfig)
+	testPostFreeze(t, gcpSpannerConfig)
 }
 
 func setup(config backendConfig) (read.Client, write.Client, error) {

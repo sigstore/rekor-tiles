@@ -13,7 +13,7 @@ docker compose -f compose.yml up -d --build --wait --wait-timeout 60
 Run the tests:
 
 ```sh
-go test -v -tags=e2e -run TestGCP ./tests/
+go test -v -tags=e2e -run TestGCPSpanner ./tests/
 ```
 
 When finished, you can clean up the Docker containers if desired:
