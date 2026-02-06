@@ -74,21 +74,21 @@ type backendConfig struct {
 	ComposePath string
 }
 
-var gcpConfig = backendConfig{
+var gcpSpannerConfig = backendConfig{
 	ServerURL:   "http://localhost:3003",
 	StorageURL:  "http://localhost:7080/tiles",
 	ComposePath: "compose.yml",
 }
 
-func TestGCP(t *testing.T) {
+func TestGCPSpanner(t *testing.T) {
 	t.Run("ReadWrite", func(t *testing.T) {
-		testReadWrite(t, gcpConfig)
+		testReadWrite(t, gcpSpannerConfig)
 	})
 	t.Run("UnimplementedReadMethods", func(t *testing.T) {
-		testUnimplementedReadMethods(t, gcpConfig)
+		testUnimplementedReadMethods(t, gcpSpannerConfig)
 	})
 	t.Run("PersistentDeduplication", func(t *testing.T) {
-		testPersistentDeduplication(t, gcpConfig)
+		testPersistentDeduplication(t, gcpSpannerConfig)
 	})
 }
 
@@ -125,6 +125,24 @@ func TestAWS(t *testing.T) {
 	})
 	t.Run("PersistentDeduplication", func(t *testing.T) {
 		testPersistentDeduplication(t, awsConfig)
+	})
+}
+
+var cloudSQLConfig = backendConfig{
+	ServerURL:   "http://localhost:3005",
+	StorageURL:  "http://localhost:9002/tiles",
+	ComposePath: "cloudsql-compose.yml",
+}
+
+func TestGCPCloudSQL(t *testing.T) {
+	t.Run("ReadWrite", func(t *testing.T) {
+		testReadWrite(t, cloudSQLConfig)
+	})
+	t.Run("UnimplementedReadMethods", func(t *testing.T) {
+		testUnimplementedReadMethods(t, cloudSQLConfig)
+	})
+	t.Run("PersistentDeduplication", func(t *testing.T) {
+		testPersistentDeduplication(t, cloudSQLConfig)
 	})
 }
 

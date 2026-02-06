@@ -17,6 +17,7 @@ Rekor v2 supports multiple storage backends. Separate binaries for each backend 
 * `rekor-server-gcp`: GCP-specific binary (includes only Google Cloud dependencies)
 * `rekor-server-aws`: AWS-specific binary (includes only AWS dependencies)
 * `rekor-server-posix`: POSIX-based storage (lightweight, no cloud dependencies)
+* `rekor-server-gcpcloudsql`: Alternative to GCP binary that uses CloudSQL instead of Spanner
 
 ### Google Cloud Platform (GCP)
 
@@ -41,6 +42,23 @@ Rekor v2 supports multiple storage backends. Separate binaries for each backend 
 * Sequencing: Atomic POSIX operations
 * Tile storage: POSIX-compliant filesystem
 * Use case: Lower cost, easy to serve
+
+### GCP CloudSQL + Cloud Storage
+
+* Binary: `rekor-server-gcpcloudsql`
+* Container `rekor-tiles/gcpcloudsql`
+* Sequencing: CloudSQL
+* Tile storage: Google Cloud Storage (GCS)
+* Use case: Alternative to Spanner sequencing, would only recommend if Spanner cannot be used
+
+To authenticate to GCS, you must create
+[HMAC access keys](https://docs.cloud.google.com/storage/docs/authentication/hmackeys)
+and set the following environment variables:
+
+* `GCS_HMAC_ACCESS_KEY_ID`
+* `GCS_HMAC_SECRET`
+* `GCS_REGION`, the region of the bucket
+* `GCS_ENDPOINT_URL`, which should equal `https://storage.googleapis.com`
 
 ## Public-good instance
 

@@ -13,7 +13,7 @@ docker compose -f compose.yml up -d --build --wait --wait-timeout 60
 Run the tests:
 
 ```sh
-go test -v -tags=e2e -run TestGCP ./tests/
+go test -v -tags=e2e -run TestGCPSpanner ./tests/
 ```
 
 When finished, you can clean up the Docker containers if desired:
@@ -60,4 +60,24 @@ When finished, you can clean up the Docker containers if desired:
 
 ```sh
 docker compose -f aws-compose.yml down --volumes
+```
+
+## GCP CloudSQL binary
+
+Start the Docker containers from the top level directory:
+
+```sh
+docker compose -f cloudsql-compose.yml up -d --build --wait --wait-timeout 60
+```
+
+Run the tests:
+
+```sh
+go test -v -tags=e2e -run TestGCPCloudSQL ./tests/
+```
+
+When finished, you can clean up the Docker containers if desired:
+
+```sh
+docker compose -f cloudsql-compose.yml down --volumes
 ```
