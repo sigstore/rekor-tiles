@@ -36,6 +36,11 @@ import (
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 )
 
+const (
+	maxVerifiers  = 10
+	maxSignatures = 10
+)
+
 // ToLogEntry validates a request, verifies all envelope signatures, and converts it to a log entry type for inclusion in the log
 func ToLogEntry(ds *pb.DSSERequestV002, algorithmRegistry *signature.AlgorithmRegistryConfig) (*pb.Entry, error) {
 	if err := validate(ds); err != nil {
@@ -94,6 +99,9 @@ func validate(ds *pb.DSSERequestV002) error {
 	if len(ds.Verifiers) == 0 {
 		return fmt.Errorf("missing verifiers")
 	}
+	if len(ds.Verifiers) > maxVerifiers {
+		return fmt.Errorf("too many verifiers: %d, max allowed: %d", len(ds.Verifiers), maxVerifiers)
+	}
 	for _, v := range ds.Verifiers {
 		if err := pbverifier.Validate(v); err != nil {
 			return fmt.Errorf("invalid verifier: %v", err)
@@ -101,6 +109,9 @@ func validate(ds *pb.DSSERequestV002) error {
 	}
 	if len(ds.Envelope.Signatures) == 0 {
 		return fmt.Errorf("envelope missing signatures")
+	}
+	if len(ds.Envelope.Signatures) > maxSignatures {
+		return fmt.Errorf("too many signatures: %d, max allowed: %d", len(ds.Envelope.Signatures), maxSignatures)
 	}
 	for _, s := range ds.Envelope.Signatures {
 		if s == nil || len(s.Sig) == 0 {

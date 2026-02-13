@@ -566,7 +566,61 @@ func TestConverters(t *testing.T) {
 			}
 		})
 	}
+}
 
+func TestToLogEntryLimits(t *testing.T) {
+	var payload = []byte("payload")
+
+	var verifiers []*pb.Verifier
+	for range maxVerifiers + 1 {
+		verifiers = append(verifiers, &pb.Verifier{
+			Verifier: &pb.Verifier_PublicKey{
+				PublicKey: &pb.PublicKey{
+					RawBytes: []byte("somebytes"),
+				},
+			},
+			KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+		})
+	}
+	var signatures []*dsse.Signature
+	for range maxSignatures + 1 {
+		signatures = append(signatures, &dsse.Signature{
+			Sig: []byte("somesig"),
+		})
+	}
+
+	t.Run("too many verifiers", func(t *testing.T) {
+		req := &pb.DSSERequestV002{
+			Envelope: &dsse.Envelope{
+				Payload:     payload,
+				PayloadType: "application/vnd.in-toto+json",
+				Signatures:  []*dsse.Signature{{Sig: []byte("sig")}},
+			},
+			Verifiers: verifiers,
+		}
+		_, err := ToLogEntry(req, &signature.AlgorithmRegistryConfig{})
+		assert.ErrorContains(t, err, fmt.Sprintf("too many verifiers: %d, max allowed: %d", len(verifiers), maxVerifiers))
+	})
+
+	t.Run("too many signatures", func(t *testing.T) {
+		req := &pb.DSSERequestV002{
+			Envelope: &dsse.Envelope{
+				Payload:     payload,
+				PayloadType: "application/vnd.in-toto+json",
+				Signatures:  signatures,
+			},
+			Verifiers: []*pb.Verifier{{
+				Verifier: &pb.Verifier_PublicKey{
+					PublicKey: &pb.PublicKey{
+						RawBytes: []byte("somebytes"),
+					},
+				},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+			}},
+		}
+		_, err := ToLogEntry(req, &signature.AlgorithmRegistryConfig{})
+		assert.ErrorContains(t, err, fmt.Sprintf("too many signatures: %d, max allowed: %d", len(signatures), maxSignatures))
+	})
 }
 
 func b64DecodeOrDie(t *testing.T, msg string) []byte {
