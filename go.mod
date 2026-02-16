@@ -34,7 +34,7 @@ require (
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/transparency-dev/tessera v1.0.1
 	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/exporters/prometheus v0.61.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.62.0
 	go.opentelemetry.io/otel/sdk/metric v1.40.0
 	go.step.sm/crypto v0.76.0
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
@@ -153,7 +153,7 @@ require (
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.67.4 // indirect
+	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
