@@ -5,7 +5,7 @@ Sigstore's signature transparency log, transitioning its backend to a modern,
 [tile-backed transparency log](https://transparency.dev/articles/tile-based-logs/) implementation to
 simplify maintenance and lower operational costs.
 
-More information (documents are shared with [sigstore-dev](https://groups.google.com/g/sigstore-dev), join the group to get access):
+More information (**documents are shared with [sigstore-dev](https://groups.google.com/g/sigstore-dev), join the group to get access, please don't request access**):
 
 * [Proposal](https://docs.google.com/document/d/1Mi9OhzrucIyt-UCLk_FxO2_xSQZW9ow9U3Lv0ZB_PpM/edit?resourcekey=0-4rPbZPyCS7QDj26Hk0UyvA&tab=t.0#heading=h.bjitqo6lwsmn)
 * [Design doc](https://docs.google.com/document/d/1ZYlt_VFB-lxbZCcTZHN-6KVDox3h7-ePp85pNpOUF1U/edit?resourcekey=0-V3WqDB22nOJfI4lTs59RVQ&tab=t.0#heading=h.xzptrog8pyxf)
