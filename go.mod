@@ -30,7 +30,7 @@ require (
 	github.com/tink-crypto/tink-go-awskms/v2 v2.1.0
 	github.com/tink-crypto/tink-go-gcpkms/v2 v2.2.0
 	github.com/tink-crypto/tink-go/v2 v2.6.0
-	github.com/transparency-dev/formats v0.0.0-20251017110053-404c0d5b696c
+	github.com/transparency-dev/formats v0.1.0
 	github.com/transparency-dev/merkle v0.0.2
 	github.com/transparency-dev/tessera v1.0.2
 	go.opentelemetry.io/otel v1.40.0
