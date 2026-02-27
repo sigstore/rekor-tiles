@@ -117,6 +117,40 @@ Run `docker compose up --build --wait` to start the service along with emulated 
 Run `docker compose down` to turn down the service, or `docker compose down --volumes` to turn down the service and delete
 persisted tiles.
 
+### Local deployment with nginx
+
+To deploy rekor-tiles locally with an nginx reverse proxy (serving on port 80):
+
+1. Add `rekor-local` to your hosts file:
+
+   ```bash
+   # Linux/macOS
+   echo "127.0.0.1 rekor-local" | sudo tee -a /etc/hosts
+
+   # Windows (run as Administrator)
+   echo 127.0.0.1 rekor-local >> C:\Windows\System32\drivers\etc\hosts
+   ```
+
+2. Start the services with the `local` profile:
+
+   ```bash
+   docker compose --profile local up --build --wait
+   ```
+
+3. Verify the deployment:
+
+   ```bash
+   curl http://rekor-local/checkpoint
+   ```
+
+   You should see a checkpoint with signatures from both `rekor-local` and the witness.
+
+4. To stop the services:
+
+   ```bash
+   docker compose --profile local down --volumes
+   ```
+
 ### Making a request
 
 Follow the [client documentation](https://github.com/sigstore/rekor-tiles/blob/main/CLIENTS.md#rekor-v2-the-bash-way)
