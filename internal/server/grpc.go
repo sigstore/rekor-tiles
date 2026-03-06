@@ -61,7 +61,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	grpcPanicRecoveryHandler := func(p any) (err error) {
 		getMetrics().panicsTotal.Inc()
 		slog.Error("recovered from panic", "panic", p, "stack", debug.Stack())
-		return status.Errorf(codes.Internal, "%s", p)
+		return status.Errorf(codes.Internal, "internal server error")
 	}
 
 	opts = append(opts,
