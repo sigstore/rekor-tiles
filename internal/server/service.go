@@ -137,10 +137,11 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		// Returns a 499 Client Closed Request
 		return nil, status.Error(codes.Canceled, err.Error())
 	}
-	if errors.As(err, &tessera.DuplicateError{}) {
+	var dupErr tessera.DuplicateError
+	if errors.As(err, &dupErr) {
 		_ = grpc.SetHeader(ctx, metadata.Pairs(
 			duplicateEntryHeader,
-			strconv.FormatUint(err.(tessera.DuplicateError).Index(), 10)))
+			strconv.FormatUint(dupErr.Index(), 10)))
 		return nil, status.Error(codes.AlreadyExists, err.Error())
 	}
 	if errors.As(err, &tessera.InclusionProofVerificationError{}) {
