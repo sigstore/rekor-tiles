@@ -102,10 +102,22 @@ func validate(ds *pb.DSSERequestV002) error {
 	if len(ds.Verifiers) > maxVerifiers {
 		return fmt.Errorf("too many verifiers: %d, max allowed: %d", len(ds.Verifiers), maxVerifiers)
 	}
+	seen := make(map[string]struct{}, len(ds.Verifiers))
 	for _, v := range ds.Verifiers {
 		if err := pbverifier.Validate(v); err != nil {
 			return fmt.Errorf("invalid verifier: %v", err)
 		}
+		var rawBytes []byte
+		if pk := v.GetPublicKey(); pk != nil {
+			rawBytes = pk.RawBytes
+		} else if cert := v.GetX509Certificate(); cert != nil {
+			rawBytes = cert.RawBytes
+		}
+		key := string(rawBytes)
+		if _, exists := seen[key]; exists {
+			return fmt.Errorf("duplicate verifier")
+		}
+		seen[key] = struct{}{}
 	}
 	if len(ds.Envelope.Signatures) == 0 {
 		return fmt.Errorf("envelope missing signatures")
@@ -150,26 +162,17 @@ func extractVerifiers(ds *pb.DSSERequestV002) (map[*pb.Verifier]verifier.Verifie
 // verifyEnvelopeAndSupportedAlgs takes in verifiers, a map of key details to the signature verifier. Verifiers are used to
 // to verify the envelope's signatures. Returns a map of signatures to their verifiers.
 func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier, pbenv *pbdsse.Envelope, algorithmRegistry *signature.AlgorithmRegistryConfig) (map[string]*pb.Verifier, error) {
-	env := FromProto(pbenv)
-	savs := make(map[string]*pb.Verifier, len(verifiers))
-	// generate a fake id for these keys so we can get back to the key bytes and match them to their corresponding signature
-	allSigs := make(map[string]struct{})
-	for _, sig := range env.Signatures {
-		allSigs[sig.Sig] = struct{}{}
-	}
-
+	// Check all verifier algorithms against the registry upfront, before
+	// attempting any signature verification. This ensures the algorithm
+	// policy is enforced deterministically for all verifiers regardless
+	// of map iteration order.
 	for v, verifierKey := range verifiers {
-		if len(allSigs) == 0 {
-			break // if all signatures have been verified, do not attempt anymore
-		}
-
 		algDetails, err := signature.GetAlgorithmDetails(v.KeyDetails)
 		if err != nil {
 			return nil, fmt.Errorf("getting key algorithm details: %w", err)
 		}
 		alg := algDetails.GetHashType()
 
-		// check if signing algorithm is supported by this Rekor instance
 		valid, err := algorithmregistry.CheckEntryAlgorithms(verifierKey.PublicKey(), alg, algorithmRegistry)
 		if err != nil {
 			return nil, fmt.Errorf("checking entry algorithm: %w", err)
@@ -177,6 +180,25 @@ func verifyEnvelopeAndSupportedAlgs(verifiers map[*pb.Verifier]verifier.Verifier
 		if !valid {
 			return nil, &algorithmregistry.UnsupportedAlgorithm{Pub: verifierKey.PublicKey(), Alg: alg}
 		}
+	}
+
+	env := FromProto(pbenv)
+	savs := make(map[string]*pb.Verifier, len(verifiers))
+	allSigs := make(map[string]struct{})
+	for _, sig := range env.Signatures {
+		allSigs[sig.Sig] = struct{}{}
+	}
+
+	for v, verifierKey := range verifiers {
+		if len(allSigs) == 0 {
+			break
+		}
+
+		algDetails, err := signature.GetAlgorithmDetails(v.KeyDetails)
+		if err != nil {
+			return nil, fmt.Errorf("getting key algorithm details: %w", err)
+		}
+		alg := algDetails.GetHashType()
 
 		vfr, err := signature.LoadVerifier(verifierKey.PublicKey(), alg)
 		if err != nil {
