@@ -60,6 +60,10 @@ func (e InclusionProofVerificationError) Error() string {
 	return fmt.Sprintf("verifying inclusion proof for index %d: %v", e.index, e.err)
 }
 
+func (e InclusionProofVerificationError) Unwrap() error {
+	return e.err
+}
+
 // Storage provides the functions to add entries to a Tessera log.
 type Storage interface {
 	Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error)
