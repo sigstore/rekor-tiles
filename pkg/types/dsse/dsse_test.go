@@ -623,6 +623,110 @@ func TestToLogEntryLimits(t *testing.T) {
 	})
 }
 
+func TestDuplicateVerifiers(t *testing.T) {
+	block, _ := pem.Decode([]byte(pemPublicKey))
+	publicKey := block.Bytes
+
+	block, _ = pem.Decode([]byte(pemx509Cert))
+	x509Cert := block.Bytes
+
+	var payload = []byte("payload")
+	var keySignature = b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=")
+
+	algReg, err := signature.NewAlgorithmRegistryConfig([]v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("duplicate public key verifiers", func(t *testing.T) {
+		req := &pb.DSSERequestV002{
+			Envelope: &dsse.Envelope{
+				Payload:     payload,
+				PayloadType: "application/vnd.in-toto+json",
+				Signatures:  []*dsse.Signature{{Sig: keySignature}},
+			},
+			Verifiers: []*pb.Verifier{
+				{
+					Verifier:   &pb.Verifier_PublicKey{PublicKey: &pb.PublicKey{RawBytes: publicKey}},
+					KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+				},
+				{
+					Verifier:   &pb.Verifier_PublicKey{PublicKey: &pb.PublicKey{RawBytes: publicKey}},
+					KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+				},
+			},
+		}
+		_, err := ToLogEntry(req, algReg)
+		assert.ErrorContains(t, err, "duplicate verifier")
+	})
+
+	t.Run("duplicate certificate verifiers", func(t *testing.T) {
+		req := &pb.DSSERequestV002{
+			Envelope: &dsse.Envelope{
+				Payload:     payload,
+				PayloadType: "application/vnd.in-toto+json",
+				Signatures:  []*dsse.Signature{{Sig: keySignature}},
+			},
+			Verifiers: []*pb.Verifier{
+				{
+					Verifier:   &pb.Verifier_X509Certificate{X509Certificate: &v1.X509Certificate{RawBytes: x509Cert}},
+					KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+				},
+				{
+					Verifier:   &pb.Verifier_X509Certificate{X509Certificate: &v1.X509Certificate{RawBytes: x509Cert}},
+					KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+				},
+			},
+		}
+		_, err := ToLogEntry(req, algReg)
+		assert.ErrorContains(t, err, "duplicate verifier")
+	})
+}
+
+// TestDisallowedAlgorithmWithExtraVerifier verifies that a verifier using a
+// disallowed algorithm is rejected even when all envelope signatures can be
+// verified by other (allowed) verifiers. Previously, the algorithm check was
+// inside the verification loop and could be skipped by an early break when
+// all signatures were already verified, depending on map iteration order.
+func TestDisallowedAlgorithmWithExtraVerifier(t *testing.T) {
+	block, _ := pem.Decode([]byte(pemPublicKey))
+	publicKey := block.Bytes
+
+	block, _ = pem.Decode([]byte(pemPublicKeyP384))
+	publicKeyP384 := block.Bytes
+
+	var payload = []byte("payload")
+	var keySignature = b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk=")
+
+	// Only allow P256 — the P384 verifier should be rejected even though
+	// it has no matching signature.
+	algReg, err := signature.NewAlgorithmRegistryConfig([]v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := &pb.DSSERequestV002{
+		Envelope: &dsse.Envelope{
+			Payload:     payload,
+			PayloadType: "application/vnd.in-toto+json",
+			Signatures:  []*dsse.Signature{{Sig: keySignature}},
+		},
+		Verifiers: []*pb.Verifier{
+			{
+				Verifier:   &pb.Verifier_PublicKey{PublicKey: &pb.PublicKey{RawBytes: publicKey}},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+			},
+			{
+				Verifier:   &pb.Verifier_PublicKey{PublicKey: &pb.PublicKey{RawBytes: publicKeyP384}},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+			},
+		},
+	}
+
+	_, err = ToLogEntry(req, algReg)
+	assert.ErrorContains(t, err, "unsupported entry algorithm")
+}
+
 func b64DecodeOrDie(t *testing.T, msg string) []byte {
 	decoded, err := base64.StdEncoding.DecodeString(msg)
 	if err != nil {
