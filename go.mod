@@ -42,7 +42,7 @@ require (
 	golang.org/x/sync v0.20.0
 	google.golang.org/api v0.269.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57
-	google.golang.org/grpc v1.79.1
+	google.golang.org/grpc v1.79.3
 	google.golang.org/protobuf v1.36.11
 	k8s.io/klog/v2 v2.130.1
 	sigs.k8s.io/release-utils v0.12.3
