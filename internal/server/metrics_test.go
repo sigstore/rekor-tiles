@@ -53,7 +53,6 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 	// server with no requests ever recorded, rekor_http_* statistics may be uninitialized
 	expectedMetrics := []string{
 		"rekor_v2_new_hashedrekord_entries",
-		"rekor_v2_new_dsse_entries",
 		"build_info",
 		"rekor_v2_http_api_latency",
 		"rekor_v2_http_requests_total",

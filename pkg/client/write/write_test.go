@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
-
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/v2/pkg/client"
@@ -136,67 +134,16 @@ func TestAdd(t *testing.T) {
 			expectErr: nil,
 		},
 		{
-			name: "valid dsse",
-			entry: &pb.DSSERequestV002{
-				Envelope: &dsse.Envelope{
-					Payload:     []byte("some payload"),
-					PayloadType: "",
-					Signatures: []*dsse.Signature{
-						{
-							Sig:   []byte("some signature"),
-							Keyid: "abcd",
-						},
-					},
-				},
-				Verifiers: []*pb.Verifier{
-					{
-						Verifier: &pb.Verifier_PublicKey{
-							PublicKey: &pb.PublicKey{
-								RawBytes: []byte("key"),
-							},
-						},
-						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-					},
-				},
-			},
-			respBody: marshalJSONOrDie(t, pbs.TransparencyLogEntry{
-				LogIndex: 1,
-				InclusionProof: &pbs.InclusionProof{
-					RootHash: b64DecodeOrDie(t, "YmMwMDVjZTE3OGY1MWJkNTE0YzkyMDUxNjAzYmQzNjY5NjJkNzQzYTliMjhkZjU3YjYxMDFiNjM4MzZhNzdmNg=="),
-
-					TreeSize: 2,
-					Hashes: [][]byte{
-						b64DecodeOrDie(t, "wWB4RFtzi4KkguQYjzcUge9No4fwgGMVdtQt6ls5B0I="),
-					},
-					Checkpoint: &pbs.Checkpoint{
-						Envelope: "rekor-local\n2\nvABc4Xj1G9UUySBRYDvTZpYtdDqbKN9XthAbY4Nqd/Y=\n\n— rekor-local 2AtEIJwBlAY6KMMNAqcWRKgPZDhP6/bpBmefw4mD89JwL3KozxrLgz7MA8G5pM4UrGNoTOxxpW2bbdv/A5l22ymMLAU=\n",
-					},
-				},
-				CanonicalizedBody: []byte(`{"envelope":"dsse","verifier":[{"publicKey":{"rawBytes":"a2V5"}}]}`),
-			}),
-			respCode:  http.StatusCreated,
-			expectErr: nil,
-		},
-		{
 			name:      "invalid entry type",
 			entry:     "intoto entry",
 			expectErr: fmt.Errorf("unsupported entry type: string"),
 		},
 		{
 			name: "server error",
-			entry: &pb.DSSERequestV002{
-				Envelope: &dsse.Envelope{
-					Payload:     []byte("some payload"),
-					PayloadType: "",
-					Signatures: []*dsse.Signature{
-						{
-							Sig:   []byte("some signature"),
-							Keyid: "abcd",
-						},
-					},
-				},
-				Verifiers: []*pb.Verifier{
-					{
+			entry: &pb.HashedRekordRequestV002{
+				Signature: &pb.Signature{
+					Content: []byte("sign"),
+					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
 								RawBytes: []byte("key"),
@@ -205,6 +152,7 @@ func TestAdd(t *testing.T) {
 						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
+				Digest: []byte("digest"),
 			},
 			respBody:  []byte("server died"),
 			respCode:  http.StatusInternalServerError,
@@ -212,19 +160,10 @@ func TestAdd(t *testing.T) {
 		},
 		{
 			name: "unexpected response body from server",
-			entry: &pb.DSSERequestV002{
-				Envelope: &dsse.Envelope{
-					Payload:     []byte("some payload"),
-					PayloadType: "",
-					Signatures: []*dsse.Signature{
-						{
-							Sig:   []byte("some signature"),
-							Keyid: "abcd",
-						},
-					},
-				},
-				Verifiers: []*pb.Verifier{
-					{
+			entry: &pb.HashedRekordRequestV002{
+				Signature: &pb.Signature{
+					Content: []byte("sign"),
+					Verifier: &pb.Verifier{
 						Verifier: &pb.Verifier_PublicKey{
 							PublicKey: &pb.PublicKey{
 								RawBytes: []byte("key"),
@@ -233,6 +172,7 @@ func TestAdd(t *testing.T) {
 						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 					},
 				},
+				Digest: []byte("digest"),
 			},
 			respBody:  []byte("i love ice cream"),
 			respCode:  http.StatusCreated,
