@@ -477,8 +477,7 @@
       },
       "title": "Create a new HashedRekord or DSSE",
       "required": [
-        "hashedRekordRequestV002",
-        "dsseRequestV002"
+        "hashedRekordRequestV002"
       ]
     },
     "v2DSSERequestV002": {
@@ -497,11 +496,7 @@
           "title": "All necessary verification material to verify all signatures embedded in the envelope"
         }
       },
-      "title": "A request to add a DSSE v0.0.2 entry to the log",
-      "required": [
-        "envelope",
-        "verifiers"
-      ]
+      "title": "A request to add a DSSE v0.0.2 entry to the log\nDeprecated: Use HashedRekordRequestV002 with the hash of the DSSE PAE instead"
     },
     "v2HashedRekordRequestV002": {
       "type": "object",
