@@ -27,7 +27,6 @@ import (
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
-	"github.com/sigstore/rekor-tiles/v2/pkg/types/dsse"
 	"github.com/sigstore/rekor-tiles/v2/pkg/types/hashedrekord"
 	"github.com/sigstore/sigstore/pkg/signature"
 	ttessera "github.com/transparency-dev/tessera"
@@ -104,24 +103,11 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		}
 		metricsCounter = getMetrics().newHashedRekordEntries
 	case *pb.CreateEntryRequest_DsseRequestV002:
-		ds := req.GetDsseRequestV002()
-		entry, err := dsse.ToLogEntry(ds, s.algorithmRegistry)
-		if err != nil {
-			slog.WarnContext(ctx, "failed validating dsse request", "error", err.Error())
-			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")
-		}
-		kv = &pbs.KindVersion{
-			Kind:    entry.Kind,
-			Version: entry.ApiVersion,
-		}
-		serialized, err = protojson.Marshal(entry)
-		if err != nil {
-			slog.WarnContext(ctx, "failed marshaling dsse request", "error", err.Error())
-			return nil, status.Errorf(codes.InvalidArgument, "invalid dsse request")
-		}
-		metricsCounter = getMetrics().newDsseEntries
+		_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "405"))
+		_ = grpc.SetHeader(ctx, metadata.Pairs(httpErrorMessageHeader, "DSSE entries not supported, use hashedrekord"))
+		return nil, status.Errorf(codes.Unimplemented, "DSSE entries not supported")
 	default:
-		return nil, status.Errorf(codes.InvalidArgument, "invalid type, must be either hashedrekord or dsse")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid type, must be hashedrekord")
 	}
 	canonicalized, err := jsoncanonicalizer.Transform(serialized)
 	if err != nil {

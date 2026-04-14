@@ -42,7 +42,6 @@ type metrics struct {
 	serverMetrics *grpc_prometheus.ServerMetrics
 	// metrics
 	newHashedRekordEntries     prometheus.Counter
-	newDsseEntries             prometheus.Counter
 	httpLatency                *prometheus.HistogramVec
 	httpRequestsCount          *prometheus.CounterVec
 	httpRequestSize            *prometheus.HistogramVec
@@ -57,7 +56,7 @@ func getMetrics() *metrics {
 	return _initMetricsFunc()
 }
 
-var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
+var _initMetricsFunc = sync.OnceValue(func() *metrics {
 	m := metrics{
 		reg:           prometheus.NewRegistry(),
 		serverMetrics: grpc_prometheus.NewServerMetrics(grpc_prometheus.WithServerHandlingTimeHistogram()),
@@ -68,12 +67,7 @@ var _initMetricsFunc = sync.OnceValue[*metrics](func() *metrics {
 
 	m.newHashedRekordEntries = f.NewCounter(prometheus.CounterOpts{
 		Name: "rekor_v2_new_hashedrekord_entries",
-		Help: "The total number of new dsse log entries",
-	})
-
-	m.newDsseEntries = f.NewCounter(prometheus.CounterOpts{
-		Name: "rekor_v2_new_dsse_entries",
-		Help: "The total number of new dsse log entries",
+		Help: "The total number of new hashedrekord log entries",
 	})
 
 	// grpc_packet_part should always be "payload" but we can measure "header" or "trailer" in the future

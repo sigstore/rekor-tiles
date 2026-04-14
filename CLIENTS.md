@@ -48,52 +48,6 @@ below:
         }
     }
 }
-
-// Request with an attestation
-{
-    "dsseRequestV002": {
-        "envelope": {
-            "payload": "<base64-encoded message>",
-            "payloadType": "<type, e.g. application/vnd.in-toto+json>",
-            "signatures": [
-                {
-                    "sig": "<base64-encoded signature>",
-                    "keyid": ""
-                }
-            ]
-        },
-        "verifier": {
-            "x509Certificate": {
-                "rawBytes": "<base64 DER-encoded certificate>"
-            },
-            // Must match signing algorithm
-            "keyDetails": "PKIX_ECDSA_P256_SHA_256"
-        }
-    }
-}
-
-// Request with an attestation with a self-managed key
-{
-    "dsseRequestV002": {
-        "envelope": {
-            "payload": "<base64-encoded message>",
-            "payloadType": "<type, e.g. application/vnd.in-toto+json>",
-            "signatures": [
-                {
-                    "sig": "<base64-encoded signature>",
-                    "keyid": ""
-                }
-            ]
-        },
-        "verifier": {
-            "publicKey": {
-                "rawBytes": "<base64 DER-encoded public key>"
-            },
-            // Must match signing algorithm
-            "keyDetails": "PKIX_ECDSA_P256_SHA_256"
-        }
-    }
-}
 ```
 
 The response will be a
@@ -130,46 +84,17 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
     }
 }
 
-// DSSE entry
-{
-    "apiVersion": "0.0.2",
-    "kind": "dsse",
-    "spec": {
-        "dsseV002": {
-            "data": {
-                "algorithm": "SHA2_256",
-                // Note that we no longer include the envelope hash, since there is no
-                // canonicalization scheme for a DSSE envelope
-                "digest": "<base64-encoded digest of payload hash>"
-            },
-            "signatures": [
-                {
-                    "content": "<base64-encoded signature",
-                    "verifier": {
-                        // Must match signing algorithm
-                        "keyDetails": "PKIX_ECDSA_P256_SHA_256",
-                        "publicKey": {
-                            "rawBytes": "<base64 DER-encoded public key>"
-                        }
-                    }
-                }
-            ]
-        }
-    }
-}
-```
+### Entry Type
 
-### Two Entry Types
-
-Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV002`) and
-`dsse` (`DSSELogEntryV002`) entry types, dropping a number of unused types
-such as `jar`, `alpine`, `rpm`, and the older types `rekord` and `intoto`.
+Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV002`), dropping
+a number of unused types such as `jar`, `alpine`, `rpm`, and the older
+types `rekord` and `intoto`.
 Additional types may be added in the future if there is demand, but this
 will require updating the client specification so that all clients implement
 support for these types.
 
 As with Rekor v1, the entry, aka `canonicalized_body`, will include the entry's
-kind (`hashedrekord`, `dsse`) and version (`0.0.2`) along with the entry itself
+kind (`hashedrekord`) and version (`0.0.2`) along with the entry itself
 in a `spec` field. Clients MUST gracefully fail when given a bundle with a
 kind or version that the client doesn't know how to parse. This is necessary
 so that clients gracefully fail when given a Rekor v2 entry.
@@ -188,13 +113,11 @@ to parse an entry:
    bundle, but will have the canonicalized body. A monitor must use the `kind` and
    `apiVersion` to parse `spec`.
 
-#### DSSE
+#### DSSE / signed attestations
 
-For DSSE entries, the entry payload hash will always be SHA-256, regardless of
-the signature hashing algorithm specified in the key details. If non-default
-signing key algorithms (e.g. not ECDSA-P256) are supported, when verifying an entry,
-clients will need to handle computing the digest of the payload using SHA-256
-and computing the digest to verify based on the key details.
+Rekor v2 will not support a DSSE entry type. Instead, clients should extract the DSSE
+Pre-Authentication Encoding (PAE) and signature from the DSSE envelope, including the
+hash of the PAE and the signature in a `hashedrekord` request.
 
 ### Certificate and Public Key Verifiers
 
@@ -465,8 +388,7 @@ Rekor v1's `intoto` type persisted attestations. Rekor v1's `dsse` type
 removed attestation storage as Rekor was not designed to be used as storage
 for verification metadata.
 
-In Rekor v2, the `DSSELogEntryV0_0_2` type will also not support attestation
-storage. Attestations should be persisted alongside an artifact, e.g. in
+Attestations should be persisted alongside an artifact, e.g. in
 OCI or a package registry, or in a dedicated attestation storage service.
 
 ## C2SP Checkpoints

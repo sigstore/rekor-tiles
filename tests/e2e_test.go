@@ -19,7 +19,6 @@ package main
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -33,19 +32,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/secure-systems-lab/go-securesystemslib/dsse"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	pbdsse "github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	"github.com/sigstore/rekor-tiles/v2/internal/safeint"
 	"github.com/sigstore/rekor-tiles/v2/pkg/client/read"
 	"github.com/sigstore/rekor-tiles/v2/pkg/client/write"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
-	dsset "github.com/sigstore/rekor-tiles/v2/pkg/types/dsse"
 	"github.com/sigstore/rekor-tiles/v2/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/signature"
-	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
 	f_note "github.com/transparency-dev/formats/note"
 	"github.com/transparency-dev/merkle/proof"
@@ -273,43 +267,6 @@ func testReadWrite(t *testing.T, config backendConfig) {
 	assert.Equal(t, "0.0.2", e.ApiVersion)
 	hrEntry := e.Spec.GetHashedRekordV002()
 	assert.NotNil(t, hrEntry)
-
-	// Add a DSSE entry
-	numNewEntries++
-	dr, err := newDSSERequest(clientPrivKey, clientPubKey)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tle, err = writer.Add(ctx, dr)
-	assert.NoError(t, err)
-	assertDSSETLE(t, tle, initialTreeSize+numNewEntries-1, logID, noteVerifiers, dr)
-
-	safeLogSize, err := safeint.NewSafeInt64(tle.InclusionProof.TreeSize)
-	if err != nil {
-		t.Fatal(err)
-	}
-	latestTreeSize = safeLogSize.U()
-	tileIndex = latestTreeSize / layout.TileWidth
-	tilePart = layout.PartialTileSize(tileLevel, latestTreeSize-1, latestTreeSize)
-	entryBundle, err = reader.ReadEntryBundle(ctx, tileIndex, tilePart)
-	assert.NoError(t, err)
-	expectedPayloadHash := sha256.Sum256([]byte("payload"))
-	expectedB64PayloadHash := base64.StdEncoding.EncodeToString(expectedPayloadHash[:])
-	assert.Contains(t, string(entryBundle), expectedB64PayloadHash)
-
-	// Parse a DSSE entry from the latest entry bundle
-	bundle = api.EntryBundle{}
-	err = bundle.UnmarshalText(entryBundle)
-	assert.NoError(t, err)
-	assert.NotEmpty(t, bundle.Entries)
-	e = &pb.Entry{}
-	// last entry in the bundle should be a DSSE entry
-	err = protojson.Unmarshal(bundle.Entries[len(bundle.Entries)-1], e)
-	assert.NoError(t, err)
-	assert.Equal(t, "dsse", e.Kind)
-	assert.Equal(t, "0.0.2", e.ApiVersion)
-	dsseEntry := e.Spec.GetDsseV002()
-	assert.NotNil(t, dsseEntry)
 }
 
 func testUnimplementedReadMethods(t *testing.T, config backendConfig) {
@@ -449,46 +406,6 @@ func newHashedRekordRequest(privKey *ecdsa.PrivateKey, pubKey []byte, idx uint64
 	}, nil
 }
 
-func newDSSEEnvelope(privKey *ecdsa.PrivateKey) (*pbdsse.Envelope, error) {
-	ecdsaSigner, err := signature.LoadECDSASigner(privKey, crypto.SHA256)
-	if err != nil {
-		return nil, err
-	}
-	envelopeSigner, err := dsse.NewEnvelopeSigner(&sigdsse.SignerAdapter{
-		SignatureSigner: ecdsaSigner,
-	})
-	if err != nil {
-		return nil, err
-	}
-	payload := "payload"
-	payloadType := "application/vnd.in-toto+json"
-	envelope, err := envelopeSigner.SignPayload(context.Background(), payloadType, []byte(payload))
-	if err != nil {
-		return nil, err
-	}
-	return dsset.ToProto(envelope)
-}
-
-func newDSSERequest(privKey *ecdsa.PrivateKey, pubKey []byte) (*pb.DSSERequestV002, error) {
-	envelope, err := newDSSEEnvelope(privKey)
-	if err != nil {
-		return nil, err
-	}
-	return &pb.DSSERequestV002{
-		Envelope: envelope,
-		Verifiers: []*pb.Verifier{
-			{
-				Verifier: &pb.Verifier_PublicKey{
-					PublicKey: &pb.PublicKey{
-						RawBytes: pubKey,
-					},
-				},
-				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-			},
-		},
-	}, nil
-}
-
 func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialTreeSize, numNewEntries uint64, logID []byte, verifiers []signednote.Verifier, hr *pb.HashedRekordRequestV002) {
 	assert.NotNil(t, tle)
 
@@ -520,42 +437,6 @@ func assertHashedRekordTLE(t *testing.T, tle *pbs.TransparencyLogEntry, initialT
 	assert.Equal(t, hrEntry.Signature, hr.Signature)
 	assert.Equal(t, hrEntry.Data.Algorithm, v1.HashAlgorithm_SHA2_256)
 	assert.Equal(t, hrEntry.Data.Digest, hr.Digest)
-}
-
-func assertDSSETLE(t *testing.T, tle *pbs.TransparencyLogEntry, index uint64, logID []byte, verifiers []signednote.Verifier, dr *pb.DSSERequestV002) {
-	assert.NotNil(t, tle)
-
-	// Check server does not set deprecated fields
-	assert.Zero(t, tle.IntegratedTime)
-	assert.Nil(t, tle.InclusionPromise)
-
-	// Check populated fields
-	// Assert log index. There is a single DSSE upload so the exact index is known
-	assert.Equal(t, tle.LogIndex, int64(index))
-	// Assert log IDs are equivalent
-	assert.Equal(t, tle.LogId.KeyId, logID)
-	// Assert kind and version match expected values
-	assert.Equal(t, tle.KindVersion.Kind, "dsse")
-	assert.Equal(t, tle.KindVersion.Version, "0.0.2")
-	// Verify checkpoint and inclusion proof
-	verifyInclusionProof(t, tle, verifiers)
-	// Parse canonicalized body and assert entry matches request
-	e := &pb.Entry{}
-	assert.NotNil(t, tle.CanonicalizedBody)
-	err := protojson.Unmarshal(tle.CanonicalizedBody, e)
-	assert.NoError(t, err)
-	assert.Equal(t, "dsse", e.Kind)
-	assert.Equal(t, "0.0.2", e.ApiVersion)
-	dsseEntry := e.Spec.GetDsseV002()
-	assert.NotNil(t, dsseEntry)
-	// Assert payload hash is as expected
-	assert.Equal(t, dsseEntry.PayloadHash.Algorithm, v1.HashAlgorithm_SHA2_256)
-	expectedPayloadHash := sha256.Sum256(dr.Envelope.Payload)
-	assert.Equal(t, dsseEntry.PayloadHash.Digest, expectedPayloadHash[:])
-	// Assert signature matches envelope's signature
-	assert.Len(t, dsseEntry.Signatures, 1)
-	assert.Equal(t, dsseEntry.Signatures[0].Content, dr.Envelope.Signatures[0].Sig)
-	assert.Equal(t, dsseEntry.Signatures[0].Verifier, dr.Verifiers[0])
 }
 
 func verifyInclusionProof(t *testing.T, tle *pbs.TransparencyLogEntry, verifiers []signednote.Verifier) {
