@@ -49,7 +49,7 @@ services:
 
   # MySQL - Aurora-compatible database for sequencing and antispam
   mysql:
-    image: mysql:8.0@sha256:64756cc92f707eb504496d774353990bcb0f6999ddf598b6ad188f2da66bd000
+    image: mysql:8.0@sha256:4af1f8815716546f5b12410f7621f37f93db8dd11a184706ef59111930b8c2ff
     ports:
       - "3306:3306"
     environment:
