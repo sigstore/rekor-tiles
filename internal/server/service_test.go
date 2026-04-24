@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
-	"github.com/sigstore/protobuf-specs/gen/pb-go/dsse"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
@@ -78,37 +77,6 @@ func TestCreateEntry(t *testing.T) {
 			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
 		},
 		{
-			name: "valid dsse",
-			req: &pb.CreateEntryRequest{
-				Spec: &pb.CreateEntryRequest_DsseRequestV002{
-					DsseRequestV002: &pb.DSSERequestV002{
-						Envelope: &dsse.Envelope{
-							Payload:     b64DecodeOrDie(t, "cGF5bG9hZA=="),
-							PayloadType: "application/vnd.in-toto+json",
-							Signatures: []*dsse.Signature{
-								{
-									Sig:   b64DecodeOrDie(t, "MEUCIQCSWas1Y9bI7aDNrBdHlzrFH8ch7B7IM+pJK86mtjkbJAIgaeCltz6vs20DP2sJ7IBihvcrdqGn3ivuV/KNPlMOetk="),
-									Keyid: "",
-								},
-							},
-						},
-						Verifiers: []*pb.Verifier{
-							{
-								Verifier: &pb.Verifier_PublicKey{
-									PublicKey: &pb.PublicKey{
-										RawBytes: b64DecodeOrDie(t, "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE850nB+WrwXzivt7yFbhFKw/8M2paqSTHiQhkA4/0ZAsJtmzn/v4HdeZKTCQcsHq5IwM/LtbmEdv9ChO9M3cg9g=="),
-									},
-								},
-								KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-							},
-						},
-					},
-				},
-			},
-			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
-			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
-		},
-		{
 			name: "invalid hashedrekord",
 			req: &pb.CreateEntryRequest{
 				Spec: &pb.CreateEntryRequest_HashedRekordRequestV002{
@@ -121,16 +89,16 @@ func TestCreateEntry(t *testing.T) {
 			expectedCode:            codes.InvalidArgument,
 		},
 		{
-			name: "invalid dsse",
+			name: "dsse is rejected",
 			req: &pb.CreateEntryRequest{
 				Spec: &pb.CreateEntryRequest_DsseRequestV002{
-					DsseRequestV002: &pb.DSSERequestV002{},
+					DsseRequestV002: &pb.DSSERequestV002{}, //nolint: staticcheck // ignore to verify graceful rejection
 				},
 			},
 			addFn:                   func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
 			clientSigningAlgorithms: []string{"ecdsa-sha2-256-nistp256"},
-			expectError:             fmt.Errorf("invalid dsse request"),
-			expectedCode:            codes.InvalidArgument,
+			expectError:             fmt.Errorf("DSSE entries not supported"),
+			expectedCode:            codes.Unimplemented,
 		},
 		{
 			name: "context canceled",
