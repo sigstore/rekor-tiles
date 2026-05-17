@@ -46,7 +46,7 @@ func New(ctx context.Context, opts ...Option) (signature.SignerVerifier, error) 
 		}):
 		return kms.Get(ctx, sc.kms, sc.kmsHash)
 	case sc.tinkKEKURI != "":
-		return NewTinkSignerVerifier(sc.tinkKEKURI, sc.tinkKeysetPath)
+		return NewTinkSignerVerifier(ctx, sc.tinkKEKURI, sc.tinkKeysetPath)
 	case sc.filePath != "":
 		return sv.NewFileSignerVerifier(sc.filePath, sc.password)
 	default:

@@ -17,12 +17,13 @@
 package signerverifier
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
 
 	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
-	"github.com/tink-crypto/tink-go-awskms/v2/integration/awskms"
+	"github.com/tink-crypto/tink-go-awskms/v3/integration/awskms"
 	"github.com/tink-crypto/tink-go/v2/core/registry"
 	"github.com/tink-crypto/tink-go/v2/tink"
 
@@ -33,11 +34,11 @@ const TinkScheme = "tink"
 
 // NewTinkSignerVerifier returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
 // Provide a path to the encrypted keyset and AWS KMS key URI for decryption
-func NewTinkSignerVerifier(kekURI, keysetPath string) (signature.SignerVerifier, error) {
+func NewTinkSignerVerifier(ctx context.Context, kekURI, keysetPath string) (signature.SignerVerifier, error) {
 	if kekURI == "" || keysetPath == "" {
 		return nil, fmt.Errorf("key encryption key URI or keyset path unset")
 	}
-	kek, err := getKeyEncryptionKey(kekURI)
+	kek, err := getKeyEncryptionKey(ctx, kekURI)
 	if err != nil {
 		return nil, err
 	}
@@ -45,10 +46,10 @@ func NewTinkSignerVerifier(kekURI, keysetPath string) (signature.SignerVerifier,
 }
 
 // getKeyEncryptionKey returns a Tink AEAD encryption key from AWS KMS
-func getKeyEncryptionKey(kmsKey string) (tink.AEAD, error) {
+func getKeyEncryptionKey(ctx context.Context, kmsKey string) (tink.AEAD, error) {
 	switch {
 	case strings.HasPrefix(kmsKey, "aws-kms://"):
-		awsClient, err := awskms.NewClientWithOptions(kmsKey)
+		awsClient, err := awskms.NewClientWithOptions(ctx, kmsKey)
 		if err != nil {
 			return nil, err
 		}
