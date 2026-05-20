@@ -96,6 +96,40 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 	}
 }
 
+// TestAddSetsIntegratedTime guards against the regression where
+// TransparencyLogEntry.IntegratedTime is left at the proto default (0) — the
+// gap behind issue #285 that PR #292 only partially closed. Verifies the
+// returned value is a plausible recent Unix timestamp.
+func TestAddSetsIntegratedTime(t *testing.T) {
+	ctx := context.Background()
+	tileHash := hexDecodeOrDie(t, "81bfc09c412c04da53a1b0ddb94dce48d6a24e9ea58987f7d45a04e8007fb3ca")
+	readCheckpoint := func(_ context.Context) ([]byte, error) {
+		<-time.After(5 * time.Millisecond)
+		return []byte(`test.origin
+1
+gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
+
+— test.origin AAAAAW5vb3AKMQpnYi9BbkVFc0JOcFRvYkRkdVUzT1NOYWlUcDZsaVlmMzFGb0U2QUIvczhvPQo=`), nil
+	}
+	s := storage{
+		awaiter: tessera.NewPublicationAwaiter(ctx, readCheckpoint, 10*time.Millisecond),
+		readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
+			return tileHash, nil
+		},
+		addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+			return func() (tessera.Index, error) { return tessera.Index{Index: 0}, nil }
+		},
+	}
+	before := time.Now().Unix()
+	got, err := s.Add(ctx, tessera.NewEntry([]byte("stuff")))
+	after := time.Now().Unix()
+
+	assert.NoError(t, err)
+	assert.NotZero(t, got.IntegratedTime, "IntegratedTime must not be left at proto default")
+	assert.GreaterOrEqual(t, got.IntegratedTime, before)
+	assert.LessOrEqual(t, got.IntegratedTime, after)
+}
+
 func TestReadTile(t *testing.T) {
 	ctx := context.Background()
 	tileHash := hexDecodeOrDie(t, "81bfc09c412c04da53a1b0ddb94dce48d6a24e9ea58987f7d45a04e8007fb3ca")

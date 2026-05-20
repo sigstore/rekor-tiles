@@ -148,6 +148,16 @@ func (s *storage) Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.Tran
 		LogIndex:          idx.I(),
 		InclusionProof:    inclusionProof,
 		CanonicalizedBody: entry.Data(),
+		// Set IntegratedTime at the point the entry was sequenced and the
+		// inclusion proof was built. This function is synchronous on Tessera
+		// integration (s.addEntry awaits the awaiter; buildProof requires the
+		// integrated tile state), so time.Now() is the integration time. Per
+		// the protobuf-specs comment on TransparencyLogEntry.integrated_time,
+		// this field is the "time the entry was integrated into the log".
+		// Closes #285 follow-up (the integrated_time half of the
+		// "Complete returned TransparencyLogEntry" trio that PR #292 only
+		// partially landed).
+		IntegratedTime: time.Now().Unix(),
 	}, nil
 }
 
