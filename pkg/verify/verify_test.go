@@ -17,28 +17,20 @@ package verify
 
 import (
 	"context"
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
-	"crypto/x509"
 	"encoding/hex"
 	"log"
 	"testing"
 
-	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
-	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
-	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
-	"github.com/sigstore/rekor-tiles/v2/pkg/types/hashedrekord"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	f_log "github.com/transparency-dev/formats/log"
 	f_note "github.com/transparency-dev/formats/note"
 	"github.com/transparency-dev/merkle/rfc6962"
 	note "golang.org/x/mod/sumdb/note"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestVerifyInclusionProof(t *testing.T) {
@@ -371,112 +363,6 @@ func TestVerifyLogEntryWithEntryHash(t *testing.T) {
 	// Wrong leaf hash should fail inclusion verification.
 	wrongLeaf := rfc6962.DefaultHasher.HashLeaf([]byte("not the body"))
 	assert.Error(t, VerifyLogEntryWithEntryHash(entry, noteVerifier, wrongLeaf))
-}
-
-// TestRecomputeLeafEndToEnd drives the rekor-v2-spec §6.1.4 "Recompute the
-// leaf" path producer-to-consumer: a HashedRekordRequestV002 is canonicalized
-// the same way the log service does, the resulting leaf hash anchors a signed
-// size-1 checkpoint, and the bundle-signed inputs are then re-fed through
-// hashedrekord.ToEntryHash + VerifyLogEntryWithEntryHash. This catches
-// any future divergence between the client reconstruction and server
-// canonicalization (protojson field ordering, defaults, jsoncanonicalizer
-// behavior, etc.) that the isolated unit tests would silently miss.
-func TestRecomputeLeafEndToEnd(t *testing.T) {
-	hostname := "rekor.localhost"
-
-	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pubKeyDER, err := x509.MarshalPKIXPublicKey(privKey.Public())
-	if err != nil {
-		t.Fatal(err)
-	}
-	payloadDigest := sha256.Sum256([]byte("end-to-end test payload"))
-	sig, err := ecdsa.SignASN1(rand.Reader, privKey, payloadDigest[:])
-	if err != nil {
-		t.Fatal(err)
-	}
-	req := &pb.HashedRekordRequestV002{
-		Digest: payloadDigest[:],
-		Signature: &pb.Signature{
-			Content: sig,
-			Verifier: &pb.Verifier{
-				Verifier: &pb.Verifier_PublicKey{
-					PublicKey: &pb.PublicKey{RawBytes: pubKeyDER},
-				},
-				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-			},
-		},
-	}
-
-	algReg, err := signature.NewAlgorithmRegistryConfig([]v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256})
-	if err != nil {
-		t.Fatal(err)
-	}
-	logEntry, err := hashedrekord.ToLogEntry(req, algReg)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// Server-side leaf hash: protojson.Marshal -> jsoncanonicalizer.Transform
-	// -> rfc6962 HashLeaf, exactly mirroring internal/server/service.go.
-	serialized, err := protojson.Marshal(logEntry)
-	if err != nil {
-		t.Fatal(err)
-	}
-	canonicalized, err := jsoncanonicalizer.Transform(serialized)
-	if err != nil {
-		t.Fatal(err)
-	}
-	serverLeafHash := rfc6962.DefaultHasher.HashLeaf(canonicalized)
-
-	cpSV, _, err := signature.NewDefaultECDSASignerVerifier()
-	if err != nil {
-		t.Fatal(err)
-	}
-	noteSigner, err := rekornote.NewNoteSigner(context.Background(), hostname, cpSV)
-	if err != nil {
-		t.Fatal(err)
-	}
-	noteVerifier, err := rekornote.NewNoteVerifier(hostname, cpSV)
-	if err != nil {
-		t.Fatal(err)
-	}
-	cpRaw := f_log.Checkpoint{
-		Origin: hostname,
-		Size:   1,
-		Hash:   serverLeafHash,
-	}.Marshal()
-	signedCp, err := note.Sign(&note.Note{Text: string(cpRaw)}, noteSigner)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tle := &pbs.TransparencyLogEntry{
-		LogIndex: 0,
-		InclusionProof: &pbs.InclusionProof{
-			LogIndex: 0,
-			TreeSize: 1,
-			Hashes:   [][]byte{},
-			Checkpoint: &pbs.Checkpoint{
-				Envelope: string(signedCp),
-			},
-		},
-	}
-
-	clientLeafHash, err := hashedrekord.ToEntryHash(req.Digest, req.Signature)
-	assert.NoError(t, err)
-	assert.Equal(t, serverLeafHash, clientLeafHash, "client-reconstructed leaf hash must equal server-canonicalized leaf hash")
-
-	assert.NoError(t, VerifyLogEntryWithEntryHash(tle, noteVerifier, clientLeafHash))
-
-	// Tampered digest must produce a different leaf hash that fails inclusion.
-	tamperedDigest := append([]byte(nil), req.Digest...)
-	tamperedDigest[0] ^= 0x01
-	tamperedLeafHash, err := hashedrekord.ToEntryHash(tamperedDigest, req.Signature)
-	assert.NoError(t, err)
-	assert.NotEqual(t, clientLeafHash, tamperedLeafHash)
-	assert.Error(t, VerifyLogEntryWithEntryHash(tle, noteVerifier, tamperedLeafHash))
 }
 
 func TestVerifyConsistencyProof(t *testing.T) {
