@@ -19,6 +19,7 @@ import (
 	"crypto"
 	"fmt"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
@@ -28,6 +29,8 @@ import (
 	"github.com/sigstore/rekor-tiles/v2/pkg/verifier/publickey"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/transparency-dev/merkle/rfc6962"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // ToLogEntry validates a request, verifies its signature, and converts it to a log entry type for inclusion in the log
@@ -62,6 +65,37 @@ func ToLogEntry(hr *pb.HashedRekordRequestV002, algorithmRegistry *signature.Alg
 			},
 		},
 	}, nil
+}
+
+// ToEntryHash reconstructs a HashedRekordLogEntryV002 from bundle-signed
+// inputs and returns its entry hash. Callers use this to verify an inclusion
+// proof without trusting the persisted canonicalized body.
+func ToEntryHash(digest []byte, sig *pb.Signature) ([]byte, error) {
+	algDetails, err := signature.GetAlgorithmDetails(sig.GetVerifier().GetKeyDetails())
+	if err != nil {
+		return nil, fmt.Errorf("getting key algorithm details: %w", err)
+	}
+	entry := &pb.Entry{
+		Kind:       "hashedrekord",
+		ApiVersion: "0.0.2",
+		Spec: &pb.Spec{
+			Spec: &pb.Spec_HashedRekordV002{
+				HashedRekordV002: &pb.HashedRekordLogEntryV002{
+					Data:      &v1.HashOutput{Digest: digest, Algorithm: algDetails.GetProtoHashType()},
+					Signature: sig,
+				},
+			},
+		},
+	}
+	serialized, err := protojson.Marshal(entry)
+	if err != nil {
+		return nil, fmt.Errorf("marshaling reconstructed entry: %w", err)
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(serialized)
+	if err != nil {
+		return nil, fmt.Errorf("canonicalizing reconstructed entry: %w", err)
+	}
+	return rfc6962.DefaultHasher.HashLeaf(canonicalized), nil
 }
 
 // validate validates there are no missing fields in a HashedRekordRequestV002 protobuf

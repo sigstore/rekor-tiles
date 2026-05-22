@@ -15,17 +15,29 @@
 package hashedrekord
 
 import (
+	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"math/big"
 	"testing"
+	"time"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-test/deep"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/transparency-dev/merkle/rfc6962"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
@@ -345,4 +357,127 @@ func b64DecodeOrDie(t *testing.T, msg string) []byte {
 		t.Fatal(err)
 	}
 	return decoded
+}
+
+func testCertDER(t *testing.T) []byte {
+	t.Helper()
+	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+	template := x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "leafhash-test"},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
+	require.NoError(t, err)
+	return der
+}
+
+func TestToEntryHashRoundTrip(t *testing.T) {
+	digest := bytes.Repeat([]byte{0xab}, 32)
+	sig := []byte("test-signature-bytes")
+
+	for _, tc := range []struct {
+		name     string
+		verifier *pb.Verifier
+	}{
+		{
+			name: "public key",
+			verifier: &pb.Verifier{
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+				Verifier: &pb.Verifier_PublicKey{
+					PublicKey: &pb.PublicKey{RawBytes: []byte("test-raw-public-key")},
+				},
+			},
+		},
+		{
+			name: "x509 certificate",
+			verifier: &pb.Verifier{
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+				Verifier: &pb.Verifier_X509Certificate{
+					X509Certificate: &v1.X509Certificate{RawBytes: testCertDER(t)},
+				},
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := ToEntryHash(digest, &pb.Signature{Content: sig, Verifier: tc.verifier})
+			assert.NoError(t, err)
+
+			entry := &pb.Entry{
+				Kind:       "hashedrekord",
+				ApiVersion: "0.0.2",
+				Spec: &pb.Spec{
+					Spec: &pb.Spec_HashedRekordV002{
+						HashedRekordV002: &pb.HashedRekordLogEntryV002{
+							Data: &v1.HashOutput{Digest: digest, Algorithm: v1.HashAlgorithm_SHA2_256},
+							Signature: &pb.Signature{
+								Content:  sig,
+								Verifier: tc.verifier,
+							},
+						},
+					},
+				},
+			}
+			serialized, err := protojson.Marshal(entry)
+			assert.NoError(t, err)
+			canonicalized, err := jsoncanonicalizer.Transform(serialized)
+			assert.NoError(t, err)
+			want := rfc6962.DefaultHasher.HashLeaf(canonicalized)
+
+			assert.Equal(t, want, got)
+		})
+	}
+}
+
+func TestToEntryHashChangesWithInputs(t *testing.T) {
+	type inputs struct {
+		digest     []byte
+		sig        []byte
+		verifierRB []byte
+		keyDetails v1.PublicKeyDetails
+		asCert     bool
+	}
+	base := inputs{
+		digest:     bytes.Repeat([]byte{0xab}, 32),
+		sig:        []byte("test-signature-bytes"),
+		verifierRB: []byte("test-raw-public-key"),
+		keyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+	}
+	hash := func(in inputs) []byte {
+		verifier := &pb.Verifier{KeyDetails: in.keyDetails}
+		if in.asCert {
+			verifier.Verifier = &pb.Verifier_X509Certificate{
+				X509Certificate: &v1.X509Certificate{RawBytes: in.verifierRB},
+			}
+		} else {
+			verifier.Verifier = &pb.Verifier_PublicKey{
+				PublicKey: &pb.PublicKey{RawBytes: in.verifierRB},
+			}
+		}
+		h, err := ToEntryHash(in.digest, &pb.Signature{Content: in.sig, Verifier: verifier})
+		assert.NoError(t, err)
+		return h
+	}
+	baseHash := hash(base)
+
+	for _, tc := range []struct {
+		name   string
+		mutate func(*inputs)
+	}{
+		{"digest", func(in *inputs) { in.digest = bytes.Repeat([]byte{0xcd}, 32) }},
+		{"signature", func(in *inputs) { in.sig = []byte("different-signature") }},
+		{"verifier raw bytes", func(in *inputs) { in.verifierRB = []byte("different-key") }},
+		{"verifier key details", func(in *inputs) { in.keyDetails = v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384 }},
+		{"verifier oneof variant", func(in *inputs) { in.asCert = true }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mutated := base
+			tc.mutate(&mutated)
+			assert.NotEqual(t, baseHash, hash(mutated), "entry hash should change when %s changes", tc.name)
+		})
+	}
 }

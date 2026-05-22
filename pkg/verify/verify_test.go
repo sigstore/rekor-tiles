@@ -377,7 +377,7 @@ func TestVerifyLogEntryWithLeafHash(t *testing.T) {
 // leaf" path producer-to-consumer: a HashedRekordRequestV002 is canonicalized
 // the same way the log service does, the resulting leaf hash anchors a signed
 // size-1 checkpoint, and the bundle-signed inputs are then re-fed through
-// hashedrekord.ReconstructLeafHash + VerifyLogEntryWithLeafHash. This catches
+// hashedrekord.ToEntryHash + VerifyLogEntryWithLeafHash. This catches
 // any future divergence between the client reconstruction and server
 // canonicalization (protojson field ordering, defaults, jsoncanonicalizer
 // behavior, etc.) that the isolated unit tests would silently miss.
@@ -464,7 +464,7 @@ func TestRecomputeLeafEndToEnd(t *testing.T) {
 		},
 	}
 
-	clientLeafHash, err := hashedrekord.ReconstructLeafHash(req.Digest, req.Signature)
+	clientLeafHash, err := hashedrekord.ToEntryHash(req.Digest, req.Signature)
 	assert.NoError(t, err)
 	assert.Equal(t, serverLeafHash, clientLeafHash, "client-reconstructed leaf hash must equal server-canonicalized leaf hash")
 
@@ -473,7 +473,7 @@ func TestRecomputeLeafEndToEnd(t *testing.T) {
 	// Tampered digest must produce a different leaf hash that fails inclusion.
 	tamperedDigest := append([]byte(nil), req.Digest...)
 	tamperedDigest[0] ^= 0x01
-	tamperedLeafHash, err := hashedrekord.ReconstructLeafHash(tamperedDigest, req.Signature)
+	tamperedLeafHash, err := hashedrekord.ToEntryHash(tamperedDigest, req.Signature)
 	assert.NoError(t, err)
 	assert.NotEqual(t, clientLeafHash, tamperedLeafHash)
 	assert.Error(t, VerifyLogEntryWithLeafHash(tle, noteVerifier, tamperedLeafHash))
