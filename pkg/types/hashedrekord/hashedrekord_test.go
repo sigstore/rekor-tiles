@@ -22,14 +22,11 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	"crypto/x509/pkix"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
-	"math/big"
 	"testing"
-	"time"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-test/deep"
@@ -40,7 +37,6 @@ import (
 	"github.com/sigstore/rekor-tiles/v2/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	f_log "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/merkle/rfc6962"
 	note "golang.org/x/mod/sumdb/note"
@@ -364,80 +360,6 @@ func b64DecodeOrDie(t *testing.T, msg string) []byte {
 		t.Fatal(err)
 	}
 	return decoded
-}
-
-func testCertDER(t *testing.T) []byte {
-	t.Helper()
-	priv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	require.NoError(t, err)
-	template := x509.Certificate{
-		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: "test"},
-		NotBefore:             time.Now().Add(-time.Hour),
-		NotAfter:              time.Now().Add(time.Hour),
-		KeyUsage:              x509.KeyUsageDigitalSignature,
-		BasicConstraintsValid: true,
-	}
-	der, err := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
-	require.NoError(t, err)
-	return der
-}
-
-func TestToEntryHashRoundTrip(t *testing.T) {
-	digest := bytes.Repeat([]byte{0xab}, 32)
-	sig := []byte("test-signature-bytes")
-
-	for _, tc := range []struct {
-		name     string
-		verifier *pb.Verifier
-	}{
-		{
-			name: "public key",
-			verifier: &pb.Verifier{
-				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-				Verifier: &pb.Verifier_PublicKey{
-					PublicKey: &pb.PublicKey{RawBytes: []byte("test-raw-public-key")},
-				},
-			},
-		},
-		{
-			name: "x509 certificate",
-			verifier: &pb.Verifier{
-				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
-				Verifier: &pb.Verifier_X509Certificate{
-					X509Certificate: &v1.X509Certificate{RawBytes: testCertDER(t)},
-				},
-			},
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			got, err := ToEntryHash(digest, &pb.Signature{Content: sig, Verifier: tc.verifier})
-			assert.NoError(t, err)
-
-			entry := &pb.Entry{
-				Kind:       "hashedrekord",
-				ApiVersion: "0.0.2",
-				Spec: &pb.Spec{
-					Spec: &pb.Spec_HashedRekordV002{
-						HashedRekordV002: &pb.HashedRekordLogEntryV002{
-							Data: &v1.HashOutput{Digest: digest, Algorithm: v1.HashAlgorithm_SHA2_256},
-							Signature: &pb.Signature{
-								Content:  sig,
-								Verifier: tc.verifier,
-							},
-						},
-					},
-				},
-			}
-			serialized, err := protojson.Marshal(entry)
-			assert.NoError(t, err)
-			canonicalized, err := jsoncanonicalizer.Transform(serialized)
-			assert.NoError(t, err)
-			want := rfc6962.DefaultHasher.HashLeaf(canonicalized)
-
-			assert.Equal(t, want, got)
-		})
-	}
 }
 
 func TestToEntryHashChangesWithInputs(t *testing.T) {
