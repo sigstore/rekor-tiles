@@ -68,11 +68,10 @@ func VerifyLogEntry(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifie
 	return VerifyInclusionProof(entry, cp)
 }
 
-// VerifyLogEntryWithLeafHash is like VerifyLogEntry but uses a caller-provided leaf hash
-// instead of hashing entry.CanonicalizedBody. Use this when the caller reconstructs the
-// canonicalized entry from independently-verified inputs (see rekor-v2-spec §6.1.4
-// "Recompute the leaf").
-func VerifyLogEntryWithLeafHash(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier, leafHash []byte) error { //nolint: revive
+// VerifyLogEntryWithEntryHash verifies a log entry's checkpoint signature and
+// inclusion proof using a caller-provided entry hash instead of hashing
+// entry.CanonicalizedBody.
+func VerifyLogEntryWithEntryHash(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier, entryHash []byte) error { //nolint: revive
 	cp, err := VerifyCheckpoint(entry.GetInclusionProof().GetCheckpoint().GetEnvelope(), verifier)
 	if err != nil {
 		return err
@@ -81,7 +80,7 @@ func VerifyLogEntryWithLeafHash(entry *pbs.TransparencyLogEntry, verifier sumdb_
 	if err != nil {
 		return fmt.Errorf("invalid index: %w", err)
 	}
-	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, index.U(), cp.Size, leafHash, entry.InclusionProof.Hashes, cp.Hash); err != nil {
+	if err := proof.VerifyInclusion(rfc6962.DefaultHasher, index.U(), cp.Size, entryHash, entry.InclusionProof.Hashes, cp.Hash); err != nil {
 		return fmt.Errorf("verifying inclusion: %w", err)
 	}
 	return nil
