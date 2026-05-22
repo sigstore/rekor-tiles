@@ -68,10 +68,10 @@ func VerifyLogEntry(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifie
 	return VerifyInclusionProof(entry, cp)
 }
 
-// VerifyLogEntryWithEntryHash verifies a log entry's checkpoint signature and
+// VerifyLogEntryWithHash verifies a log entry's checkpoint signature and
 // inclusion proof using a caller-provided entry hash instead of hashing
 // entry.CanonicalizedBody.
-func VerifyLogEntryWithEntryHash(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier, entryHash []byte) error { //nolint: revive
+func VerifyLogEntryWithHash(entry *pbs.TransparencyLogEntry, verifier sumdb_note.Verifier, entryHash []byte) error { //nolint: revive
 	cp, err := VerifyCheckpoint(entry.GetInclusionProof().GetCheckpoint().GetEnvelope(), verifier)
 	if err != nil {
 		return err

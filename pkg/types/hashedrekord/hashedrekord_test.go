@@ -372,7 +372,7 @@ func testCertDER(t *testing.T) []byte {
 	require.NoError(t, err)
 	template := x509.Certificate{
 		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: "leafhash-test"},
+		Subject:               pkix.Name{CommonName: "test"},
 		NotBefore:             time.Now().Add(-time.Hour),
 		NotAfter:              time.Now().Add(time.Hour),
 		KeyUsage:              x509.KeyUsageDigitalSignature,
@@ -574,12 +574,12 @@ func TestToEntryHashEndToEnd(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, serverEntryHash, clientEntryHash, "client-reconstructed entry hash must equal server-canonicalized entry hash")
 
-	assert.NoError(t, verify.VerifyLogEntryWithEntryHash(tle, noteVerifier, clientEntryHash))
+	assert.NoError(t, verify.VerifyLogEntryWithHash(tle, noteVerifier, clientEntryHash))
 
 	tamperedDigest := append([]byte(nil), req.Digest...)
 	tamperedDigest[0] ^= 0x01
 	tamperedEntryHash, err := ToEntryHash(tamperedDigest, req.Signature)
 	assert.NoError(t, err)
 	assert.NotEqual(t, clientEntryHash, tamperedEntryHash)
-	assert.Error(t, verify.VerifyLogEntryWithEntryHash(tle, noteVerifier, tamperedEntryHash))
+	assert.Error(t, verify.VerifyLogEntryWithHash(tle, noteVerifier, tamperedEntryHash))
 }

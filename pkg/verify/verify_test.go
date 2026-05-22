@@ -308,7 +308,7 @@ func TestVerifyLogEntry(t *testing.T) {
 	assert.NoError(t, gotErr)
 }
 
-func TestVerifyLogEntryWithEntryHash(t *testing.T) {
+func TestVerifyLogEntryWithHash(t *testing.T) {
 	hostname := "rekor.localhost"
 	hash := []byte{89, 165, 117, 241, 87, 39, 71, 2, 195, 141, 227, 171, 30, 23, 132, 34, 111, 57, 31, 183, 149, 0, 235, 249, 240, 43, 68, 57, 251, 119, 87, 76}
 	rootHash := []byte{91, 225, 117, 141, 210, 34, 138, 207, 175, 37, 70, 180, 182, 206, 138, 164, 12, 130, 163, 116, 143, 61, 203, 85, 14, 13, 103, 186, 52, 240, 42, 69}
@@ -350,19 +350,18 @@ func TestVerifyLogEntryWithEntryHash(t *testing.T) {
 		},
 	}
 
-	// Entry intentionally omits CanonicalizedBody to confirm the new function
-	// does not depend on it.
+	// Entry omits CanonicalizedBody — this function uses the caller-provided hash.
 	entry := &pbs.TransparencyLogEntry{
 		InclusionProof: proof,
 		LogIndex:       1,
 	}
 
-	leafHash := rfc6962.DefaultHasher.HashLeaf(body)
-	assert.NoError(t, VerifyLogEntryWithEntryHash(entry, noteVerifier, leafHash))
+	entryHash := rfc6962.DefaultHasher.HashLeaf(body)
+	assert.NoError(t, VerifyLogEntryWithHash(entry, noteVerifier, entryHash))
 
-	// Wrong leaf hash should fail inclusion verification.
-	wrongLeaf := rfc6962.DefaultHasher.HashLeaf([]byte("not the body"))
-	assert.Error(t, VerifyLogEntryWithEntryHash(entry, noteVerifier, wrongLeaf))
+	// Wrong entry hash should fail inclusion verification.
+	wrongEntryHash := rfc6962.DefaultHasher.HashLeaf([]byte("not the body"))
+	assert.Error(t, VerifyLogEntryWithHash(entry, noteVerifier, wrongEntryHash))
 }
 
 func TestVerifyConsistencyProof(t *testing.T) {
