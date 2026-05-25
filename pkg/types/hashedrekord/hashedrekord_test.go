@@ -15,17 +15,32 @@
 package hashedrekord
 
 import (
+	"bytes"
+	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
 	"testing"
 
+	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
 	"github.com/go-test/deep"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
+	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
+	"github.com/sigstore/rekor-tiles/v2/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
+	f_log "github.com/transparency-dev/formats/log"
+	"github.com/transparency-dev/merkle/rfc6962"
+	note "golang.org/x/mod/sumdb/note"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
@@ -345,4 +360,148 @@ func b64DecodeOrDie(t *testing.T, msg string) []byte {
 		t.Fatal(err)
 	}
 	return decoded
+}
+
+func TestToEntryHashChangesWithInputs(t *testing.T) {
+	type inputs struct {
+		digest     []byte
+		sig        []byte
+		verifierRB []byte
+		keyDetails v1.PublicKeyDetails
+		asCert     bool
+	}
+	base := inputs{
+		digest:     bytes.Repeat([]byte{0xab}, 32),
+		sig:        []byte("test-signature-bytes"),
+		verifierRB: []byte("test-raw-public-key"),
+		keyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+	}
+	hash := func(in inputs) []byte {
+		verifier := &pb.Verifier{KeyDetails: in.keyDetails}
+		if in.asCert {
+			verifier.Verifier = &pb.Verifier_X509Certificate{
+				X509Certificate: &v1.X509Certificate{RawBytes: in.verifierRB},
+			}
+		} else {
+			verifier.Verifier = &pb.Verifier_PublicKey{
+				PublicKey: &pb.PublicKey{RawBytes: in.verifierRB},
+			}
+		}
+		h, err := ToEntryHash(in.digest, &pb.Signature{Content: in.sig, Verifier: verifier})
+		assert.NoError(t, err)
+		return h
+	}
+	baseHash := hash(base)
+
+	for _, tc := range []struct {
+		name   string
+		mutate func(*inputs)
+	}{
+		{"digest", func(in *inputs) { in.digest = bytes.Repeat([]byte{0xcd}, 32) }},
+		{"signature", func(in *inputs) { in.sig = []byte("different-signature") }},
+		{"verifier raw bytes", func(in *inputs) { in.verifierRB = []byte("different-key") }},
+		{"verifier key details", func(in *inputs) { in.keyDetails = v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384 }},
+		{"verifier oneof variant", func(in *inputs) { in.asCert = true }},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mutated := base
+			tc.mutate(&mutated)
+			assert.NotEqual(t, baseHash, hash(mutated), "entry hash should change when %s changes", tc.name)
+		})
+	}
+}
+
+func TestToEntryHashEndToEnd(t *testing.T) {
+	hostname := "rekor.localhost"
+
+	privKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pubKeyDER, err := x509.MarshalPKIXPublicKey(privKey.Public())
+	if err != nil {
+		t.Fatal(err)
+	}
+	payloadDigest := sha256.Sum256([]byte("end-to-end test payload"))
+	sig, err := ecdsa.SignASN1(rand.Reader, privKey, payloadDigest[:])
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := &pb.HashedRekordRequestV002{
+		Digest: payloadDigest[:],
+		Signature: &pb.Signature{
+			Content: sig,
+			Verifier: &pb.Verifier{
+				Verifier: &pb.Verifier_PublicKey{
+					PublicKey: &pb.PublicKey{RawBytes: pubKeyDER},
+				},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+			},
+		},
+	}
+
+	algReg, err := signature.NewAlgorithmRegistryConfig([]v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256})
+	if err != nil {
+		t.Fatal(err)
+	}
+	logEntry, err := ToLogEntry(req, algReg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	serialized, err := protojson.Marshal(logEntry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonicalized, err := jsoncanonicalizer.Transform(serialized)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverEntryHash := rfc6962.DefaultHasher.HashLeaf(canonicalized)
+
+	cpSV, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+	noteSigner, err := rekornote.NewNoteSigner(context.Background(), hostname, cpSV)
+	if err != nil {
+		t.Fatal(err)
+	}
+	noteVerifier, err := rekornote.NewNoteVerifier(hostname, cpSV)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cpRaw := f_log.Checkpoint{
+		Origin: hostname,
+		Size:   1,
+		Hash:   serverEntryHash,
+	}.Marshal()
+	signedCp, err := note.Sign(&note.Note{Text: string(cpRaw)}, noteSigner)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tle := &pbs.TransparencyLogEntry{
+		LogIndex: 0,
+		InclusionProof: &pbs.InclusionProof{
+			LogIndex: 0,
+			TreeSize: 1,
+			Hashes:   [][]byte{},
+			Checkpoint: &pbs.Checkpoint{
+				Envelope: string(signedCp),
+			},
+		},
+	}
+
+	clientEntryHash, err := ToEntryHash(req.Digest, req.Signature)
+	assert.NoError(t, err)
+	assert.Equal(t, serverEntryHash, clientEntryHash, "client-reconstructed entry hash must equal server-canonicalized entry hash")
+
+	assert.NoError(t, verify.VerifyLogEntryWithHash(tle, noteVerifier, clientEntryHash))
+
+	tamperedDigest := append([]byte(nil), req.Digest...)
+	tamperedDigest[0] ^= 0x01
+	tamperedEntryHash, err := ToEntryHash(tamperedDigest, req.Signature)
+	assert.NoError(t, err)
+	assert.NotEqual(t, clientEntryHash, tamperedEntryHash)
+	assert.Error(t, verify.VerifyLogEntryWithHash(tle, noteVerifier, tamperedEntryHash))
 }

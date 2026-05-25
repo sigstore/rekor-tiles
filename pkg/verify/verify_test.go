@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	f_log "github.com/transparency-dev/formats/log"
 	f_note "github.com/transparency-dev/formats/note"
+	"github.com/transparency-dev/merkle/rfc6962"
 	note "golang.org/x/mod/sumdb/note"
 )
 
@@ -305,6 +306,62 @@ func TestVerifyLogEntry(t *testing.T) {
 
 	gotErr := VerifyLogEntry(entry, noteVerifier)
 	assert.NoError(t, gotErr)
+}
+
+func TestVerifyLogEntryWithHash(t *testing.T) {
+	hostname := "rekor.localhost"
+	hash := []byte{89, 165, 117, 241, 87, 39, 71, 2, 195, 141, 227, 171, 30, 23, 132, 34, 111, 57, 31, 183, 149, 0, 235, 249, 240, 43, 68, 57, 251, 119, 87, 76}
+	rootHash := []byte{91, 225, 117, 141, 210, 34, 138, 207, 175, 37, 70, 180, 182, 206, 138, 164, 12, 130, 163, 116, 143, 61, 203, 85, 14, 13, 103, 186, 52, 240, 42, 69}
+	body := []byte("{\"apiVersion\":\"0.0.1\",\"kind\":\"rekord\",\"spec\":{\"data\":{\"hash\":{\"algorithm\":\"sha256\",\"value\":\"ecdc5536f73bdae8816f0ea40726ef5e9b810d914493075903bb90623d97b1d8\"}},\"signature\":{\"content\":\"MEYCIQD/PdPQmKWC1+0BNEd5gKvQGr1xxl3ieUffv3jk1zzJKwIhALBj3xfAyWxlz4jpoIEIV1UfK9vnkUUOSoeZxBZPHKPC\",\"format\":\"x509\",\"publicKey\":{\"content\":\"LS0tLS1CRUdJTiBQVUJMSUMgS0VZLS0tLS0KTUZrd0V3WUhLb1pJemowQ0FRWUlLb1pJemowREFRY0RRZ0FFTU9jVGZSQlM5amlYTTgxRlo4Z20vMStvbWVNdwptbi8zNDcvNTU2Zy9scmlTNzJ1TWhZOUxjVCs1VUo2ZkdCZ2xyNVo4TDBKTlN1YXN5ZWQ5T3RhUnZ3PT0KLS0tLS1FTkQgUFVCTElDIEtFWS0tLS0tCg==\"}}}}")
+
+	sv, _, err := signature.NewDefaultECDSASignerVerifier()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noteVerifier, err := rekornote.NewNoteVerifier(hostname, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noteSigner, err := rekornote.NewNoteSigner(context.Background(), hostname, sv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cpRaw := f_log.Checkpoint{
+		Origin: hostname,
+		Size:   uint64(2),
+		Hash:   rootHash,
+	}.Marshal()
+
+	n, err := note.Sign(&note.Note{Text: string(cpRaw)}, noteSigner)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	proof := &pbs.InclusionProof{
+		LogIndex: 1,
+		TreeSize: 2,
+		Hashes: [][]byte{
+			[]byte(hash),
+		},
+		Checkpoint: &pbs.Checkpoint{
+			Envelope: string(n),
+		},
+	}
+
+	// Entry omits CanonicalizedBody — this function uses the caller-provided hash.
+	entry := &pbs.TransparencyLogEntry{
+		InclusionProof: proof,
+		LogIndex:       1,
+	}
+
+	entryHash := rfc6962.DefaultHasher.HashLeaf(body)
+	assert.NoError(t, VerifyLogEntryWithHash(entry, noteVerifier, entryHash))
+
+	// Wrong entry hash should fail inclusion verification.
+	wrongEntryHash := rfc6962.DefaultHasher.HashLeaf([]byte("not the body"))
+	assert.Error(t, VerifyLogEntryWithHash(entry, noteVerifier, wrongEntryHash))
 }
 
 func TestVerifyConsistencyProof(t *testing.T) {
