@@ -48,7 +48,7 @@ services:
       "
 
   mysql:
-    image: mysql:8.0@sha256:4af1f8815716546f5b12410f7621f37f93db8dd11a184706ef59111930b8c2ff
+    image: mysql:9.7@sha256:c11782aa2a96624c1efc121768641d96954faa136d6aa82751b032d8c426ffbc
     ports:
       - "3306:3306"
     environment:
