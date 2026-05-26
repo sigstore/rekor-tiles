@@ -62,7 +62,7 @@ GOBIN = $(abspath ./tools/bin)
 STORAGE_BACKEND ?= gcp
 
 lint:
-	go tool addlicense -l apache -c "The Sigstore Authors" -ignore "third_party/**" -v *
+	go tool addlicense -l apache -c "The Sigstore Authors" -ignore "third_party/**" -ignore "tests/testdata/**" -v *
 	go tool goimports -w $(SRC)
 	docker run -t --rm -v $(PWD):/app -w /app \
 		--user $(shell id -u):$(shell id -g) \
