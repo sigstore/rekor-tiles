@@ -46,7 +46,7 @@ func TestNewWriter(t *testing.T) {
 			name: "no options",
 			expected: &writeClient{
 				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
-				client:  &http.Client{Transport: http.DefaultTransport},
+				client:  &http.Client{Transport: http.DefaultTransport, Timeout: 30 * time.Second},
 			},
 		},
 		{
@@ -56,7 +56,7 @@ func TestNewWriter(t *testing.T) {
 			},
 			expected: &writeClient{
 				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
-				client:  &http.Client{Transport: client.CreateRoundTripper(nil, "test")},
+				client:  &http.Client{Transport: client.CreateRoundTripper(nil, "test"), Timeout: 30 * time.Second},
 			},
 		},
 		{
@@ -278,4 +278,34 @@ func marshalJSONOrDie(t *testing.T, obj any) []byte {
 		t.Fatal(err)
 	}
 	return marshaledResp
+}
+
+func TestAdd_ResponseExceedsLimit(t *testing.T) {
+	ctx := context.Background()
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusCreated)
+			// Write 10MB + 1 byte
+			w.Write(make([]byte, 10*1024*1024+1))
+		}))
+	defer server.Close()
+
+	client, err := NewWriter(server.URL)
+	assert.NoError(t, err)
+
+	entry := &pb.HashedRekordRequestV002{
+		Signature: &pb.Signature{
+			Content: []byte("sig"),
+			Verifier: &pb.Verifier{
+				Verifier: &pb.Verifier_PublicKey{
+					PublicKey: &pb.PublicKey{RawBytes: []byte("key")},
+				},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+			},
+		},
+		Digest: []byte("digest"),
+	}
+
+	_, gotErr := client.Add(ctx, entry)
+	assert.Error(t, gotErr)
 }
