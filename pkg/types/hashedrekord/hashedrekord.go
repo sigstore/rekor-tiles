@@ -49,7 +49,13 @@ func ToLogEntry(hr *pb.HashedRekordRequestV002, algorithmRegistry *signature.Alg
 		return nil, err
 	}
 
-	if err := verifySignature(hr, v, algDetails.GetHashType()); err != nil {
+	hashAlg := algDetails.GetHashType()
+	expectedSize := hashAlg.Size()
+	if len(hr.Digest) != expectedSize {
+		return nil, fmt.Errorf("digest length (%d) does not match expected size (%d) for algorithm %s", len(hr.Digest), expectedSize, hashAlg.String())
+	}
+
+	if err := verifySignature(hr, v, hashAlg); err != nil {
 		return nil, err
 	}
 

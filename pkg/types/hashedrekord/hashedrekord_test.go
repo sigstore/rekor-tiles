@@ -322,6 +322,42 @@ func TestToLogEntry(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "mismatched digest length (too short)",
+			hashedrekord: &pb.HashedRekordRequestV002{
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+					},
+				},
+				Digest: []byte{0xab},
+			},
+			expectErr: fmt.Errorf("digest length (1) does not match expected size (32) for algorithm SHA-256"),
+		},
+		{
+			name: "mismatched digest length (too long)",
+			hashedrekord: &pb.HashedRekordRequestV002{
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+					},
+				},
+				Digest: bytes.Repeat([]byte{0xab}, 33),
+			},
+			expectErr: fmt.Errorf("digest length (33) does not match expected size (32) for algorithm SHA-256"),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {

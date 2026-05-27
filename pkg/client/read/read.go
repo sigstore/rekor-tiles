@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/sigstore/rekor-tiles/v2/pkg/client"
 	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
@@ -27,6 +28,10 @@ import (
 	"github.com/transparency-dev/formats/log"
 	tclient "github.com/transparency-dev/tessera/client"
 	"golang.org/x/mod/sumdb/note"
+)
+
+const (
+	defaultTimeout = 30 * time.Second
 )
 
 // Client reads checkpoints, tiles, and entry bundles from the tile storage service.
@@ -63,9 +68,13 @@ func NewReader(readURL, origin string, verifier signature.Verifier, opts ...clie
 			TLSClientConfig: cfg.TLSConfig,
 		}
 	}
+	timeout := cfg.Timeout
+	if timeout == 0 {
+		timeout = defaultTimeout
+	}
 	httpClient := &http.Client{
 		Transport: client.CreateRoundTripper(transport, cfg.UserAgent),
-		Timeout:   cfg.Timeout,
+		Timeout:   timeout,
 	}
 	tileClient, err := tclient.NewHTTPFetcher(baseURL, httpClient)
 	if err != nil {
