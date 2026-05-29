@@ -28,6 +28,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
 	"os/exec"
 	"strings"
 	"testing"
@@ -44,6 +45,7 @@ import (
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	dsset "github.com/sigstore/rekor-tiles/v2/pkg/types/dsse"
 	"github.com/sigstore/rekor-tiles/v2/pkg/verify"
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
 	sigdsse "github.com/sigstore/sigstore/pkg/signature/dsse"
 	"github.com/stretchr/testify/assert"
@@ -52,7 +54,6 @@ import (
 	"github.com/transparency-dev/merkle/rfc6962"
 	"github.com/transparency-dev/tessera/api"
 	"github.com/transparency-dev/tessera/api/layout"
-	"go.step.sm/crypto/pemutil"
 	signednote "golang.org/x/mod/sumdb/note"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/protobuf/encoding/protojson"
@@ -150,7 +151,11 @@ func testReadWrite(t *testing.T, config backendConfig) {
 	ctx := context.Background()
 
 	// get verifier needed for both read and write
-	serverPubKey, err := pemutil.Read(defaultServerPublicKey)
+	serverPubKeyPEM, err := os.ReadFile(defaultServerPublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverPubKey, err := cryptoutils.UnmarshalPEMToPublicKey(serverPubKeyPEM)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,7 +320,11 @@ func testReadWrite(t *testing.T, config backendConfig) {
 func testUnimplementedReadMethods(t *testing.T, config backendConfig) {
 	ctx := context.Background()
 
-	serverPubKey, err := pemutil.Read(defaultServerPublicKey)
+	serverPubKeyPEM, err := os.ReadFile(defaultServerPublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	serverPubKey, err := cryptoutils.UnmarshalPEMToPublicKey(serverPubKeyPEM)
 	if err != nil {
 		t.Fatal(err)
 	}

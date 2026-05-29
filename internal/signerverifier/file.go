@@ -20,9 +20,10 @@ package signerverifier
 
 import (
 	"fmt"
+	"os"
 
+	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"go.step.sm/crypto/pemutil"
 )
 
 // File is a file-based signer/verifier.
@@ -32,7 +33,12 @@ type File struct {
 
 // NewFileSignerVerifier returns an file-based signer-verifier, used for spinning up local instances.
 func NewFileSignerVerifier(keyPath, keyPass string) (*File, error) {
-	opaqueKey, err := pemutil.Read(keyPath, pemutil.WithPassword([]byte(keyPass)))
+	data, err := os.ReadFile(keyPath)
+	if err != nil {
+		return nil, fmt.Errorf("file: failed to read key file %s: %w", keyPath, err)
+	}
+
+	opaqueKey, err := cryptoutils.UnmarshalPEMToPrivateKey(data, cryptoutils.StaticPasswordFunc([]byte(keyPass)))
 	if err != nil {
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
 	}
