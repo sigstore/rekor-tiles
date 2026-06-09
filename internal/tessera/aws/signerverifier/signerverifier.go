@@ -24,10 +24,11 @@ import (
 	"fmt"
 	"strings"
 
+	"slices"
+
 	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
-	"golang.org/x/exp/slices"
 
 	// these are imported to load the providers via init() calls
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
