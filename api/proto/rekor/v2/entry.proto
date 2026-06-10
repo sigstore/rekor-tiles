@@ -43,7 +43,7 @@ message Entry {
 message Spec {
     oneof spec {
         HashedRekordLogEntryV002 hashed_rekord_v002 = 1 [(google.api.field_behavior) = REQUIRED];
-        DSSELogEntryV002 dsse_v002  = 2 [(google.api.field_behavior) = REQUIRED];
+        DSSELogEntryV002 dsse_v002  = 2 [deprecated = true];
     }
 }
 
@@ -51,6 +51,6 @@ message Spec {
 message CreateEntryRequest {
     oneof spec {
         HashedRekordRequestV002 hashed_rekord_request_v002 = 1 [(google.api.field_behavior) = REQUIRED];
-        DSSERequestV002 dsse_request_v002 = 2 [(google.api.field_behavior) = REQUIRED];
+        DSSERequestV002 dsse_request_v002 = 2 [deprecated = true];
     }
 }
