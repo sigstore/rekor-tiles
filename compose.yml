@@ -103,7 +103,6 @@ services:
       - "--db_file=/witness_data/witness.sqlite"
       - "--private_key_path=/witness_config/private.key"
       - "--additional_logs=/witness_config/config.yaml"
-      - "--poll_interval=0"
       - "--logtostderr"
       - "--v=2"
     restart: always
