@@ -22,6 +22,7 @@ import "sigstore_rekor.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
 import "rekor/v2/entry.proto";
+import "rekor/v2/identity.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf";
 
@@ -63,6 +64,14 @@ service Rekor {
     rpc CreateEntry (CreateEntryRequest) returns (dev.sigstore.rekor.v1.TransparencyLogEntry) {
         option (google.api.http) = {
             post: "/api/v2/log/entries"
+            body: "*"
+        };
+    }
+
+    // Create an identity entry in the log
+    rpc CreateIdentityEntry (IdentityRequestV001) returns (google.api.HttpBody) {
+        option (google.api.http) = {
+            post: "/api/v2/log/identities"
             body: "*"
         };
     }

@@ -36,10 +36,11 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Rekor_CreateEntry_FullMethodName    = "/dev.sigstore.rekor.v2.Rekor/CreateEntry"
-	Rekor_GetTile_FullMethodName        = "/dev.sigstore.rekor.v2.Rekor/GetTile"
-	Rekor_GetEntryBundle_FullMethodName = "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle"
-	Rekor_GetCheckpoint_FullMethodName  = "/dev.sigstore.rekor.v2.Rekor/GetCheckpoint"
+	Rekor_CreateEntry_FullMethodName         = "/dev.sigstore.rekor.v2.Rekor/CreateEntry"
+	Rekor_CreateIdentityEntry_FullMethodName = "/dev.sigstore.rekor.v2.Rekor/CreateIdentityEntry"
+	Rekor_GetTile_FullMethodName             = "/dev.sigstore.rekor.v2.Rekor/GetTile"
+	Rekor_GetEntryBundle_FullMethodName      = "/dev.sigstore.rekor.v2.Rekor/GetEntryBundle"
+	Rekor_GetCheckpoint_FullMethodName       = "/dev.sigstore.rekor.v2.Rekor/GetCheckpoint"
 )
 
 // RekorClient is the client API for Rekor service.
@@ -51,6 +52,8 @@ const (
 type RekorClient interface {
 	// Create an entry in the log
 	CreateEntry(ctx context.Context, in *CreateEntryRequest, opts ...grpc.CallOption) (*v1.TransparencyLogEntry, error)
+	// Create an identity entry in the log
+	CreateIdentityEntry(ctx context.Context, in *IdentityRequestV001, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 	// Get a tile from the log
 	GetTile(ctx context.Context, in *TileRequest, opts ...grpc.CallOption) (*httpbody.HttpBody, error)
 	// Get an entry bundle from the log
@@ -71,6 +74,16 @@ func (c *rekorClient) CreateEntry(ctx context.Context, in *CreateEntryRequest, o
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(v1.TransparencyLogEntry)
 	err := c.cc.Invoke(ctx, Rekor_CreateEntry_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *rekorClient) CreateIdentityEntry(ctx context.Context, in *IdentityRequestV001, opts ...grpc.CallOption) (*httpbody.HttpBody, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(httpbody.HttpBody)
+	err := c.cc.Invoke(ctx, Rekor_CreateIdentityEntry_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +129,8 @@ func (c *rekorClient) GetCheckpoint(ctx context.Context, in *emptypb.Empty, opts
 type RekorServer interface {
 	// Create an entry in the log
 	CreateEntry(context.Context, *CreateEntryRequest) (*v1.TransparencyLogEntry, error)
+	// Create an identity entry in the log
+	CreateIdentityEntry(context.Context, *IdentityRequestV001) (*httpbody.HttpBody, error)
 	// Get a tile from the log
 	GetTile(context.Context, *TileRequest) (*httpbody.HttpBody, error)
 	// Get an entry bundle from the log
@@ -134,6 +149,9 @@ type UnimplementedRekorServer struct{}
 
 func (UnimplementedRekorServer) CreateEntry(context.Context, *CreateEntryRequest) (*v1.TransparencyLogEntry, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateEntry not implemented")
+}
+func (UnimplementedRekorServer) CreateIdentityEntry(context.Context, *IdentityRequestV001) (*httpbody.HttpBody, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CreateIdentityEntry not implemented")
 }
 func (UnimplementedRekorServer) GetTile(context.Context, *TileRequest) (*httpbody.HttpBody, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetTile not implemented")
@@ -179,6 +197,24 @@ func _Rekor_CreateEntry_Handler(srv interface{}, ctx context.Context, dec func(i
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(RekorServer).CreateEntry(ctx, req.(*CreateEntryRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Rekor_CreateIdentityEntry_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IdentityRequestV001)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(RekorServer).CreateIdentityEntry(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Rekor_CreateIdentityEntry_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(RekorServer).CreateIdentityEntry(ctx, req.(*IdentityRequestV001))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -247,6 +283,10 @@ var Rekor_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateEntry",
 			Handler:    _Rekor_CreateEntry_Handler,
+		},
+		{
+			MethodName: "CreateIdentityEntry",
+			Handler:    _Rekor_CreateIdentityEntry_Handler,
 		},
 		{
 			MethodName: "GetTile",
