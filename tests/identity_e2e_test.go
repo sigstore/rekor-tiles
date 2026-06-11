@@ -118,7 +118,7 @@ func testIdentityReadWrite(t *testing.T, config backendConfig) {
 	b, err := protojson.Marshal(req)
 	assert.NoError(t, err)
 
-	url := fmt.Sprintf("%s/api/v2/log/identities", config.ServerURL)
+	url := fmt.Sprintf("%s/api/v2/log/entries", config.ServerURL)
 	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
 	assert.NoError(t, err)
 	httpReq.Header.Set("Content-Type", "application/json")

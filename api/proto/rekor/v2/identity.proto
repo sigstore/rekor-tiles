@@ -54,5 +54,3 @@ message ContextEntry {
     // Must be a SHA-256 digest of the value.
     bytes value = 2 [(google.api.field_behavior) = REQUIRED];
 }
-
-

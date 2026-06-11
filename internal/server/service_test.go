@@ -16,15 +16,10 @@ package server
 
 import (
 	"context"
-	"crypto/ed25519"
-	"crypto/rand"
-	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
 	"fmt"
 	"testing"
-
-	"github.com/sigstore/sigstore/pkg/cryptoutils"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
@@ -252,150 +247,6 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 				s, ok := status.FromError(gotErr)
 				assert.True(t, ok)
 				assert.Equal(t, s.Code(), test.expectedCode)
-				assert.ErrorContains(t, gotErr, test.expectError.Error())
-			}
-		})
-	}
-}
-
-func TestCreateIdentityEntry(t *testing.T) {
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	pubBytes, err := cryptoutils.MarshalPublicKeyToDER(pub)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	msgHash := sha256.Sum256([]byte("hello world"))
-	payload := []byte("c2sp.org/identity-transparency/v1\x00")
-	msgDoubleHash := sha256.Sum256(msgHash[:])
-	payload = append(payload, msgDoubleHash[:]...)
-	sig := ed25519.Sign(priv, payload)
-
-	tests := []struct {
-		name                    string
-		req                     *pb.IdentityRequestV001
-		addFn                   func() (*rekor_pb.TransparencyLogEntry, error)
-		clientSigningAlgorithms []string
-		expectError             error
-		expectedCode            codes.Code
-		identityMode            bool
-	}{
-		{
-			name: "server not in identity mode",
-			req:  &pb.IdentityRequestV001{},
-			addFn: func() (*rekor_pb.TransparencyLogEntry, error) {
-				return &rekor_pb.TransparencyLogEntry{}, nil
-			},
-			clientSigningAlgorithms: []string{"ed25519"},
-			expectError:             fmt.Errorf("server is not running in identity mode"),
-			expectedCode:            codes.Unimplemented,
-			identityMode:            false,
-		},
-		{
-			name: "valid request",
-			req: &pb.IdentityRequestV001{
-				Credential: &pb.IdentityRequestV001_PublicKey{
-					PublicKey: &pb.PublicKeyCredential{
-						PublicKey: pubBytes,
-						Signature: sig,
-					},
-				},
-				Message: msgHash[:],
-			},
-			addFn: func() (*rekor_pb.TransparencyLogEntry, error) {
-				return &rekor_pb.TransparencyLogEntry{
-					InclusionProof: &rekor_pb.InclusionProof{
-						LogIndex:   1,
-						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint"},
-					},
-				}, nil
-			},
-			clientSigningAlgorithms: []string{"ed25519"},
-			identityMode:            true,
-		},
-		{
-			name: "failed validation",
-			req: &pb.IdentityRequestV001{
-				Credential: &pb.IdentityRequestV001_PublicKey{
-					PublicKey: &pb.PublicKeyCredential{
-						PublicKey: pubBytes,
-						Signature: sig,
-					},
-				},
-				Message: make([]byte, 31), // invalid message length
-			},
-			addFn: func() (*rekor_pb.TransparencyLogEntry, error) {
-				return &rekor_pb.TransparencyLogEntry{}, nil
-			},
-			clientSigningAlgorithms: []string{"ed25519"},
-			expectError:             fmt.Errorf("invalid identity request"),
-			expectedCode:            codes.InvalidArgument,
-			identityMode:            true,
-		},
-		{
-			name: "failed integration",
-			req: &pb.IdentityRequestV001{
-				Credential: &pb.IdentityRequestV001_PublicKey{
-					PublicKey: &pb.PublicKeyCredential{
-						PublicKey: pubBytes,
-						Signature: sig,
-					},
-				},
-				Message: msgHash[:],
-			},
-			addFn: func() (*rekor_pb.TransparencyLogEntry, error) {
-				return nil, fmt.Errorf("timed out")
-			},
-			clientSigningAlgorithms: []string{"ed25519"},
-			expectError:             fmt.Errorf("failed to integrate entry"),
-			expectedCode:            codes.Unknown,
-			identityMode:            true,
-		},
-		{
-			name: "inclusion proof verification failure",
-			req: &pb.IdentityRequestV001{
-				Credential: &pb.IdentityRequestV001_PublicKey{
-					PublicKey: &pb.PublicKeyCredential{
-						PublicKey: pubBytes,
-						Signature: sig,
-					},
-				},
-				Message: msgHash[:],
-			},
-			addFn: func() (*rekor_pb.TransparencyLogEntry, error) {
-				return nil, tessera.InclusionProofVerificationError{}
-			},
-			clientSigningAlgorithms: []string{"ed25519"},
-			expectError:             fmt.Errorf("failed to integrate entry"),
-			expectedCode:            codes.Unknown,
-			identityMode:            true,
-		},
-	}
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			storage := &mockStorage{addFn: test.addFn}
-			algReg, err := algorithmregistry.AlgorithmRegistry(test.clientSigningAlgorithms)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var server *Server
-			if test.identityMode {
-				server = NewIdentityServer(storage, false, algReg, []byte{1})
-			} else {
-				server = NewServer(storage, false, algReg, []byte{1})
-			}
-			gotBody, gotErr := server.CreateIdentityEntry(context.Background(), test.req)
-			if test.expectError == nil {
-				assert.NoError(t, gotErr)
-				assert.NotNil(t, gotBody)
-				assert.Equal(t, "text/plain", gotBody.ContentType)
-			} else {
-				s, ok := status.FromError(gotErr)
-				assert.True(t, ok)
-				assert.Equal(t, test.expectedCode, s.Code())
 				assert.ErrorContains(t, gotErr, test.expectError.Error())
 			}
 		})

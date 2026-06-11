@@ -85,39 +85,6 @@
         ]
       }
     },
-    "/api/v2/log/identities": {
-      "post": {
-        "summary": "Create an identity entry in the log",
-        "operationId": "Rekor_CreateIdentityEntry",
-        "responses": {
-          "200": {
-            "description": "A successful response.",
-            "schema": {
-              "$ref": "#/definitions/apiHttpBody"
-            }
-          },
-          "default": {
-            "description": "An unexpected error response.",
-            "schema": {
-              "$ref": "#/definitions/rpcStatus"
-            }
-          }
-        },
-        "parameters": [
-          {
-            "name": "body",
-            "in": "body",
-            "required": true,
-            "schema": {
-              "$ref": "#/definitions/v2IdentityRequestV001"
-            }
-          }
-        ],
-        "tags": [
-          "Rekor"
-        ]
-      }
-    },
     "/api/v2/tile/entries/{N}": {
       "get": {
         "summary": "Get an entry bundle from the log",
@@ -498,25 +465,6 @@
         "rawBytes"
       ]
     },
-    "v2ContextEntry": {
-      "type": "object",
-      "properties": {
-        "key": {
-          "type": "string",
-          "format": "byte",
-          "description": "Must be a SHA-256 digest of the key."
-        },
-        "value": {
-          "type": "string",
-          "format": "byte",
-          "description": "Must be a SHA-256 digest of the value."
-        }
-      },
-      "required": [
-        "key",
-        "value"
-      ]
-    },
     "v2CreateEntryRequest": {
       "type": "object",
       "properties": {
@@ -566,50 +514,6 @@
       "title": "A request to add a hashedrekord v0.0.2 to the log",
       "required": [
         "digest",
-        "signature"
-      ]
-    },
-    "v2IdentityRequestV001": {
-      "type": "object",
-      "properties": {
-        "publicKey": {
-          "$ref": "#/definitions/v2PublicKeyCredential"
-        },
-        "message": {
-          "type": "string",
-          "format": "byte",
-          "description": "Must be a SHA-256 digest of data."
-        },
-        "context": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "$ref": "#/definitions/v2ContextEntry"
-          },
-          "description": "Optional mapping of hashed context keys to hashed values.\nLimited to 20 context strings."
-        }
-      },
-      "title": "A request to add an identity-based transparency log entry (v0.0.1)",
-      "required": [
-        "message"
-      ]
-    },
-    "v2PublicKeyCredential": {
-      "type": "object",
-      "properties": {
-        "publicKey": {
-          "type": "string",
-          "format": "byte",
-          "description": "The public key used to verify the signature.\nMUST be an Ed25519 public key (SPKI DER-encoded)."
-        },
-        "signature": {
-          "type": "string",
-          "format": "byte",
-          "description": "The signature computed over the specification identifier, checksum, and context strings,\nas defined by the c2sp.org/identity-transparency specification."
-        }
-      },
-      "required": [
-        "publicKey",
         "signature"
       ]
     },

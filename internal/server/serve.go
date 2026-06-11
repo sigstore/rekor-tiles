@@ -23,7 +23,7 @@ import (
 )
 
 // Serve starts the grpc server and its http proxy.
-func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, tesseraTimeout time.Duration, s rekorServer, tesseraShutdownFn func(context.Context) error) {
+func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, tesseraTimeout time.Duration, s any, tesseraShutdownFn func(context.Context) error) {
 	var wg sync.WaitGroup
 
 	if hc.port == 0 || gc.port == 0 {
