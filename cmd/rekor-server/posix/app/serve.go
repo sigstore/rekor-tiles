@@ -28,6 +28,7 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/fulcio/pkg/config"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/cli"
 	"github.com/sigstore/rekor-tiles/v2/internal/server"
@@ -141,12 +142,29 @@ func runServer(cmd *cobra.Command, isIdentity bool) {
 	}
 	var rekorServer server.Registrar
 	if isIdentity {
+		oidcConfigPath := viper.GetString("oidc-config")
+		if oidcConfigPath == "" {
+			slog.Error("--oidc-config must be set")
+			os.Exit(1)
+		}
+		f, err := os.ReadFile(oidcConfigPath)
+		if err != nil {
+			slog.Error("failed to read oidc config file", "file", oidcConfigPath, "error", err)
+			os.Exit(1)
+		}
+		oidcConfig, err := config.Read(f)
+		if err != nil {
+			slog.Error("failed to load oidc config", "error", err)
+			os.Exit(1)
+		}
+		slog.Info("OIDC config loaded", "path", oidcConfigPath)
+
 		algorithmRegistry, err := algorithmregistry.IdentityAlgorithmRegistry(viper.GetStringSlice("client-signing-algorithms"))
 		if err != nil {
 			slog.Error("failed to get algorithm registry", "error", err)
 			os.Exit(1)
 		}
-		rekorServer = server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry)
+		rekorServer = server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry, oidcConfig)
 	} else {
 		// Compute log ID for TransparencyLogEntry, to be used by clients to look up
 		// the correct instance in a trust root. Log ID is equivalent to the non-truncated

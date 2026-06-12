@@ -15,14 +15,21 @@
 package identity_v1
 
 import (
+	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
+	"fmt"
+	"slices"
 	"testing"
 
+	"github.com/sigstore/fulcio/pkg/config"
+	"github.com/sigstore/fulcio/pkg/server"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/stretchr/testify/assert"
@@ -75,15 +82,16 @@ func TestToLogEntry(t *testing.T) {
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
-	leafBytes, err := ToLogEntry(req, algReg)
+	leafBytes, extraData, err := ToLogEntry(context.Background(), req, algReg, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, leafBytes)
 	assert.Len(t, leafBytes, 1+4*sha256.Size+sha256.Size)
 	assert.Equal(t, LeafVersion, leafBytes[0])
+	assert.Equal(t, fmt.Appendf(nil, "%s:%s", ContextKeyName, hex.EncodeToString(req.GetPublicKey().GetContext())), extraData)
 
 	rootOfTrust := append([]byte("Ed25519"), req.GetPublicKey().GetPublicKey()...)
-	rootPubKeyHash := sha256.Sum256(rootOfTrust)
-	assert.Equal(t, rootPubKeyHash[:], leafBytes[1:33]) // H(RoT) comes first after version byte
+	rootOfTrustHash := sha256.Sum256(rootOfTrust)
+	assert.Equal(t, rootOfTrustHash[:], leafBytes[1:33]) // H(RoT) comes first after version byte
 
 	msgHash := sha256.Sum256(req.GetMessage())
 	assert.Equal(t, msgHash[:], leafBytes[33:65]) // H(H(data)) comes second after version byte
@@ -125,8 +133,9 @@ func TestToLogEntry_NoContext(t *testing.T) {
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
-	leafBytes, err := ToLogEntry(req, algReg)
+	leafBytes, extraData, err := ToLogEntry(context.Background(), req, algReg, nil)
 	assert.NoError(t, err)
+	assert.Nil(t, extraData)
 	assert.Len(t, leafBytes, 1+3*sha256.Size)
 	assert.Equal(t, LeafVersion, leafBytes[0])
 
@@ -142,7 +151,7 @@ func TestToLogEntry_InvalidSignature(t *testing.T) {
 	// Invalidate the signature by flipping the first byte
 	req.GetPublicKey().Signature[0] ^= 0xFF
 
-	leafBytes, err := ToLogEntry(req, algReg)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid signature")
 	assert.Nil(t, leafBytes)
@@ -155,7 +164,7 @@ func TestToLogEntry_InvalidSignatureLength(t *testing.T) {
 
 	req.GetPublicKey().Signature = []byte("short-sig")
 
-	leafBytes, err := ToLogEntry(req, algReg)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid signature length, must be 64 bytes for Ed25519")
 	assert.Nil(t, leafBytes)
@@ -167,7 +176,7 @@ func TestToLogEntry_UnsupportedAlgorithm(t *testing.T) {
 	algReg, err := algorithmregistry.AlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
-	leafBytes, err := ToLogEntry(req, algReg)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported entry algorithm for Ed25519 key, digest none")
 	assert.Nil(t, leafBytes)
@@ -180,7 +189,7 @@ func TestToLogEntry_InvalidPublicKey(t *testing.T) {
 
 	req.GetPublicKey().PublicKey = []byte("not-valid-der")
 
-	leafBytes, err := ToLogEntry(req, algReg)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to parse public key")
 	assert.Nil(t, leafBytes)
@@ -197,12 +206,12 @@ func TestToLogEntry_NonEd25519Key(t *testing.T) {
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
-	leafBytes, err := ToLogEntry(req, algReg)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported entry algorithm for ECDSA key, curve P-256, digest none")
 	assert.Nil(t, leafBytes)
 
-	leafBytes, err = ToLogEntry(req, nil)
+	leafBytes, _, err = ToLogEntry(context.Background(), req, nil, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "public key is not an Ed25519 key")
 	assert.Nil(t, leafBytes)
@@ -287,7 +296,7 @@ func TestToEntryHash(t *testing.T) {
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
-	leafBytes, err := ToLogEntry(req, algReg)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
 	assert.NoError(t, err)
 
 	expectedHash := rfc6962.DefaultHasher.HashLeaf(leafBytes)
@@ -295,4 +304,173 @@ func TestToEntryHash(t *testing.T) {
 	h, err := ToEntryHash(req.GetPublicKey().GetPublicKey(), req.GetPublicKey().GetSignature(), req.Message, req.GetPublicKey().GetContext())
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHash, h)
+}
+
+func TestValidate_OidcEmptyToken(t *testing.T) {
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_Oidc{
+			Oidc: &pb.OidcCredential{
+				Token: "",
+			},
+		},
+		Message: bytes.Repeat([]byte{0x00}, 32),
+	}
+
+	err := validate(req)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "oidc token is empty")
+}
+
+func TestToLogEntry_OidcInvalidToken(t *testing.T) {
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_Oidc{
+			Oidc: &pb.OidcCredential{
+				Token: "invalid.token.here",
+			},
+		},
+		Message: bytes.Repeat([]byte{0x00}, 32),
+	}
+
+	leafBytes, _, err := ToLogEntry(context.Background(), req, nil, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "oidc config must be provided")
+	assert.Nil(t, leafBytes)
+
+	cfg, err := config.Read([]byte("{}"))
+	assert.NoError(t, err)
+	ctx := config.With(context.Background(), cfg)
+	pool := server.NewIssuerPool(cfg)
+
+	leafBytes, _, err = ToLogEntry(ctx, req, nil, pool)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to authenticate token")
+	assert.Nil(t, leafBytes)
+}
+
+func TestToLogEntry_OidcValid(t *testing.T) {
+	ctx := context.Background()
+	m := newMockOIDC(t)
+	defer m.server.Close()
+
+	cfgJSON := fmt.Sprintf(`{
+		"OIDCIssuers": {
+			"%s": {
+				"IssuerURL": "%s",
+				"ClientID":  "sigstore",
+				"Type":      "email"
+			}
+		}
+	}`, m.server.URL, m.server.URL)
+	cfg, err := config.Read([]byte(cfgJSON))
+	assert.NoError(t, err)
+	ctx = config.With(ctx, cfg)
+	pool := server.NewIssuerPool(cfg)
+
+	tok := m.token(t, "test-sub", "foo@example.com")
+	msgHash := sha256.Sum256([]byte("test message"))
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_Oidc{
+			Oidc: &pb.OidcCredential{
+				Token: tok,
+			},
+		},
+		Message: msgHash[:],
+	}
+
+	leafBytes, extraData, err := ToLogEntry(ctx, req, nil, pool)
+	assert.NoError(t, err)
+	expectedClaims := map[string]string{
+		"identity": "foo@example.com",
+		"issuer":   m.server.URL,
+		"subject":  "test-sub",
+	}
+	assert.Equal(t, fmt.Appendf(nil, "identity:foo@example.com\nissuer:%s\nsubject:test-sub", m.server.URL), extraData)
+
+	// Expected leaf layout:
+	// 1 byte version (0x01) + 32B SHA256(issuer) + 32B SHA256(msgHash) +
+	// 3 * 64B sorted (SHA256(SHA256(k)) || SHA256(SHA256(v))) + 32B zero receipt
+	expectedLen := 1 + 32 + 32 + len(expectedClaims)*64 + 32
+	assert.Len(t, leafBytes, expectedLen)
+	assert.Equal(t, LeafVersion, leafBytes[0])
+
+	expectedRootHash := sha256.Sum256([]byte(m.server.URL))
+	assert.Equal(t, expectedRootHash[:], leafBytes[1:33])
+
+	expectedMsgDoubleHash := sha256.Sum256(msgHash[:])
+	assert.Equal(t, expectedMsgDoubleHash[:], leafBytes[33:65])
+
+	type kvHash struct {
+		k [32]byte
+		v [32]byte
+	}
+	var expectedPairs []kvHash
+	for k, v := range expectedClaims {
+		kh := sha256.Sum256([]byte(k))
+		vh := sha256.Sum256([]byte(v))
+		expectedPairs = append(expectedPairs, kvHash{
+			k: sha256.Sum256(kh[:]),
+			v: sha256.Sum256(vh[:]),
+		})
+	}
+	slices.SortFunc(expectedPairs, func(a, b kvHash) int {
+		return bytes.Compare(a.k[:], b.k[:])
+	})
+	offset := 65
+	for _, p := range expectedPairs {
+		assert.Equal(t, p.k[:], leafBytes[offset:offset+32])
+		assert.Equal(t, p.v[:], leafBytes[offset+32:offset+64])
+		offset += 64
+	}
+	assert.Equal(t, make([]byte, 32), leafBytes[offset:offset+32])
+}
+
+func TestToOIDCEntryHash(t *testing.T) {
+	ctx := context.Background()
+	m := newMockOIDC(t)
+	defer m.server.Close()
+
+	cfgJSON := fmt.Sprintf(`{
+		"OIDCIssuers": {
+			"%s": {
+				"IssuerURL": "%s",
+				"ClientID":  "sigstore",
+				"Type":      "email"
+			}
+		}
+	}`, m.server.URL, m.server.URL)
+	cfg, err := config.Read([]byte(cfgJSON))
+	assert.NoError(t, err)
+	ctx = config.With(ctx, cfg)
+	pool := server.NewIssuerPool(cfg)
+
+	tok := m.token(t, "test-sub", "foo@example.com")
+	msgHash := sha256.Sum256([]byte("test message"))
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_Oidc{
+			Oidc: &pb.OidcCredential{
+				Token: tok,
+			},
+		},
+		Message: msgHash[:],
+	}
+
+	leafBytes, _, err := ToLogEntry(ctx, req, nil, pool)
+	assert.NoError(t, err)
+	expectedHash := rfc6962.DefaultHasher.HashLeaf(leafBytes)
+
+	claims := map[string]string{
+		"identity": "foo@example.com",
+		"issuer":   m.server.URL,
+		"subject":  "test-sub",
+	}
+	gotHash, err := ToOIDCEntryHash(msgHash[:], claims)
+	assert.NoError(t, err)
+	assert.Equal(t, expectedHash, gotHash)
+
+	_, err = ToOIDCEntryHash([]byte("short"), claims)
+	assert.ErrorContains(t, err, "invalid message hash size")
+
+	delete(claims, "issuer")
+	_, err = ToOIDCEntryHash(msgHash[:], claims)
+	assert.ErrorContains(t, err, "issuer claim is missing or empty")
 }

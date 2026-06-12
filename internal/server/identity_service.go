@@ -16,13 +16,14 @@ package server
 
 import (
 	"context"
-	"encoding/hex"
 	"errors"
-	"fmt"
 	"log/slog"
 	"strconv"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/sigstore/fulcio/pkg/config"
+	"github.com/sigstore/fulcio/pkg/identity"
+	fulcioserver "github.com/sigstore/fulcio/pkg/server"
 	"github.com/sigstore/rekor-tiles/v2/internal/safeint"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
@@ -46,13 +47,17 @@ type IdentityServer struct {
 	storage           tessera.Storage
 	readOnly          bool
 	algorithmRegistry *signature.AlgorithmRegistryConfig
+	oidcConfig        *config.FulcioConfig
+	issuerPool        identity.IssuerPool
 }
 
-func NewIdentityServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig) *IdentityServer {
+func NewIdentityServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig, oidcConfig *config.FulcioConfig) *IdentityServer {
 	return &IdentityServer{
 		storage:           storage,
 		readOnly:          readOnly,
 		algorithmRegistry: algorithmRegistry,
+		oidcConfig:        oidcConfig,
+		issuerPool:        fulcioserver.NewIssuerPool(oidcConfig),
 	}
 }
 
@@ -64,7 +69,8 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 		return nil, status.Errorf(codes.Unimplemented, "log frozen")
 	}
 
-	leafBytes, err := identity_v1.ToLogEntry(req, s.algorithmRegistry)
+	ctx = config.With(ctx, s.oidcConfig)
+	leafBytes, extraData, err := identity_v1.ToLogEntry(ctx, req, s.algorithmRegistry, s.issuerPool)
 	if err != nil {
 		slog.WarnContext(ctx, "failed validating identity request", "error", err.Error())
 		return nil, status.Errorf(codes.InvalidArgument, "invalid identity request")
@@ -97,16 +103,6 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 		var arr [32]byte
 		copy(arr[:], h)
 		proofHashes = append(proofHashes, arr)
-	}
-
-	var extraData []byte
-	var contextBytes []byte
-	if cred, ok := req.Credential.(*pb.IdentityRequestV001_PublicKey); ok {
-		contextBytes = cred.PublicKey.GetContext()
-	}
-
-	if len(contextBytes) > 0 {
-		extraData = fmt.Appendf(nil, "%s:%s", identity_v1.ContextKeyName, hex.EncodeToString(contextBytes))
 	}
 
 	index, err := safeint.NewSafeInt64(tle.InclusionProof.LogIndex)
