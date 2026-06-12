@@ -16,6 +16,7 @@ package identity
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
@@ -24,6 +25,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/sigstore/fulcio/pkg/config"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/transparency-dev/merkle/rfc6962"
 )
@@ -45,6 +47,10 @@ func validate(req *pb.IdentityRequestV001) error {
 		}
 		if len(cred.PublicKey.GetSignature()) != ed25519.SignatureSize {
 			return errors.New("invalid signature length, must be 64 bytes for Ed25519")
+		}
+	case *pb.IdentityRequestV001_Oidc:
+		if len(cred.Oidc.GetToken()) == 0 {
+			return errors.New("oidc token is empty")
 		}
 	default:
 		return errors.New("unsupported or missing credential type")
@@ -118,58 +124,80 @@ func computeLeafHash(req *pb.IdentityRequestV001, sortedContext []*pb.ContextEnt
 		leaf = append(leaf, vDoubleHash[:]...)
 	}
 
-	var sig []byte
 	if cred, ok := req.Credential.(*pb.IdentityRequestV001_PublicKey); ok {
-		sig = cred.PublicKey.GetSignature()
+		sig := cred.PublicKey.GetSignature()
+		sigHash := sha256.Sum256(sig)
+		leaf = append(leaf, sigHash[:]...)
+	} else if _, ok := req.Credential.(*pb.IdentityRequestV001_Oidc); ok {
+		leaf = append(leaf, make([]byte, 32)...)
 	}
-	sigHash := sha256.Sum256(sig)
-	leaf = append(leaf, sigHash[:]...)
 
 	return leaf
 }
 
 // ToLogEntry reconstructs the leaf bytes from bundle-signed inputs.
-// It validates the signature and returns the unhashed leaf format.
-func ToLogEntry(req *pb.IdentityRequestV001) ([]byte, error) {
+// It validates the signature and returns the unhashed leaf format, as well as an
+// optional map of raw context key-value pairs (e.g. for OIDC claims).
+func ToLogEntry(ctx context.Context, req *pb.IdentityRequestV001, cfg *config.FulcioConfig) ([]byte, map[string]string, error) {
 	if err := validate(req); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	sortedContext := sortContext(req.GetContext())
 
-	var pubKey, sig []byte
 	switch cred := req.Credential.(type) {
 	case *pb.IdentityRequestV001_PublicKey:
-		pubKey = cred.PublicKey.GetPublicKey()
-		sig = cred.PublicKey.GetSignature()
+		pubKey := cred.PublicKey.GetPublicKey()
+		sig := cred.PublicKey.GetSignature()
+
+		pub, err := x509.ParsePKIXPublicKey(pubKey)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to parse public key: %w", err)
+		}
+		edKey, ok := pub.(ed25519.PublicKey)
+		if !ok {
+			return nil, nil, errors.New("public key is not an Ed25519 key")
+		}
+
+		payload := computeSignaturePayload(req, sortedContext)
+
+		if !ed25519.Verify(edKey, payload, sig) {
+			return nil, nil, errors.New("invalid signature")
+		}
+
+		rootOfTrust := append([]byte("Ed25519"), pubKey...)
+		rootPubKeyHash := sha256.Sum256(rootOfTrust)
+		return computeLeafHash(req, sortedContext, rootPubKeyHash[:]), nil, nil
+
+	case *pb.IdentityRequestV001_Oidc:
+		issuer, claims, err := extractOIDCClaims(ctx, cred.Oidc.GetToken(), cfg)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to extract OIDC claims: %w", err)
+		}
+
+		var ctxEntries []*pb.ContextEntry
+		for k, v := range claims {
+			keyHash := sha256.Sum256([]byte(k))
+			valHash := sha256.Sum256([]byte(v))
+			ctxEntries = append(ctxEntries, &pb.ContextEntry{
+				Key:   keyHash[:],
+				Value: valHash[:],
+			})
+		}
+		sortedContext = sortContext(ctxEntries)
+
+		rootPubKeyHash := sha256.Sum256([]byte(issuer))
+		return computeLeafHash(req, sortedContext, rootPubKeyHash[:]), claims, nil
+
 	default:
-		return nil, errors.New("unsupported credential type")
+		return nil, nil, errors.New("unsupported credential type")
 	}
-
-	pub, err := x509.ParsePKIXPublicKey(pubKey)
-	if err != nil {
-		return nil, fmt.Errorf("failed to parse public key: %w", err)
-	}
-	edKey, ok := pub.(ed25519.PublicKey)
-	if !ok {
-		return nil, errors.New("public key is not an Ed25519 key")
-	}
-
-	payload := computeSignaturePayload(req, sortedContext)
-
-	if !ed25519.Verify(edKey, payload, sig) {
-		return nil, errors.New("invalid signature")
-	}
-
-	rootOfTrust := append([]byte("Ed25519"), pubKey...)
-	rootPubKeyHash := sha256.Sum256(rootOfTrust)
-	return computeLeafHash(req, sortedContext, rootPubKeyHash[:]), nil
 }
 
 // ToEntryHash reconstructs the identity log entry from bundle-signed
 // inputs and returns its entry hash.
-func ToEntryHash(publicKey []byte, signature []byte, message []byte, context map[string]string) ([]byte, error) {
+func ToEntryHash(publicKey []byte, signature []byte, message []byte, ctxMap map[string]string) ([]byte, error) {
 	var ctxEntries []*pb.ContextEntry
-	for k, v := range context {
+	for k, v := range ctxMap {
 		keyBytes, err := hex.DecodeString(k)
 		if err != nil {
 			return nil, fmt.Errorf("invalid context key hex: %w", err)
@@ -194,7 +222,7 @@ func ToEntryHash(publicKey []byte, signature []byte, message []byte, context map
 		Message: message,
 		Context: ctxEntries,
 	}
-	leafBytes, err := ToLogEntry(req)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, nil)
 	if err != nil {
 		return nil, err
 	}

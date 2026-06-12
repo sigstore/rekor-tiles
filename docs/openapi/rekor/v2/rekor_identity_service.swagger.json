@@ -238,6 +238,9 @@
         "publicKey": {
           "$ref": "#/definitions/v2PublicKeyCredential"
         },
+        "oidc": {
+          "$ref": "#/definitions/v2OidcCredential"
+        },
         "message": {
           "type": "string",
           "format": "byte",
@@ -255,6 +258,18 @@
       "title": "A request to add an identity-based transparency log entry (v0.0.1)",
       "required": [
         "message"
+      ]
+    },
+    "v2OidcCredential": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "title": "The raw OIDC identity token"
+        }
+      },
+      "required": [
+        "token"
       ]
     },
     "v2PublicKeyCredential": {

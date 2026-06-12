@@ -134,7 +134,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			server := NewIdentityServer(storage, false, algReg, []byte{1})
+			server := NewIdentityServer(storage, false, algReg, []byte{1}, nil)
 
 			gotBody, gotErr := server.CreateEntry(context.Background(), test.req)
 			if test.expectError == nil {

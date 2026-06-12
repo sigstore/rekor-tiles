@@ -23,6 +23,7 @@ import (
 	"log/slog"
 	"os"
 
+	"github.com/sigstore/fulcio/pkg/config"
 	"k8s.io/klog/v2"
 
 	"github.com/spf13/cobra"
@@ -154,7 +155,18 @@ var serveCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		rekorServer := server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry, logID)
+		var oidcConfig *config.FulcioConfig
+		if oidcConfigPath := viper.GetString("oidc-config"); oidcConfigPath != "" {
+			var err error
+			oidcConfig, err = config.Load(oidcConfigPath)
+			if err != nil {
+				slog.Error("failed to load oidc config", "error", err)
+				os.Exit(1)
+			}
+		}
+		slog.Info("OIDC config loaded", "path", viper.GetString("oidc-config"), "isNil", oidcConfig == nil)
+
+		rekorServer := server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry, logID, oidcConfig)
 
 		server.Serve(
 			ctx,
@@ -195,6 +207,7 @@ func init() {
 	serveCmd.Flags().String("signer-filepath", "", "path to the signing key")
 	serveCmd.Flags().String("signer-password", "", "password for the signing key")
 	serveCmd.Flags().String("kms-key-id", "", "ID of the KMS key for signing checkpoints")
+	serveCmd.Flags().String("oidc-config", "", "path to the OIDC configuration file")
 
 	// Override global flag help/defaults for identity-posix
 	if f := serveCmd.Flags().Lookup("client-signing-algorithms"); f != nil {

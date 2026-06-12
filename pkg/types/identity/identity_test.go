@@ -16,6 +16,7 @@ package identity
 
 import (
 	"bytes"
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/sha256"
@@ -75,7 +76,7 @@ func generateValidRequest(t *testing.T) (*pb.IdentityRequestV001, []byte) {
 func TestToLogEntry(t *testing.T) {
 	req, _ := generateValidRequest(t)
 
-	leafBytes, err := ToLogEntry(req)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, nil)
 	assert.NoError(t, err)
 	assert.NotNil(t, leafBytes)
 	assert.Greater(t, len(leafBytes), 0)
@@ -88,7 +89,7 @@ func TestToLogEntry_InvalidSignature(t *testing.T) {
 	// Invalidate the signature by flipping the first byte
 	req.GetPublicKey().Signature[0] ^= 0xFF
 
-	leafBytes, err := ToLogEntry(req)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid signature")
 	assert.Nil(t, leafBytes)
@@ -126,7 +127,7 @@ func TestSortContext(t *testing.T) {
 func TestToEntryHash(t *testing.T) {
 	req, _ := generateValidRequest(t)
 
-	leafBytes, err := ToLogEntry(req)
+	leafBytes, _, err := ToLogEntry(context.Background(), req, nil)
 	assert.NoError(t, err)
 
 	expectedHash := rfc6962.DefaultHasher.HashLeaf(leafBytes)
@@ -139,4 +140,35 @@ func TestToEntryHash(t *testing.T) {
 	h, err := ToEntryHash(req.GetPublicKey().GetPublicKey(), req.GetPublicKey().GetSignature(), req.Message, ctxMap)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHash, h)
+}
+
+func TestValidate_OidcEmptyToken(t *testing.T) {
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_Oidc{
+			Oidc: &pb.OidcCredential{
+				Token: "",
+			},
+		},
+		Message: bytes.Repeat([]byte{0x00}, 32),
+	}
+
+	err := validate(req)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "oidc token is empty")
+}
+
+func TestToLogEntry_OidcInvalidToken(t *testing.T) {
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_Oidc{
+			Oidc: &pb.OidcCredential{
+				Token: "invalid.token.here",
+			},
+		},
+		Message: bytes.Repeat([]byte{0x00}, 32),
+	}
+
+	leafBytes, _, err := ToLogEntry(context.Background(), req, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to authenticate token")
+	assert.Nil(t, leafBytes)
 }

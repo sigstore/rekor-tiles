@@ -34,10 +34,16 @@ message PublicKeyCredential {
     bytes signature = 2 [(google.api.field_behavior) = REQUIRED];
 }
 
+message OidcCredential {
+    // The raw OIDC identity token
+    string token = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
 // A request to add an identity-based transparency log entry (v0.0.1)
 message IdentityRequestV001 {
     oneof credential {
         PublicKeyCredential public_key = 1;
+        OidcCredential oidc = 2;
     }
     
     // Must be a SHA-256 digest of data.

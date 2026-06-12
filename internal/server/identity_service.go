@@ -20,9 +20,11 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strconv"
 	"strings"
 
+	"github.com/sigstore/fulcio/pkg/config"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/v2/pkg/types/identity"
@@ -45,14 +47,16 @@ type IdentityServer struct {
 	readOnly          bool
 	logID             []byte
 	algorithmRegistry *signature.AlgorithmRegistryConfig
+	oidcConfig        *config.FulcioConfig
 }
 
-func NewIdentityServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig, logID []byte) *IdentityServer {
+func NewIdentityServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig, logID []byte, oidcConfig *config.FulcioConfig) *IdentityServer {
 	return &IdentityServer{
 		storage:           storage,
 		readOnly:          readOnly,
 		logID:             logID,
 		algorithmRegistry: algorithmRegistry,
+		oidcConfig:        oidcConfig,
 	}
 }
 
@@ -64,7 +68,7 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 		return nil, status.Errorf(codes.Unimplemented, "log frozen")
 	}
 
-	leafBytes, err := identity.ToLogEntry(req)
+	leafBytes, extraDataMap, err := identity.ToLogEntry(ctx, req, s.oidcConfig)
 	if err != nil {
 		slog.WarnContext(ctx, "failed validating identity request", "error", err.Error())
 		return nil, status.Errorf(codes.InvalidArgument, "invalid identity request")
@@ -104,13 +108,21 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 	}
 
 	var extraData []byte
-	if len(req.GetContext()) > 0 {
+	if len(extraDataMap) > 0 {
+		var contextPairs []string
+		for k, v := range extraDataMap {
+			contextPairs = append(contextPairs, fmt.Sprintf("%s:%s", k, v))
+		}
+		sort.Strings(contextPairs)
+		extraData = []byte(strings.Join(contextPairs, "\n"))
+	} else if len(req.GetContext()) > 0 {
 		var contextPairs []string
 		for _, entry := range req.GetContext() {
 			k := hex.EncodeToString(entry.GetKey())
 			v := hex.EncodeToString(entry.GetValue())
 			contextPairs = append(contextPairs, fmt.Sprintf("%s:%s", k, v))
 		}
+		sort.Strings(contextPairs)
 		extraData = []byte(strings.Join(contextPairs, "\n"))
 	}
 

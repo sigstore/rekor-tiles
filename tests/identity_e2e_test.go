@@ -25,13 +25,16 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"testing"
 	"time"
 
-	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
+	fulcio_config "github.com/sigstore/fulcio/pkg/config"
+
 	"github.com/sigstore/rekor-tiles/v2/pkg/client/read"
+	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/rekor-tiles/v2/pkg/types/identity"
 	"github.com/sigstore/rekor-tiles/v2/pkg/verify"
@@ -53,8 +56,11 @@ var identityPosixConfig = backendConfig{
 }
 
 func TestIdentityPOSIX(t *testing.T) {
-	t.Run("ReadWrite", func(t *testing.T) {
+	t.Run("ReadWritePublicKey", func(t *testing.T) {
 		testIdentityReadWrite(t, identityPosixConfig)
+	})
+	t.Run("ReadWriteOIDC", func(t *testing.T) {
+		testIdentityOIDC(t, identityPosixConfig)
 	})
 }
 
@@ -163,6 +169,119 @@ func testIdentityReadWrite(t *testing.T, config backendConfig) {
 
 	leafHash, err := identity.ToEntryHash(pubBytes, sig, req.Message, ctxMap)
 	assert.NoError(t, err)
+
+	var hashes [][]byte
+	for _, h := range pr.Hashes {
+		hCopy := h
+		hashes = append(hashes, hCopy[:])
+	}
+
+	err = proof.VerifyInclusion(rfc6962.DefaultHasher, pr.Index, cp.Size, leafHash, hashes, cp.Hash)
+	assert.NoError(t, err, "Inclusion proof should be valid")
+
+	assert.Equal(t, initialTreeSize, pr.Index, "Index should match the tree size from before uploading")
+}
+
+func testIdentityOIDC(t *testing.T, config backendConfig) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// get verifier needed for both read and write
+	serverPubKeyPEM, err := os.ReadFile(defaultServerPublicKey)
+	assert.NoError(t, err)
+	serverPubKey, err := cryptoutils.UnmarshalPEMToPublicKey(serverPubKeyPEM)
+	assert.NoError(t, err)
+	verifier, err := signature.LoadDefaultVerifier(serverPubKey)
+	assert.NoError(t, err)
+
+	reader, err := read.NewReader(config.StorageURL, defaultRekorHostname, verifier)
+	assert.NoError(t, err)
+	checkpoint, _, err := reader.ReadCheckpoint(ctx)
+	assert.NoError(t, err)
+	initialTreeSize := checkpoint.Size
+
+	resp, err := http.Get("http://localhost:8080/token?issuer=http://fakeoidc:8080")
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	tokBytes, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+	tok := string(tokBytes)
+
+	// Create a random message hash
+	message := make([]byte, 32)
+	_, _ = rand.Read(message)
+	msgHash := sha256.Sum256(message)
+
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_Oidc{
+			Oidc: &pb.OidcCredential{
+				Token: tok,
+			},
+		},
+		Message: msgHash[:],
+	}
+
+	b, err := protojson.Marshal(req)
+	assert.NoError(t, err)
+
+	url := fmt.Sprintf("%s/api/v2/log/entries", config.ServerURL)
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
+	assert.NoError(t, err)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp = nil
+	resp, err = client.Do(httpReq)
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	assert.NoError(t, err)
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode, "Expected 201 Created, got: %s", string(respBody))
+
+	// Ensure the response is a tlog-proof object
+	respStr := string(respBody)
+	t.Logf("Response body: %s", respStr)
+
+	var pr tlogproof.TLogProof
+	err = pr.Unmarshal(respBody)
+	assert.NoError(t, err, "Response body should parse as TLogProof")
+
+	expectedExtraData := []byte("san:foo@bar.com\nsubject:foo@bar.com")
+	assert.Equal(t, expectedExtraData, pr.ExtraData, "ExtraData should match expected identity claims")
+
+	noteVerifier, err := note.NewNoteVerifier(defaultRekorHostname, verifier)
+	assert.NoError(t, err)
+
+	witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(defaultWitnessVKey)
+	assert.NoError(t, err)
+
+	noteVerifiers := []signednote.Verifier{noteVerifier, witnessNoteVerifier}
+
+	cp, parsedNote, err := verify.VerifyWitnessedCheckpoint(string(pr.Checkpoint), noteVerifiers[0], noteVerifiers[1:]...)
+	assert.NoError(t, err, "Checkpoint should be valid")
+	assert.Len(t, parsedNote.Sigs, 2, "Expected 2 valid signatures, from the log and witness")
+
+	// Use the local config so ToLogEntry can parse the OIDC token
+	// Override transport to route fakeoidc:8080 to localhost:8080 for the test
+	originalTransport := http.DefaultTransport
+	http.DefaultTransport = &http.Transport{
+		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
+			if addr == "fakeoidc:8080" {
+				addr = "localhost:8080"
+			}
+			return (&net.Dialer{}).DialContext(ctx, network, addr)
+		},
+	}
+	defer func() { http.DefaultTransport = originalTransport }()
+
+	cfg, err := fulcio_config.Load("testdata/oidc-config.json")
+	assert.NoError(t, err)
+
+	leafBytes, _, err := identity.ToLogEntry(ctx, req, cfg)
+	assert.NoError(t, err)
+	leafHash := rfc6962.DefaultHasher.HashLeaf(leafBytes)
 
 	var hashes [][]byte
 	for _, h := range pr.Hashes {
