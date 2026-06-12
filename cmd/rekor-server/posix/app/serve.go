@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/viper"
 	"sigs.k8s.io/release-utils/version"
 
+	"github.com/sigstore/fulcio/pkg/config"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/cli"
 	"github.com/sigstore/rekor-tiles/v2/internal/server"
@@ -172,9 +173,20 @@ func runServer(cmd *cobra.Command, isIdentity bool) {
 		os.Exit(1)
 	}
 
+	var oidcConfig *config.FulcioConfig
+	if oidcConfigPath := viper.GetString("oidc-config"); oidcConfigPath != "" {
+		var err error
+		oidcConfig, err = config.Load(oidcConfigPath)
+		if err != nil {
+			slog.Error("failed to load oidc config", "error", err)
+			os.Exit(1)
+		}
+	}
+	slog.Info("OIDC config loaded", "path", viper.GetString("oidc-config"), "isNil", oidcConfig == nil)
+
 	var rekorServer server.Registrar
 	if isIdentity {
-		rekorServer = server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry)
+		rekorServer = server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry, oidcConfig)
 	} else {
 		rekorServer = server.NewServer(tesseraStorage, readOnly, algorithmRegistry, logID)
 	}
@@ -216,6 +228,7 @@ func addFlags(cmd *cobra.Command) {
 	// checkpoint signing configs
 	cmd.Flags().String("signer-filepath", "", "path to the signing key")
 	cmd.Flags().String("signer-password", "", "password to decrypt the signing key")
+	cmd.Flags().String("oidc-config", "", "path to the OIDC configuration file")
 }
 
 func init() {

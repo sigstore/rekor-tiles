@@ -20,9 +20,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"github.com/sigstore/fulcio/pkg/config"
 	"github.com/sigstore/rekor-tiles/v2/internal/safeint"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
@@ -44,13 +47,15 @@ type IdentityServer struct {
 	storage           tessera.Storage
 	readOnly          bool
 	algorithmRegistry *signature.AlgorithmRegistryConfig
+	oidcConfig        *config.FulcioConfig
 }
 
-func NewIdentityServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig) *IdentityServer {
+func NewIdentityServer(storage tessera.Storage, readOnly bool, algorithmRegistry *signature.AlgorithmRegistryConfig, oidcConfig *config.FulcioConfig) *IdentityServer {
 	return &IdentityServer{
 		storage:           storage,
 		readOnly:          readOnly,
 		algorithmRegistry: algorithmRegistry,
+		oidcConfig:        oidcConfig,
 	}
 }
 
@@ -62,7 +67,7 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 		return nil, status.Errorf(codes.Unimplemented, "log frozen")
 	}
 
-	leafBytes, err := identity.ToLogEntry(req)
+	leafBytes, extraDataMap, err := identity.ToLogEntry(ctx, req, s.oidcConfig)
 	if err != nil {
 		slog.WarnContext(ctx, "failed validating identity request", "error", err.Error())
 		return nil, status.Errorf(codes.InvalidArgument, "invalid identity request")
@@ -102,13 +107,21 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 	}
 
 	var extraData []byte
-	var contextBytes []byte
-	if cred, ok := req.Credential.(*pb.IdentityRequestV001_PublicKey); ok {
-		contextBytes = cred.PublicKey.GetContext()
-	}
-
-	if len(contextBytes) > 0 {
-		extraData = fmt.Appendf(nil, "%s:%s", identity.ContextKeyName, hex.EncodeToString(contextBytes))
+	if len(extraDataMap) > 0 {
+		var contextPairs []string
+		for k, v := range extraDataMap {
+			contextPairs = append(contextPairs, fmt.Sprintf("%s:%s", k, v))
+		}
+		sort.Strings(contextPairs)
+		extraData = []byte(strings.Join(contextPairs, "\n"))
+	} else {
+		var contextBytes []byte
+		if cred, ok := req.Credential.(*pb.IdentityRequestV001_PublicKey); ok {
+			contextBytes = cred.PublicKey.GetContext()
+		}
+		if len(contextBytes) > 0 {
+			extraData = fmt.Appendf(nil, "%s:%s", identity.ContextKeyName, hex.EncodeToString(contextBytes))
+		}
 	}
 
 	index, err := safeint.NewSafeInt64(tle.InclusionProof.LogIndex)
