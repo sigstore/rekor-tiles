@@ -18,21 +18,21 @@ package dev.sigstore.rekor.v2;
 import "google/api/annotations.proto";
 import "google/api/httpbody.proto";
 import "google/protobuf/empty.proto";
-import "sigstore_rekor.proto";
 import "protoc-gen-openapiv2/options/annotations.proto";
 
-import "rekor/v2/entry.proto";
+import "rekor/v2/identity.proto";
+import "rekor/v2/rekor_service.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf";
 
 option java_package = "dev.sigstore.proto.rekor.v2";
 option java_multiple_files = true;
-option java_outer_classname = "RekorV2Service";
+option java_outer_classname = "RekorV2IdentityService";
 option ruby_package = "Sigstore::Rekor::V2";
 
 option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   info: {
-    title: "Rekor v2";
+    title: "Identity Rekor v2";
     version: "2.0";
     contact: {
       name: "Rekor v2 project";
@@ -48,26 +48,22 @@ option (grpc.gateway.protoc_gen_openapiv2.options.openapiv2_swagger) = {
   host: "*.rekor.sigstore.dev";
   external_docs: {
     url: "https://github.com/sigstore/rekor-tiles";
-    description: "More about Rekor v2";
+    description: "More about Rekor v2 Identity Log";
   };
   schemes: HTTP;
   consumes: "application/json";
   produces: "application/json";
 };
 
-
-// A service for sigstore clients to connect to to create log entries
-// and for log monitors and witnesses to audit/inspect the log
-service Rekor {
-    // Create an entry in the log
-    rpc CreateEntry (CreateEntryRequest) returns (dev.sigstore.rekor.v1.TransparencyLogEntry) {
+// A service for Sigstore clients to log identity usage when signing artifacts
+service IdentityRekor {
+    // Create an identity entry in the log
+    rpc CreateEntry (IdentityRequestV001) returns (google.api.HttpBody) {
         option (google.api.http) = {
             post: "/api/v2/log/entries"
             body: "*"
         };
     }
-
-
 
     // Get a tile from the log
     rpc GetTile (TileRequest) returns (google.api.HttpBody) {
@@ -90,19 +86,3 @@ service Rekor {
         };
     }
 }
-
-// Request for a full or partial tile (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#merkle-tree)
-message TileRequest {
-    uint32 L = 1;
-    // N must be either an index encoded as zero-padded 3-digit path elements, e.g. "x123/x456/789",
-    // and may end with ".p/<W>", where "<W>" is a uint8
-    string N = 2;
-}
-
-// Request for a full or partial entry bundle (see https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#log-entries)
-message EntryBundleRequest {
-    // N must be either an index encoded as zero-padded 3-digit path elements, e.g. "x123/x456/789",
-    // and may end with ".p/<W>", where "<W>" is a uint8
-    string N = 1;
-}
-

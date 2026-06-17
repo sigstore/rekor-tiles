@@ -1,0 +1,62 @@
+// Copyright 2026 The Sigstore Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+package dev.sigstore.rekor.v2;
+
+import "google/api/field_behavior.proto";
+
+option go_package = "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf";
+
+option java_package = "dev.sigstore.proto.rekor.v2";
+option java_multiple_files = true;
+option java_outer_classname = "RekorV2Identity";
+option ruby_package = "Sigstore::Rekor::V2";
+
+message PublicKeyCredential {
+    // The public key used to verify the signature.
+    // MUST be an Ed25519 public key (SPKI DER-encoded).
+    bytes public_key = 1 [(google.api.field_behavior) = REQUIRED];
+    
+    // The signature computed over the specification identifier, checksum, and context strings,
+    // as defined by the c2sp.org/identity-transparency specification.
+    bytes signature = 2 [(google.api.field_behavior) = REQUIRED];
+}
+
+message OidcCredential {
+    // The raw OIDC identity token
+    string token = 1 [(google.api.field_behavior) = REQUIRED];
+}
+
+// A request to add an identity-based transparency log entry (v0.0.1)
+message IdentityRequestV001 {
+    oneof credential {
+        PublicKeyCredential public_key = 1;
+        OidcCredential oidc = 2;
+    }
+    
+    // Must be a SHA-256 digest of data.
+    bytes message = 3 [(google.api.field_behavior) = REQUIRED];
+    
+    // Optional mapping of hashed context keys to hashed values.
+    // Limited to 20 context strings.
+    repeated ContextEntry context = 4;
+}
+
+message ContextEntry {
+    // Must be a SHA-256 digest of the key.
+    bytes key = 1 [(google.api.field_behavior) = REQUIRED];
+    // Must be a SHA-256 digest of the value.
+    bytes value = 2 [(google.api.field_behavior) = REQUIRED];
+}
