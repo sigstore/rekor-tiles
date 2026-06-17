@@ -44,12 +44,6 @@ const (
 	duplicateEntryHeader = "x-log-index"
 )
 
-// rekorServer is the collection of methods that our grpc server must implement.
-type rekorServer interface {
-	pb.RekorServer
-	grpc_health_v1.HealthServer
-}
-
 type Server struct {
 	pb.UnimplementedRekorServer
 	grpc_health_v1.UnimplementedHealthServer

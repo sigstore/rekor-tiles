@@ -18,14 +18,14 @@ services:
       context: .
       target: deploy
       args:
-        STORAGE_BACKEND: posix
+        STORAGE_BACKEND: identity-posix
     command:
     - "rekor-server"
     - "serve"
     - "--http-address=0.0.0.0"
     - "--grpc-address=0.0.0.0"
     - "--hostname=rekor-local"
-    - "--storage-dir=/tmp/posixlog"
+    - "--storage-dir=/tmp/identityposixlog"
     - "--signer-filepath=/pki/ed25519-priv-key.pem"
     - "--checkpoint-interval=2s"
     - "--log-level=debug"
@@ -33,9 +33,9 @@ services:
     - "--persistent-antispam=true"
     - "--witness-policy-path=/witness/policy.yaml"
     ports:
-    - "3003:3000" # http port
-    - "3001:3001" # grpc port
-    - "2114:2112" # metrics port
+    - "3006:3000" # http port
+    - "3007:3001" # grpc port
+    - "2115:2112" # metrics port
     healthcheck:
       test:
       - CMD-SHELL
@@ -46,7 +46,7 @@ services:
     volumes:
     - ./tests/testdata/pki:/pki
     - ./tests/testdata/witness:/witness
-    - posix_storage:/tmp/posixlog
+    - identity_posix_storage:/tmp/identityposixlog
     depends_on:
       nginx:
         condition: service_healthy
@@ -55,10 +55,10 @@ services:
   nginx:
     image: nginx:1.31.1@sha256:5aca99593157f4ae539a5dec1092a0ad8762f8e2eb1789085a13a0f5622369f6
     volumes:
-      - posix_storage:/usr/share/nginx/html
+      - identity_posix_storage:/usr/share/nginx/html
     restart: always
     ports:
-      - "8000:80"
+      - "8001:80"
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost/"]
       interval: 30s
@@ -88,7 +88,7 @@ services:
       retries: 10
       interval: 3s
     ports:
-      - "8100:8100"
+      - "8101:8100"
 volumes:
-  posix_storage: {}
+  identity_posix_storage: {}
   witness_data: {}
