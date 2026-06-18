@@ -196,7 +196,7 @@ func (s *mockRekorServer) GetTile(_ context.Context, in *pb.TileRequest) (*httpb
 	}
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
-		Data:        []byte(fmt.Sprintf("test-tile:%d,%d,%d", l, i, w)),
+		Data:        fmt.Appendf(nil, "test-tile:%d,%d,%d", l, i, w),
 		Extensions:  nil,
 	}, nil
 }
@@ -209,7 +209,7 @@ func (s *mockRekorServer) GetEntryBundle(_ context.Context, in *pb.EntryBundleRe
 	}
 	return &httpbody.HttpBody{
 		ContentType: "application/octet-stream",
-		Data:        []byte(fmt.Sprintf("test-entries:%d,%d", i, w)),
+		Data:        fmt.Appendf(nil, "test-entries:%d,%d", i, w),
 		Extensions:  nil,
 	}, nil
 }
