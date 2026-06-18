@@ -23,6 +23,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/stretchr/testify/assert"
@@ -63,6 +64,7 @@ func generateValidRequest(t *testing.T) (*pb.IdentityRequestV001, []byte) {
 			PublicKey: &pb.PublicKeyCredential{
 				PublicKey: pubBytes,
 				Signature: sig,
+				Algorithm: v1.PublicKeyDetails_PKIX_ED25519,
 			},
 		},
 		Message: msgHash[:],
@@ -137,7 +139,7 @@ func TestToEntryHash(t *testing.T) {
 		ctxMap[hex.EncodeToString(c.Key)] = hex.EncodeToString(c.Value)
 	}
 
-	h, err := ToEntryHash(req.GetPublicKey().GetPublicKey(), req.GetPublicKey().GetSignature(), req.Message, ctxMap)
+	h, err := ToEntryHash(req.GetPublicKey().GetPublicKey(), req.GetPublicKey().GetSignature(), v1.PublicKeyDetails_PKIX_ED25519, req.Message, ctxMap)
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHash, h)
 }

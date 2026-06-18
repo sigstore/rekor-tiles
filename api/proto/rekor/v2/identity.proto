@@ -16,6 +16,7 @@ syntax = "proto3";
 package dev.sigstore.rekor.v2;
 
 import "google/api/field_behavior.proto";
+import "sigstore_common.proto";
 
 option go_package = "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf";
 
@@ -26,12 +27,15 @@ option ruby_package = "Sigstore::Rekor::V2";
 
 message PublicKeyCredential {
     // The public key used to verify the signature.
-    // MUST be an Ed25519 public key (SPKI DER-encoded).
+    // MUST be an Ed25519 public key (SPKI DER-encoded) or an ML-DSA-44 public key (SPKI DER-encoded).
     bytes public_key = 1 [(google.api.field_behavior) = REQUIRED];
     
     // The signature computed over the specification identifier, checksum, and context strings,
     // as defined by the c2sp.org/identity-transparency specification.
     bytes signature = 2 [(google.api.field_behavior) = REQUIRED];
+
+    // The signature algorithm used. Only PKIX_ED25519 and ML_DSA_44 are supported.
+    dev.sigstore.common.v1.PublicKeyDetails algorithm = 3 [(google.api.field_behavior) = REQUIRED];
 }
 
 message OidcCredential {

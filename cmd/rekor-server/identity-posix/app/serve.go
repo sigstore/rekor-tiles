@@ -142,14 +142,19 @@ var serveCmd = &cobra.Command{
 		if !cmd.Flags().Changed("client-signing-algorithms") {
 			algorithms = []string{"ed25519"}
 		}
+		// Filter out ml-dsa-44 before initializing the legacy algorithmregistry
+		var sigstoreAlgs []string
 		// Exit if the deployer configured an algorithm we don't support
 		for _, alg := range algorithms {
-			if alg != "ed25519" {
+			if alg != "ed25519" && alg != "ml-dsa-44" {
 				slog.Error(fmt.Sprintf("unsupported algorithm '%s' for identity-posix", alg))
 				os.Exit(1)
 			}
+			if alg != "ml-dsa-44" {
+				sigstoreAlgs = append(sigstoreAlgs, alg)
+			}
 		}
-		algorithmRegistry, err := algorithmregistry.AlgorithmRegistry(algorithms)
+		algorithmRegistry, err := algorithmregistry.AlgorithmRegistry(sigstoreAlgs)
 		if err != nil {
 			slog.Error("failed to get algorithm registry", "error", err)
 			os.Exit(1)
@@ -212,7 +217,7 @@ func init() {
 	// Override global flag help/defaults for identity-posix
 	if f := serveCmd.Flags().Lookup("client-signing-algorithms"); f != nil {
 		f.DefValue = "[ed25519]"
-		f.Usage = "signing algorithm to use for signing/hashing (allowed: ed25519)"
+		f.Usage = "signing algorithm to use for signing/hashing (allowed: ed25519, ml-dsa-44)"
 	}
 
 	if err := viper.BindPFlags(serveCmd.Flags()); err != nil {

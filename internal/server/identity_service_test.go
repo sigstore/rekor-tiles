@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"testing"
 
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
@@ -62,6 +63,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 					PublicKey: &pb.PublicKeyCredential{
 						PublicKey: pubBytes,
 						Signature: sig,
+						Algorithm: v1.PublicKeyDetails_PKIX_ED25519,
 					},
 				},
 				Message: msgHash[:],
@@ -82,6 +84,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 					PublicKey: &pb.PublicKeyCredential{
 						PublicKey: pubBytes,
 						Signature: sig,
+						Algorithm: v1.PublicKeyDetails_PKIX_ED25519,
 					},
 				},
 				Message: make([]byte, 31), // invalid message length
@@ -99,6 +102,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 					PublicKey: &pb.PublicKeyCredential{
 						PublicKey: pubBytes,
 						Signature: sig,
+						Algorithm: v1.PublicKeyDetails_PKIX_ED25519,
 					},
 				},
 				Message: msgHash[:],
@@ -116,6 +120,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 					PublicKey: &pb.PublicKeyCredential{
 						PublicKey: pubBytes,
 						Signature: sig,
+						Algorithm: v1.PublicKeyDetails_PKIX_ED25519,
 					},
 				},
 				Message: msgHash[:],

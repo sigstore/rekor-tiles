@@ -71,7 +71,7 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 	leafBytes, extraDataMap, err := identity.ToLogEntry(ctx, req, s.oidcConfig)
 	if err != nil {
 		slog.WarnContext(ctx, "failed validating identity request", "error", err.Error())
-		return nil, status.Errorf(codes.InvalidArgument, "invalid identity request")
+		return nil, status.Errorf(codes.InvalidArgument, "invalid identity request: %v", err)
 	}
 
 	entry := ttessera.NewEntry(leafBytes)

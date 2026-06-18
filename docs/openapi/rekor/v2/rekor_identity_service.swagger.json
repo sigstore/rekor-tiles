@@ -213,6 +213,36 @@
         }
       }
     },
+    "v1PublicKeyDetails": {
+      "type": "string",
+      "enum": [
+        "PUBLIC_KEY_DETAILS_UNSPECIFIED",
+        "PKCS1_RSA_PKCS1V5",
+        "PKCS1_RSA_PSS",
+        "PKIX_RSA_PKCS1V5",
+        "PKIX_RSA_PSS",
+        "PKIX_RSA_PKCS1V15_2048_SHA256",
+        "PKIX_RSA_PKCS1V15_3072_SHA256",
+        "PKIX_RSA_PKCS1V15_4096_SHA256",
+        "PKIX_RSA_PSS_2048_SHA256",
+        "PKIX_RSA_PSS_3072_SHA256",
+        "PKIX_RSA_PSS_4096_SHA256",
+        "PKIX_ECDSA_P256_HMAC_SHA_256",
+        "PKIX_ECDSA_P256_SHA_256",
+        "PKIX_ECDSA_P384_SHA_384",
+        "PKIX_ECDSA_P521_SHA_512",
+        "PKIX_ED25519",
+        "PKIX_ED25519_PH",
+        "PKIX_ECDSA_P384_SHA_256",
+        "PKIX_ECDSA_P521_SHA_256",
+        "LMS_SHA256",
+        "LMOTS_SHA256",
+        "ML_DSA_65",
+        "ML_DSA_87"
+      ],
+      "default": "PUBLIC_KEY_DETAILS_UNSPECIFIED",
+      "description": "Details of a specific public key, capturing the the key encoding method,\nand signature algorithm.\n\nPublicKeyDetails captures the public key/hash algorithm combinations\nrecommended in the Sigstore ecosystem.\n\nThis is modelled as a linear set as we want to provide a small number of\nopinionated options instead of allowing every possible permutation.\n\nAny changes to this enum MUST be reflected in the algorithm registry.\n\nSee: \u003chttps://github.com/sigstore/architecture-docs/blob/main/algorithm-registry.md\u003e\n\nTo avoid the possibility of contradicting formats such as PKCS1 with\nED25519 the valid permutations are listed as a linear set instead of a\ncartesian set (i.e one combined variable instead of two, one for encoding\nand one for the signature algorithm).\n\n - PKCS1_RSA_PKCS1V5: RSA\n\nSee RFC8017\n - PKCS1_RSA_PSS: See RFC8017\n - PKIX_RSA_PKCS1V15_2048_SHA256: RSA public key in PKIX format, PKCS#1v1.5 signature\n - PKIX_RSA_PSS_2048_SHA256: RSA public key in PKIX format, RSASSA-PSS signature\n\nSee RFC4055\n - PKIX_ECDSA_P256_HMAC_SHA_256: ECDSA\n\nSee RFC6979\n - PKIX_ECDSA_P256_SHA_256: See NIST FIPS 186-4\n - PKIX_ED25519: Ed 25519\n\nSee RFC8032\n - PKIX_ECDSA_P384_SHA_256: These algorithms are deprecated and should not be used, but they\nwere/are being used by most Sigstore clients implementations.\n - LMS_SHA256: LMS and LM-OTS\n\nThese algorithms are deprecated and should not be used.\nKeys and signatures MAY be used by private Sigstore\ndeployments, but will not be supported by the public\ngood instance.\n\nUSER WARNING: LMS and LM-OTS are both stateful signature schemes.\nUsing them correctly requires discretion and careful consideration\nto ensure that individual secret keys are not used more than once.\nIn addition, LM-OTS is a single-use scheme, meaning that it\nMUST NOT be used for more than one signature per LM-OTS key.\nIf you cannot maintain these invariants, you MUST NOT use these\nschemes.\n - ML_DSA_65: ML-DSA\n\nThese ML_DSA_65 and ML-DSA_87 algorithms are the pure variants that\ntake data to sign rather than the prehash variants (HashML-DSA), which\ntake digests.  While considered quantum-resistant, their usage\ninvolves tradeoffs in that signatures and keys are much larger, and\nthis makes deployments more costly.\n\nUSER WARNING: ML_DSA_65 and ML_DSA_87 are experimental algorithms.  \nIn the future they MAY be used by private Sigstore deployments, but\nthey are not yet fully functional.  This warning will be removed when \nthese algorithms are widely supported by Sigstore clients and servers, \nbut care should still be taken for production environments.\n\nSee NIST FIPS 204"
+    },
     "v2ContextEntry": {
       "type": "object",
       "properties": {
@@ -278,17 +308,22 @@
         "publicKey": {
           "type": "string",
           "format": "byte",
-          "description": "The public key used to verify the signature.\nMUST be an Ed25519 public key (SPKI DER-encoded)."
+          "description": "The public key used to verify the signature.\nMUST be an Ed25519 public key (SPKI DER-encoded) or an ML-DSA-44 public key (SPKI DER-encoded)."
         },
         "signature": {
           "type": "string",
           "format": "byte",
           "description": "The signature computed over the specification identifier, checksum, and context strings,\nas defined by the c2sp.org/identity-transparency specification."
+        },
+        "algorithm": {
+          "$ref": "#/definitions/v1PublicKeyDetails",
+          "description": "The signature algorithm used. Only PKIX_ED25519 and ML_DSA_44 are supported."
         }
       },
       "required": [
         "publicKey",
-        "signature"
+        "signature",
+        "algorithm"
       ]
     }
   },
