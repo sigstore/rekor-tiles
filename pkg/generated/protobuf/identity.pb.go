@@ -21,6 +21,7 @@
 package protobuf
 
 import (
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -39,14 +40,16 @@ const (
 type PublicKeyCredential struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The public key used to verify the signature.
-	// MUST be an Ed25519 public key (SPKI DER-encoded).
+	// MUST be an Ed25519 public key (SPKI DER-encoded) or an ML-DSA-44 public key (SPKI DER-encoded).
 	PublicKey []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	// The signature computed over the specification identifier, checksum, and context strings,
 	// as defined by the c2sp.org/identity-transparency specification.
 	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
 	// Optional context value to record alongside the message. Must be a SHA-256 digest.
 	// Must be signed as defined by the c2sp.org/identity-transparency specification.
-	Context       []byte `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
+	Context []byte `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
+	// The signature algorithm used. Only PKIX_ED25519 and ML_DSA_44 are supported.
+	Algorithm     v1.PublicKeyDetails `protobuf:"varint,4,opt,name=algorithm,proto3,enum=dev.sigstore.common.v1.PublicKeyDetails" json:"algorithm,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -100,6 +103,13 @@ func (x *PublicKeyCredential) GetContext() []byte {
 		return x.Context
 	}
 	return nil
+}
+
+func (x *PublicKeyCredential) GetAlgorithm() v1.PublicKeyDetails {
+	if x != nil {
+		return x.Algorithm
+	}
+	return v1.PublicKeyDetails(0)
 }
 
 type OidcCredential struct {
@@ -243,12 +253,13 @@ var File_rekor_v2_identity_proto protoreflect.FileDescriptor
 
 const file_rekor_v2_identity_proto_rawDesc = "" +
 	"\n" +
-	"\x17rekor/v2/identity.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\"v\n" +
+	"\x17rekor/v2/identity.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\"\xc3\x01\n" +
 	"\x13PublicKeyCredential\x12\"\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\fB\x03\xe0A\x02R\tpublicKey\x12!\n" +
 	"\tsignature\x18\x02 \x01(\fB\x03\xe0A\x02R\tsignature\x12\x18\n" +
-	"\acontext\x18\x03 \x01(\fR\acontext\"+\n" +
+	"\acontext\x18\x03 \x01(\fR\acontext\x12K\n" +
+	"\talgorithm\x18\x04 \x01(\x0e2(.dev.sigstore.common.v1.PublicKeyDetailsB\x03\xe0A\x02R\talgorithm\"+\n" +
 	"\x0eOidcCredential\x12\x19\n" +
 	"\x05token\x18\x01 \x01(\tB\x03\xe0A\x02R\x05token\"\xcc\x01\n" +
 	"\x13IdentityRequestV001\x12K\n" +
@@ -277,15 +288,17 @@ var file_rekor_v2_identity_proto_goTypes = []any{
 	(*PublicKeyCredential)(nil), // 0: dev.sigstore.rekor.v2.PublicKeyCredential
 	(*OidcCredential)(nil),      // 1: dev.sigstore.rekor.v2.OidcCredential
 	(*IdentityRequestV001)(nil), // 2: dev.sigstore.rekor.v2.IdentityRequestV001
+	(v1.PublicKeyDetails)(0),    // 3: dev.sigstore.common.v1.PublicKeyDetails
 }
 var file_rekor_v2_identity_proto_depIdxs = []int32{
-	0, // 0: dev.sigstore.rekor.v2.IdentityRequestV001.public_key:type_name -> dev.sigstore.rekor.v2.PublicKeyCredential
-	1, // 1: dev.sigstore.rekor.v2.IdentityRequestV001.oidc:type_name -> dev.sigstore.rekor.v2.OidcCredential
-	2, // [2:2] is the sub-list for method output_type
-	2, // [2:2] is the sub-list for method input_type
-	2, // [2:2] is the sub-list for extension type_name
-	2, // [2:2] is the sub-list for extension extendee
-	0, // [0:2] is the sub-list for field type_name
+	3, // 0: dev.sigstore.rekor.v2.PublicKeyCredential.algorithm:type_name -> dev.sigstore.common.v1.PublicKeyDetails
+	0, // 1: dev.sigstore.rekor.v2.IdentityRequestV001.public_key:type_name -> dev.sigstore.rekor.v2.PublicKeyCredential
+	1, // 2: dev.sigstore.rekor.v2.IdentityRequestV001.oidc:type_name -> dev.sigstore.rekor.v2.OidcCredential
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_rekor_v2_identity_proto_init() }

@@ -22,6 +22,9 @@ import (
 	"crypto/sha256"
 	"testing"
 
+	"filippo.io/mldsa"
+	mldsax509 "filippo.io/mldsa/x509"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/stretchr/testify/assert"
@@ -62,6 +65,50 @@ func generateValidRequest(t *testing.T) (*pb.IdentityRequestV001, []byte) {
 				PublicKey: pubBytes,
 				Signature: sig,
 				Context:   vHash[:],
+				Algorithm: v1.PublicKeyDetails_PKIX_ED25519,
+			},
+		},
+		Message: msgHash[:],
+	}
+	return req, payload
+}
+
+func generateValidMLDSARequest(t *testing.T) (*pb.IdentityRequestV001, []byte) {
+	t.Helper()
+	priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	assert.NoError(t, err)
+
+	pubBytes, err := mldsax509.MarshalPKIXPublicKey(priv.PublicKey())
+	assert.NoError(t, err)
+
+	msg := []byte("test message")
+	msgHash := sha256.Sum256(msg)
+
+	v := []byte("val1")
+	vHash := sha256.Sum256(v)
+
+	payload := []byte(SpecDomainSeparatorV1)
+	payload = append(payload, 0x00)
+
+	msgDoubleHash := sha256.Sum256(msgHash[:])
+	payload = append(payload, msgDoubleHash[:]...)
+
+	k1 := sha256.Sum256([]byte(ContextKeyName))
+	kDoubleHash := sha256.Sum256(k1[:])
+	vDoubleHash := sha256.Sum256(vHash[:])
+	payload = append(payload, kDoubleHash[:]...)
+	payload = append(payload, vDoubleHash[:]...)
+
+	sig, err := priv.Sign(nil, payload, nil)
+	assert.NoError(t, err)
+
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_PublicKey{
+			PublicKey: &pb.PublicKeyCredential{
+				PublicKey: pubBytes,
+				Signature: sig,
+				Context:   vHash[:],
+				Algorithm: v1.PublicKeyDetails_ML_DSA_44,
 			},
 		},
 		Message: msgHash[:],
@@ -98,6 +145,28 @@ func TestToLogEntry_InvalidSignature(t *testing.T) {
 	assert.Nil(t, leafBytes)
 }
 
+func TestToLogEntry_MLDSA(t *testing.T) {
+	req, _ := generateValidMLDSARequest(t)
+
+	leafBytes, _, err := ToLogEntry(context.Background(), req, nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, leafBytes)
+	assert.Greater(t, len(leafBytes), 0)
+	assert.Equal(t, byte(0x01), leafBytes[0]) // Leaf hash starts with 0x01
+}
+
+func TestToLogEntry_InvalidSignature_MLDSA(t *testing.T) {
+	req, _ := generateValidMLDSARequest(t)
+
+	// Invalidate the signature by flipping the first byte
+	req.GetPublicKey().Signature[0] ^= 0xFF
+
+	leafBytes, _, err := ToLogEntry(context.Background(), req, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid signature")
+	assert.Nil(t, leafBytes)
+}
+
 func TestValidate_InvalidMessageSize(t *testing.T) {
 	req, _ := generateValidRequest(t)
 
@@ -117,7 +186,7 @@ func TestToEntryHash(t *testing.T) {
 
 	expectedHash := rfc6962.DefaultHasher.HashLeaf(leafBytes)
 
-	h, err := ToEntryHash(req.GetPublicKey().GetPublicKey(), req.GetPublicKey().GetSignature(), req.Message, req.GetPublicKey().GetContext())
+	h, err := ToEntryHash(req.GetPublicKey().GetPublicKey(), req.GetPublicKey().GetSignature(), v1.PublicKeyDetails_PKIX_ED25519, req.Message, req.GetPublicKey().GetContext())
 	assert.NoError(t, err)
 	assert.Equal(t, expectedHash, h)
 }
