@@ -23,7 +23,10 @@ import (
 	"fmt"
 	"sort"
 
+	"filippo.io/mldsa"
+	mldsax509 "filippo.io/mldsa/x509"
 	"github.com/sigstore/fulcio/pkg/config"
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/transparency-dev/merkle/rfc6962"
 )
@@ -41,11 +44,23 @@ func validate(req *pb.IdentityRequestV001) error {
 
 	switch cred := req.Credential.(type) {
 	case *pb.IdentityRequestV001_PublicKey:
-		if len(cred.PublicKey.GetPublicKey()) == 0 {
+		pkLen := len(cred.PublicKey.GetPublicKey())
+		sigLen := len(cred.PublicKey.GetSignature())
+		if pkLen == 0 {
 			return errors.New("public key is empty")
 		}
-		if len(cred.PublicKey.GetSignature()) != ed25519.SignatureSize {
-			return errors.New("invalid signature length, must be 64 bytes for Ed25519")
+		alg := cred.PublicKey.GetAlgorithm()
+		switch alg {
+		case v1.PublicKeyDetails_PKIX_ED25519:
+			if sigLen != ed25519.SignatureSize {
+				return errors.New("invalid signature length, must be 64 bytes for Ed25519")
+			}
+		case v1.PublicKeyDetails_ML_DSA_44:
+			if sigLen != mldsa.MLDSA44().SignatureSize() {
+				return errors.New("invalid signature length for ML-DSA-44")
+			}
+		default:
+			return errors.New("unsupported signature algorithm")
 		}
 		if len(cred.PublicKey.GetContext()) > 0 && len(cred.PublicKey.GetContext()) != sha256.Size {
 			return errors.New("invalid context value hash size, must be 32 bytes")
@@ -146,25 +161,51 @@ func ToLogEntry(ctx context.Context, req *pb.IdentityRequestV001, cfg *config.Fu
 	case *pb.IdentityRequestV001_PublicKey:
 		pubKey := cred.PublicKey.GetPublicKey()
 		sig := cred.PublicKey.GetSignature()
-
-		pub, err := x509.ParsePKIXPublicKey(pubKey)
-		if err != nil {
-			return nil, nil, fmt.Errorf("failed to parse public key: %w", err)
-		}
-		edKey, ok := pub.(ed25519.PublicKey)
-		if !ok {
-			return nil, nil, errors.New("public key is not an Ed25519 key")
-		}
+		alg := cred.PublicKey.GetAlgorithm()
 
 		payload := computeSignaturePayload(req)
 
-		if !ed25519.Verify(edKey, payload, sig) {
-			return nil, nil, errors.New("invalid signature")
-		}
+		switch alg {
+		case v1.PublicKeyDetails_PKIX_ED25519:
+			pub, err := x509.ParsePKIXPublicKey(pubKey)
+			if err != nil {
+				return nil, nil, fmt.Errorf("failed to parse public key: %w", err)
+			}
+			edKey, ok := pub.(ed25519.PublicKey)
+			if !ok {
+				return nil, nil, errors.New("public key is not an Ed25519 key")
+			}
 
-		rootOfTrust := append([]byte("Ed25519"), pubKey...)
-		rootPubKeyHash := sha256.Sum256(rootOfTrust)
-		return computeLeafHash(req, rootPubKeyHash[:], nil), nil, nil
+			if !ed25519.Verify(edKey, payload, sig) {
+				return nil, nil, errors.New("invalid signature")
+			}
+
+			rootOfTrust := append([]byte("Ed25519"), pubKey...)
+			rootPubKeyHash := sha256.Sum256(rootOfTrust)
+			return computeLeafHash(req, rootPubKeyHash[:], nil), nil, nil
+
+		case v1.PublicKeyDetails_ML_DSA_44:
+			pub, err := mldsax509.ParsePKIXPublicKey(pubKey)
+			if err != nil {
+				fmt.Printf("Unmarshal error: %v\n", err)
+				return nil, nil, fmt.Errorf("failed to parse ML-DSA-44 public key: %w", err)
+			}
+			mldsaKey, ok := pub.(*mldsa.PublicKey)
+			if !ok {
+				return nil, nil, errors.New("parsed key is not an ML-DSA public key")
+			}
+
+			if err := mldsa.Verify(mldsaKey, payload, sig, nil); err != nil {
+				fmt.Printf("Verify error: %v\n", err)
+				return nil, nil, errors.New("invalid signature")
+			}
+
+			rootOfTrust := append([]byte("ML-DSA-44"), pubKey...)
+			rootPubKeyHash := sha256.Sum256(rootOfTrust)
+			return computeLeafHash(req, rootPubKeyHash[:], nil), nil, nil
+		default:
+			return nil, nil, errors.New("unsupported signature algorithm")
+		}
 
 	case *pb.IdentityRequestV001_Oidc:
 		issuer, claims, err := extractOIDCClaims(ctx, cred.Oidc.GetToken(), cfg)
@@ -182,13 +223,14 @@ func ToLogEntry(ctx context.Context, req *pb.IdentityRequestV001, cfg *config.Fu
 
 // ToEntryHash reconstructs the identity log entry from bundle-signed
 // inputs and returns its entry hash.
-func ToEntryHash(publicKey []byte, signature []byte, message []byte, contextBytes []byte) ([]byte, error) {
+func ToEntryHash(publicKey []byte, signature []byte, algorithm v1.PublicKeyDetails, message []byte, contextBytes []byte) ([]byte, error) {
 	req := &pb.IdentityRequestV001{
 		Credential: &pb.IdentityRequestV001_PublicKey{
 			PublicKey: &pb.PublicKeyCredential{
 				PublicKey: publicKey,
 				Signature: signature,
 				Context:   contextBytes,
+				Algorithm: algorithm,
 			},
 		},
 		Message: message,
