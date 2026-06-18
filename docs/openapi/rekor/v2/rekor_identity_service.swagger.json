@@ -155,7 +155,7 @@
         "publicKey": {
           "type": "string",
           "format": "byte",
-          "description": "The public key used to verify the signature.\nMUST be an Ed25519 public key (SPKI DER-encoded)."
+          "description": "The public key used to verify the signature.\nMUST be an Ed25519 public key (SPKI DER-encoded) or an ML-DSA-44 public key (SPKI DER-encoded)."
         },
         "signature": {
           "type": "string",

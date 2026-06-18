@@ -19,6 +19,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"slices"
@@ -117,9 +118,10 @@ func TestIdentityAlgorithmRegistry(t *testing.T) {
 			algorithmOptions: nil,
 		},
 		{
-			name: "valid identity algorithm (pure ed25519)",
+			name: "valid identity algorithms (pure ed25519 and mldsa-44)",
 			algorithmOptions: []string{
 				"ed25519",
+				"mldsa-44",
 			},
 		},
 		{
@@ -134,6 +136,14 @@ func TestIdentityAlgorithmRegistry(t *testing.T) {
 			name: "valid format but not in allowed set (ed25519-ph)",
 			algorithmOptions: []string{
 				"ed25519-ph",
+			},
+			wantErr:     true,
+			errContains: "is not in the allowed set",
+		},
+		{
+			name: "valid format but not in allowed set (mldsa-65)",
+			algorithmOptions: []string{
+				"mldsa-65",
 			},
 			wantErr:     true,
 			errContains: "is not in the allowed set",
@@ -190,12 +200,22 @@ func generateEd25519Key(t *testing.T) ed25519.PublicKey {
 	return pub
 }
 
+func generateMLDSA44Key(t *testing.T) *mldsa.PublicKey {
+	t.Helper()
+	priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	if err != nil {
+		t.Fatalf("failed to generate ML-DSA-44 key: %v", err)
+	}
+	return priv.PublicKey()
+}
+
 func TestUnsupportedAlgorithm_Error(t *testing.T) {
 	rsaKey2048 := generateRSAKey(t, 2048)
 	rsaKey4096 := generateRSAKey(t, 4096)
 	ecdsaKeyP256 := generateECDSAKey(t, elliptic.P256())
 	ecdsaKeyP384 := generateECDSAKey(t, elliptic.P384())
 	ed25519Key := generateEd25519Key(t)
+	mldsa44Key := generateMLDSA44Key(t)
 
 	testCases := []struct {
 		name string
@@ -241,6 +261,14 @@ func TestUnsupportedAlgorithm_Error(t *testing.T) {
 				Alg: crypto.SHA256,
 			},
 			want: "unsupported entry algorithm for Ed25519 key, digest SHA-256",
+		},
+		{
+			name: "ML-DSA-44 with zero hash value",
+			err: UnsupportedAlgorithm{
+				Pub: mldsa44Key,
+				Alg: crypto.Hash(0),
+			},
+			want: "unsupported entry algorithm for ML-DSA key, parameter set ML-DSA-44, digest none",
 		},
 		{
 			name: "nil public key",
@@ -312,6 +340,12 @@ func TestUnsupportedAlgorithmForAllAllowedAlgs(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+		case signature.MLDSA:
+			priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
+			if err != nil {
+				t.Fatal(err)
+			}
+			pub = priv.PublicKey()
 		}
 		hash := details.GetHashType()
 		uaErr := UnsupportedAlgorithm{Pub: pub, Alg: hash}
