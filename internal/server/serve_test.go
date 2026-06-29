@@ -32,7 +32,7 @@ func TestServe(t *testing.T) {
 	}
 	go func() {
 		pid.Store(uint64(syscall.Getpid())) // Process IDs are positive ints
-		Serve(context.Background(), NewHTTPConfig(), NewGRPCConfig(), 1*time.Second, nil, shutdownFn)
+		Serve(context.Background(), NewHTTPConfig(), NewGRPCConfig(), 1*time.Second, &mockRekorServer{}, shutdownFn)
 		wg.Done()
 	}()
 	// One for Serve returning, one for shutdown function being invoked
