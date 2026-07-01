@@ -105,6 +105,7 @@ services:
       - "--additional_logs=/witness_config/config.yaml"
       - "--logtostderr"
       - "--v=2"
+      - "--rate_limit=100"
     restart: always
     healthcheck:
       test:
