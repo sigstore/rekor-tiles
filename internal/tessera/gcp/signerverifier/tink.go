@@ -49,7 +49,7 @@ func NewTinkSignerVerifier(ctx context.Context, kekURI, keysetPath string) (sign
 func getKeyEncryptionKey(ctx context.Context, kmsKey string) (tink.AEAD, error) {
 	switch {
 	case strings.HasPrefix(kmsKey, "gcp-kms://"):
-		gcpClient, err := gcpkms.NewClientWithOptions(ctx, kmsKey)
+		gcpClient, err := gcpkms.NewClient(ctx, kmsKey)
 		if err != nil {
 			return nil, err
 		}
