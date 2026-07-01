@@ -3,7 +3,7 @@ module github.com/sigstore/rekor-tiles/v2
 go 1.25.8
 
 require (
-	cloud.google.com/go/spanner v1.91.0
+	cloud.google.com/go/spanner v1.92.0
 	cloud.google.com/go/storage v1.62.3
 	github.com/aws/aws-sdk-go-v2 v1.42.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.25
@@ -54,7 +54,7 @@ require (
 	cloud.google.com/go/iam v1.11.0 // indirect
 	cloud.google.com/go/kms v1.31.0 // indirect
 	cloud.google.com/go/longrunning v1.0.0 // indirect
-	cloud.google.com/go/monitoring v1.25.0 // indirect
+	cloud.google.com/go/monitoring v1.29.0 // indirect
 	filippo.io/edwards25519 v1.2.0 // indirect
 	filippo.io/mldsa v0.0.0-20260215214346-43d0283efc3e // indirect
 	github.com/GoogleCloudPlatform/grpc-gcp-go/grpcgcp v1.6.0 // indirect
