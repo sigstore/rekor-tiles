@@ -9,8 +9,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/config v1.32.25
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.24
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.104.0
-	github.com/aws/smithy-go v1.27.2
-	github.com/chainguard-dev/clog v1.8.0
+	github.com/aws/smithy-go v1.27.3
+	github.com/chainguard-dev/clog v1.8.1
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	github.com/go-test/deep v1.1.1
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
