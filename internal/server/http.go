@@ -88,10 +88,19 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)), // localhost:[port]/healthz
 	)
 
-	err = pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
-	if err != nil {
-		slog.Error("failed to register gateway:", "errors", err)
-		os.Exit(1)
+	if _, ok := grpcServer.serverImpl.(pb.RekorServer); ok {
+		err = pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
+		if err != nil {
+			slog.Error("failed to register rekor handler", "error", err)
+			os.Exit(1)
+		}
+	}
+	if _, ok := grpcServer.serverImpl.(pb.IdentityRekorServer); ok {
+		err = pb.RegisterIdentityRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
+		if err != nil {
+			slog.Error("failed to register identity handler", "error", err)
+			os.Exit(1)
+		}
 	}
 
 	metrics := getMetrics()

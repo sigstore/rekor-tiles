@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/base64"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -133,13 +134,31 @@ var serveCmd = &cobra.Command{
 				os.Exit(1)
 			}
 		}
-		algorithmRegistry, err := algorithmregistry.AlgorithmRegistry(viper.GetStringSlice("client-signing-algorithms"))
+		algorithms := viper.GetStringSlice("client-signing-algorithms")
+		if viper.GetBool("identity-mode") {
+			if !cmd.Flags().Changed("client-signing-algorithms") {
+				algorithms = []string{"ed25519"}
+			}
+			for _, alg := range algorithms {
+				if alg != "ed25519" {
+					slog.Error(fmt.Sprintf("unsupported algorithm '%s' for identity log", alg))
+					os.Exit(1)
+				}
+			}
+		}
+
+		algorithmRegistry, err := algorithmregistry.AlgorithmRegistry(algorithms)
 		if err != nil {
 			slog.Error("failed to get algorithm registry", "error", err)
 			os.Exit(1)
 		}
 
-		rekorServer := server.NewServer(tesseraStorage, readOnly, algorithmRegistry, logID)
+		var rekorServer any
+		if viper.GetBool("identity-mode") {
+			rekorServer = server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry)
+		} else {
+			rekorServer = server.NewServer(tesseraStorage, readOnly, algorithmRegistry, logID)
+		}
 
 		server.Serve(
 			ctx,
@@ -175,6 +194,7 @@ func init() {
 
 	// POSIX configs
 	serveCmd.Flags().String("storage-dir", "", "directory for tile and checkpoint storage for a POSIX log")
+	serveCmd.Flags().Bool("identity-mode", false, "run as an identity log server")
 
 	// checkpoint signing configs
 	serveCmd.Flags().String("signer-filepath", "", "path to the signing key")

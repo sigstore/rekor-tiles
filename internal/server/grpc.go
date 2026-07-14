@@ -52,10 +52,11 @@ import (
 type grpcServer struct {
 	*grpc.Server
 	serverEndpoint string
+	serverImpl     any
 }
 
 // newGRPCServer starts a new grpc server and registers the services.
-func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
+func newGRPCServer(config *GRPCConfig, server any) *grpcServer {
 	var opts []grpc.ServerOption
 
 	grpcPanicRecoveryHandler := func(p any) (err error) {
@@ -86,8 +87,17 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	}
 
 	s := grpc.NewServer(opts...)
-	pb.RegisterRekorServer(s, server)
-	grpc_health_v1.RegisterHealthServer(s, server)
+
+	if r, ok := server.(pb.RekorServer); ok {
+		pb.RegisterRekorServer(s, r)
+	}
+	if i, ok := server.(pb.IdentityRekorServer); ok {
+		pb.RegisterIdentityRekorServer(s, i)
+	}
+	if h, ok := server.(grpc_health_v1.HealthServer); ok {
+		grpc_health_v1.RegisterHealthServer(s, h)
+	}
+
 	reflection.Register(s)
 
 	getMetrics().serverMetrics.InitializeMetrics(s)
@@ -96,6 +106,7 @@ func newGRPCServer(config *GRPCConfig, server rekorServer) *grpcServer {
 	return &grpcServer{
 		Server:         s,
 		serverEndpoint: config.GRPCTarget(),
+		serverImpl:     server,
 	}
 }
 
