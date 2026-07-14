@@ -39,7 +39,6 @@ import (
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
-	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -52,11 +51,11 @@ import (
 type grpcServer struct {
 	*grpc.Server
 	serverEndpoint string
-	serverImpl     any
+	serverImpl     HTTPRegistrar
 }
 
 // newGRPCServer starts a new grpc server and registers the services.
-func newGRPCServer(config *GRPCConfig, server any) *grpcServer {
+func newGRPCServer(config *GRPCConfig, server Registrar) *grpcServer {
 	var opts []grpc.ServerOption
 
 	grpcPanicRecoveryHandler := func(p any) (err error) {
@@ -88,15 +87,8 @@ func newGRPCServer(config *GRPCConfig, server any) *grpcServer {
 
 	s := grpc.NewServer(opts...)
 
-	if r, ok := server.(pb.RekorServer); ok {
-		pb.RegisterRekorServer(s, r)
-	}
-	if i, ok := server.(pb.IdentityRekorServer); ok {
-		pb.RegisterIdentityRekorServer(s, i)
-	}
-	if h, ok := server.(grpc_health_v1.HealthServer); ok {
-		grpc_health_v1.RegisterHealthServer(s, h)
-	}
+	server.RegisterGRPC(s)
+	grpc_health_v1.RegisterHealthServer(s, server)
 
 	reflection.Register(s)
 
