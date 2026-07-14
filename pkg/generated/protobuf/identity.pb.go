@@ -43,7 +43,10 @@ type PublicKeyCredential struct {
 	PublicKey []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	// The signature computed over the specification identifier, checksum, and context strings,
 	// as defined by the c2sp.org/identity-transparency specification.
-	Signature     []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+	// Optional context value to record alongside the message. Must be a SHA-256 digest.
+	// Must be signed as defined by the c2sp.org/identity-transparency specification.
+	Context       []byte `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -92,6 +95,13 @@ func (x *PublicKeyCredential) GetSignature() []byte {
 	return nil
 }
 
+func (x *PublicKeyCredential) GetContext() []byte {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
 // A request to add an identity-based transparency log entry (v0.0.1)
 type IdentityRequestV001 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -100,9 +110,7 @@ type IdentityRequestV001 struct {
 	//	*IdentityRequestV001_PublicKey
 	Credential isIdentityRequestV001_Credential `protobuf_oneof:"credential"`
 	// Must be a SHA-256 digest of data.
-	Message []byte `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
-	// Optional context value. Must be a SHA-256 digest.
-	Context       []byte `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	Message       []byte `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -160,13 +168,6 @@ func (x *IdentityRequestV001) GetMessage() []byte {
 	return nil
 }
 
-func (x *IdentityRequestV001) GetContext() []byte {
-	if x != nil {
-		return x.Context
-	}
-	return nil
-}
-
 type isIdentityRequestV001_Credential interface {
 	isIdentityRequestV001_Credential()
 }
@@ -181,16 +182,16 @@ var File_rekor_v2_identity_proto protoreflect.FileDescriptor
 
 const file_rekor_v2_identity_proto_rawDesc = "" +
 	"\n" +
-	"\x17rekor/v2/identity.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\"\\\n" +
+	"\x17rekor/v2/identity.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\"v\n" +
 	"\x13PublicKeyCredential\x12\"\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\fB\x03\xe0A\x02R\tpublicKey\x12!\n" +
-	"\tsignature\x18\x02 \x01(\fB\x03\xe0A\x02R\tsignature\"\xa9\x01\n" +
+	"\tsignature\x18\x02 \x01(\fB\x03\xe0A\x02R\tsignature\x12\x18\n" +
+	"\acontext\x18\x03 \x01(\fR\acontext\"\x8f\x01\n" +
 	"\x13IdentityRequestV001\x12K\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\v2*.dev.sigstore.rekor.v2.PublicKeyCredentialH\x00R\tpublicKey\x12\x1d\n" +
-	"\amessage\x18\x03 \x01(\fB\x03\xe0A\x02R\amessage\x12\x18\n" +
-	"\acontext\x18\x04 \x01(\fR\acontextB\f\n" +
+	"\amessage\x18\x03 \x01(\fB\x03\xe0A\x02R\amessageB\f\n" +
 	"\n" +
 	"credentialB\x81\x01\n" +
 	"\x1bdev.sigstore.proto.rekor.v2B\x0fRekorV2IdentityP\x01Z9github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf\xea\x02\x13Sigstore::Rekor::V2b\x06proto3"
