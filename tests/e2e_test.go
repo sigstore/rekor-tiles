@@ -376,7 +376,7 @@ func testPersistentDeduplication(t *testing.T, config backendConfig) {
 
 func artifactDigest(idx uint64) []byte {
 	baseArtifact := "testartifact"
-	artifact := []byte(fmt.Sprintf("%s%d", baseArtifact, idx))
+	artifact := fmt.Appendf(nil, "%s%d", baseArtifact, idx)
 	digest := sha256.Sum256(artifact)
 	return digest[:]
 }
