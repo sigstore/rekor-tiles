@@ -50,10 +50,9 @@ func ToLogEntry(hr *pb.HashedRekordRequestV002, algorithmRegistry *signature.Alg
 	}
 
 	hashAlg := algDetails.GetHashType()
-	// Some signing algorithms (for example pure Ed25519, PKIX_ED25519) have no
-	// associated prehash, so GetHashType returns crypto.Hash(0). A hashedrekord
-	// always carries a message digest, so reject these here instead of calling
-	// Size() on an unset hash, which panics.
+	// hashedrekord only permits signing algorithms that prehash the data.
+	// Pure Ed25519 (PKIX_ED25519) does not, so GetHashType returns crypto.Hash(0);
+	// reject it here rather than calling Size() on an unset hash.
 	if hashAlg == crypto.Hash(0) {
 		return nil, fmt.Errorf("unsupported signing algorithm %s for hashedrekord: no associated digest algorithm", hr.Signature.Verifier.KeyDetails)
 	}
