@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
@@ -380,6 +381,39 @@ func TestToLogEntry(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestToLogEntryEd25519NoPrehash covers a pure Ed25519 key (PKIX_ED25519),
+// which is in the default allowed set but has no associated prehash, so
+// GetHashType returns crypto.Hash(0). ToLogEntry must reject it with a clean
+// error rather than panic on crypto.Hash(0).Size().
+func TestToLogEntryEd25519NoPrehash(t *testing.T) {
+	pub, _, err := ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	der, err := x509.MarshalPKIXPublicKey(pub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req := &pb.HashedRekordRequestV002{
+		Signature: &pb.Signature{
+			Content: []byte("signature-placeholder"),
+			Verifier: &pb.Verifier{
+				Verifier: &pb.Verifier_PublicKey{
+					PublicKey: &pb.PublicKey{RawBytes: der},
+				},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ED25519,
+			},
+		},
+		Digest: bytes.Repeat([]byte{0xab}, 64),
+	}
+	algReg, err := signature.NewAlgorithmRegistryConfig([]v1.PublicKeyDetails{v1.PublicKeyDetails_PKIX_ED25519})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = ToLogEntry(req, algReg)
+	assert.ErrorContains(t, err, "unsupported signing algorithm")
 }
 
 func hexDecodeOrDie(t *testing.T, hash string) []byte {
