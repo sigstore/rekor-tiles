@@ -15,7 +15,6 @@
 syntax = "proto3";
 package dev.sigstore.rekor.v2;
 
-import "google/api/field_behavior.proto";
 import "sigstore_common.proto";
 import "envelope.proto";
 
