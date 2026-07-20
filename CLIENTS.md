@@ -83,6 +83,7 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
         }
     }
 }
+```
 
 ### Entry Type
 
