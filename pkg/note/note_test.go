@@ -18,6 +18,9 @@ package note
 
 import (
 	"context"
+	"crypto"
+	"crypto/mldsa"
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
 	"os"
@@ -25,7 +28,11 @@ import (
 	"testing"
 
 	"github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/transparency-dev/formats/log"
+	"golang.org/x/mod/sumdb/note"
 )
 
 var (
@@ -75,6 +82,13 @@ cvxSmCAcfkrJHKF1remfUOtN6Ncu9Dyr/rieoxFDqz31lezTAx3T6lLfgtspxplR
 fycQ0e/nw1JkypGoL1j4cwM=
 -----END PRIVATE KEY-----
 `)
+	// mldsa-priv-key.pem
+	mldsaPrivKey = []byte(`
+-----BEGIN PRIVATE KEY-----
+MDQCAQAwCwYJYIZIAWUDBAMRBCKAII9qENVch/5+4uTrzma75jN+rTCu6Gt6fDSc
+WEjtQxH8
+-----END PRIVATE KEY-----
+`)
 )
 
 func TestKeyHash(t *testing.T) {
@@ -102,6 +116,12 @@ func TestKeyHash(t *testing.T) {
 			key:           rsaPrivKey,
 			expectedKeyID: 2918460683,                                                                            // echo $((0x$({ printf "%s%b%b%s" "testkey" "\x0A" "\xFF" 'PKIX-RSA-PKCS#1v1.5' ; openssl rsa -in rsa-priv-key.pem -pubout -out - | openssl rsa -in /dev/stdin -pubin -outform DER -out - ;  } | sha256sum | cut -d ' ' -f 1 | head -c8)))
 			expectedLogID: hexDecodeOrDie(t, "adf42d0b4478f2d07e5c8c3e63640a7e41b440c19dc47010c3a4936af75d85b6"), // echo $({ printf "%s%b%b%s" "testkey" "\x0A" "\xFF" 'PKIX-RSA-PKCS#1v1.5' ; openssl rsa -in rsa-priv-key.pem -pubout -out - | openssl rsa -in /dev/stdin -pubin -outform DER -out - ;  } | sha256sum | cut -d ' ' -f 1)
+		},
+		{
+			name:          "mldsa",
+			key:           mldsaPrivKey,
+			expectedKeyID: 2079239679,
+			expectedLogID: hexDecodeOrDie(t, "7beeadffbc4d8e7a62f9a444e789a6d472a7502a632523e163824dcda53a008b"),
 		},
 	}
 	for _, test := range tests {
@@ -142,4 +162,97 @@ func hexDecodeOrDie(t *testing.T, text string) []byte {
 		t.Fatal(err)
 	}
 	return decoded
+}
+
+func TestMLDSASignerVerifier(t *testing.T) {
+	ctx := context.Background()
+	origin := "testkey"
+
+	td := t.TempDir()
+	keyFile := filepath.Join(td, "mldsa-priv.pem")
+	require.NoError(t, os.WriteFile(keyFile, mldsaPrivKey, 0600))
+
+	signer, err := signerverifier.NewFileSignerVerifier(keyFile, "")
+	require.NoError(t, err)
+
+	noteSigner, err := NewNoteSigner(ctx, origin, signer)
+	require.NoError(t, err)
+
+	noteVerifier, err := NewNoteVerifier(origin, signer)
+	require.NoError(t, err)
+
+	rootHash := sha256.Sum256([]byte("test root hash"))
+	cp := log.Checkpoint{
+		Origin: "example.com",
+		Size:   123,
+		Hash:   rootHash[:],
+	}
+	msg := cp.Marshal()
+
+	sig, err := noteSigner.Sign(msg)
+	require.NoError(t, err)
+	assert.True(t, noteVerifier.Verify(msg, sig))
+
+	// Verify end-to-end signed note formatting and opening
+	signedNote, err := note.Sign(&note.Note{Text: string(msg)}, noteSigner)
+	require.NoError(t, err)
+	openedNote, err := note.Open(signedNote, note.VerifierList(noteVerifier))
+	require.NoError(t, err)
+	assert.Equal(t, string(msg), openedNote.Text)
+
+	t.Run("invalid checkpoint format", func(t *testing.T) {
+		invalidMsg := []byte("not a valid checkpoint\n")
+		_, err := noteSigner.Sign(invalidMsg)
+		assert.Error(t, err)
+		assert.False(t, noteVerifier.Verify(invalidMsg, sig))
+	})
+
+	t.Run("invalid checkpoint hash length", func(t *testing.T) {
+		shortHashMsg := []byte("example.com\n123\ndGVzdGhhc2g=\n")
+		_, err := noteSigner.Sign(shortHashMsg)
+		assert.ErrorContains(t, err, "invalid checkpoint hash length")
+		assert.False(t, noteVerifier.Verify(shortHashMsg, sig))
+	})
+
+	t.Run("invalid signature length", func(t *testing.T) {
+		assert.False(t, noteVerifier.Verify(msg, sig[:7]))
+		assert.False(t, noteVerifier.Verify(msg, sig[:len(sig)-1]))
+		assert.False(t, noteVerifier.Verify(msg, append(sig, 0x00)))
+	})
+
+	t.Run("tampered message or signature", func(t *testing.T) {
+		otherHash := sha256.Sum256([]byte("other root hash"))
+		otherCP := log.Checkpoint{
+			Origin: "example.com",
+			Size:   123,
+			Hash:   otherHash[:],
+		}
+		assert.False(t, noteVerifier.Verify(otherCP.Marshal(), sig))
+
+		tamperedSig := append([]byte(nil), sig...)
+		tamperedSig[len(tamperedSig)-1] ^= 0xff
+		assert.False(t, noteVerifier.Verify(msg, tamperedSig))
+	})
+
+	t.Run("ML-DSA-65 and ML-DSA-87", func(t *testing.T) {
+		for _, params := range []mldsa.Parameters{mldsa.MLDSA65(), mldsa.MLDSA87()} {
+			priv, err := mldsa.GenerateKey(params)
+			require.NoError(t, err)
+			sv, err := signature.LoadDefaultSignerVerifier(priv)
+			require.NoError(t, err)
+			ns, err := NewNoteSigner(ctx, origin, sv)
+			require.NoError(t, err)
+			nv, err := NewNoteVerifier(origin, sv)
+			require.NoError(t, err)
+
+			s, err := ns.Sign(msg)
+			require.NoError(t, err)
+			assert.True(t, nv.Verify(msg, s))
+		}
+	})
+
+	t.Run("unsupported key type", func(t *testing.T) {
+		_, _, err := KeyHash(origin, crypto.PublicKey(struct{}{}))
+		assert.ErrorContains(t, err, "unsupported key type")
+	})
 }
