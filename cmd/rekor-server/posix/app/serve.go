@@ -17,18 +17,15 @@ package app
 
 import (
 	"context"
+	"crypto/ed25519"
 	"crypto/x509"
 	"encoding/base64"
 	"fmt"
 	"log/slog"
 	"os"
 
-	"k8s.io/klog/v2"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"sigs.k8s.io/release-utils/version"
-
+	"filippo.io/mldsa"
+	mldsax509 "filippo.io/mldsa/x509"
 	"github.com/sigstore/fulcio/pkg/config"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/cli"
@@ -38,6 +35,10 @@ import (
 	posixDriver "github.com/sigstore/rekor-tiles/v2/internal/tessera/posix"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/release-utils/version"
 )
 
 var serveCmd = &cobra.Command{
@@ -92,7 +93,16 @@ func runServer(cmd *cobra.Command, isIdentity bool) {
 		slog.Error("failed to get public key from signing key", "error", err)
 		os.Exit(1)
 	}
-	der, err := x509.MarshalPKIXPublicKey(pubkey)
+	var der []byte
+	switch pk := pubkey.(type) {
+	case *mldsa.PublicKey:
+		der, err = mldsax509.MarshalPKIXPublicKey(pk)
+	case ed25519.PublicKey:
+		der, err = x509.MarshalPKIXPublicKey(pk)
+	default:
+		slog.Error("unsupported log signing key algorithm, must be Ed25519 or ML-DSA")
+		os.Exit(1)
+	}
 	if err != nil {
 		slog.Error("failed to marshal public key to DER", "error", err)
 		os.Exit(1)
@@ -157,10 +167,10 @@ func runServer(cmd *cobra.Command, isIdentity bool) {
 	algorithms := viper.GetStringSlice("client-signing-algorithms")
 	if isIdentity {
 		if !cmd.Flags().Changed("client-signing-algorithms") {
-			algorithms = []string{"ed25519"}
+			algorithms = []string{"ed25519", "ml-dsa-44"}
 		}
 		for _, alg := range algorithms {
-			if alg != "ed25519" {
+			if alg != "ed25519" && alg != "ml-dsa-44" {
 				slog.Error(fmt.Sprintf("unsupported algorithm '%s' for identity log", alg))
 				os.Exit(1)
 			}

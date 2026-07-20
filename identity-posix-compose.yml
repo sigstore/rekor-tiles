@@ -22,16 +22,17 @@ services:
     command:
     - "rekor-server"
     - "serve-identity"
+    - "--client-signing-algorithms=ed25519"
     - "--http-address=0.0.0.0"
     - "--grpc-address=0.0.0.0"
     - "--hostname=rekor-local"
     - "--storage-dir=/tmp/identityposixlog"
-    - "--signer-filepath=/pki/ed25519-priv-key.pem"
+    - "--signer-filepath=/pki/mldsa-priv-key.pem"
     - "--checkpoint-interval=2s"
     - "--log-level=debug"
     - "--request-response-logging=true"
     - "--persistent-antispam=true"
-    - "--witness-policy-path=/witness/policy.yaml"
+    - "--witness-policy-path=/witness/mldsa-policy.yaml"
     - "--oidc-config=/testdata/oidc-config.json"
     ports:
     - "3006:3000" # http port
@@ -92,8 +93,8 @@ services:
     command:
       - "--listen=:8100"
       - "--db_file=/witness_data/witness.sqlite"
-      - "--private_key_path=/witness_config/private.key"
-      - "--additional_logs=/witness_config/config.yaml"
+      - "--private_key_path=/witness_config/mldsa-private.key"
+      - "--additional_logs=/witness_config/mldsa-config.yaml"
       - "--logtostderr"
       - "--v=2"
       - "--rate_limit=100"
