@@ -19,8 +19,13 @@ limitations under the License.
 package signerverifier
 
 import (
+	"encoding/pem"
 	"fmt"
 	"os"
+
+	filippomldsa "filippo.io/mldsa"
+	mldsax509 "filippo.io/mldsa/x509"
+	"github.com/sigstore/rekor-tiles/v2/internal/crypto/mldsa"
 
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -40,6 +45,20 @@ func NewFileSignerVerifier(keyPath, keyPass string) (*File, error) {
 
 	opaqueKey, err := cryptoutils.UnmarshalPEMToPrivateKey(data, cryptoutils.StaticPasswordFunc([]byte(keyPass)))
 	if err != nil {
+		// Try ML-DSA fallback
+		block, _ := pem.Decode(data)
+		if block != nil {
+			mldsaKeyAny, mldsaErr := mldsax509.ParsePKCS8PrivateKey(block.Bytes)
+			if mldsaErr == nil {
+				if mldsaKey, ok := mldsaKeyAny.(*filippomldsa.PrivateKey); ok {
+					sv, svErr := mldsa.LoadMLDSASignerVerifier(mldsaKey)
+					if svErr == nil {
+						return &File{sv}, nil
+					}
+				}
+			}
+		}
+
 		return nil, fmt.Errorf("file: provide a valid signer, %s is not valid: %w", keyPath, err)
 	}
 

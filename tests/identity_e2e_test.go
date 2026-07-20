@@ -23,6 +23,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"io"
 	"net"
@@ -36,13 +37,13 @@ import (
 	fulcio_config "github.com/sigstore/fulcio/pkg/config"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
+	internalmldsa "github.com/sigstore/rekor-tiles/v2/internal/crypto/mldsa"
 	"github.com/sigstore/rekor-tiles/v2/pkg/client/read"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/rekor-tiles/v2/pkg/types/identity"
 	"github.com/sigstore/rekor-tiles/v2/pkg/verify"
 	"github.com/sigstore/sigstore/pkg/cryptoutils"
-	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
 	f_note "github.com/transparency-dev/formats/note"
 	tlogproof "github.com/transparency-dev/formats/proof"
@@ -58,6 +59,11 @@ var identityPosixConfig = backendConfig{
 	ComposePath: "identity-posix-compose.yml",
 }
 
+var (
+	identityServerPublicKey = "./testdata/pki/mldsa-pub-key.pem"
+	identityWitnessVKey     = "rekor-witness-test+0a24f7bd+BtJXRyNcK7dzPDBCZMsHgTG8O/g+yGm3jaWYzwzVQ9cuRzfZY5y1XnZM0D8IYXxYuNqhdGk6FcSIB2yBGajESPSnpFoE0lNltyIODwfXwVNjGhrqNW/p+xvuCkhmWZm6HAPvp9N+woZ2Mk1pnvm9Lhz7U1VBTZ7uA1+wqnDkVoL16bBpN3Na3ocsoDTUsw+NNBQk41DZHcnAfEqas0EAFOL+bo1F6NFdYTYkFtFuPDqyKlXtAfRX/qJxjdGvgoyhS941VFHDZK74OxLo3hYMieOImkj/QiwQ3sY2ufr4C3vEsHBiIZPn37X252ZY+xQXNS7x0xRowHInxla+Jtgg0IRSJHT3EGRtbADnX+jajakztXbLs1dhVbOzHgMI11BB3NVdv/KENQcY2Ssqlm70ra/h8foMNCl3loWXblOqwaKPzChZFIqo3L+Oy0CL0Yg6MT4Ge4pi6+8RJcdBQupmHtaAY1gCPodwqdWBuetcpmhaxJcpzMz5JyI8y6V6iRHOywOUTy1n8Rp4t32sX6s+mVEtXrI4AXXQtxj0DCr7YvbFHb2hYeLkVB+85lmHvMOvIYqjrTZsabOFqYZA3oG/t03RcZgrJir6zlT7WguiHMlFwR8hL2LMZrxv+AIIYwsgDCw4YybhhgKbOUgzs6gKwaM+FLEiGDwLYNxvIvSaUI6wa3s3aNQGZiNYO/8w7D1SU17i2P3NIoV3ZNM9vbvy2mCOAqBpzmSs7vPRuU9cpwjWavG9mir0342X8x+briBPKGU7BY3kZ2kTKSC/7Lj7UE1zVXsfBKDnwCmd1Hohugx8K2y307jGcdRipVNB/ruKWK40yXq/a/baillaGP/R8POdPmnUE7hSRbpqS6EnNxYmbhXQ0M/WB9hrEgt6nhUzBjXIiivmplLFbL45/2fK3Y5MqI7xjvSsN0V1DQGvbQcVh4Btb8w9AT/uQ1qsN4TynaxF/AVY6RV1jRQCygLt98dPxF/JClN4bUpaO0jefIgjgg3ZFA2g8Qb8K8KvZmLmkNzhkf+C3iiiZIr37vIpUeGBocTfCuSiXIIBsWEPYUWl/I3631c1utU7ktNUQMzkHgjQIUQcwEAQLIMiwhWdEtsPUBShntYVsxW52qtPGDdnm7jTT+Wyoiq6Gxd/q1r6RipudSRF0VDvMIB7fvSQ2fb0cwf6u40FbRNUf54Kr4uJp5OZHOVOUQruNDYDVxb/ORZJ1JV341WHf7yjpM0b8wQ+utf+tkG1aA+MJY4qDa1lVLQMVowybTXow+DeHhtpBWDFkmX3NYBY+rtwQYe2OdRwYuWTaMdtgkAkGnygvHrDeY4LUI1bmouv8Im4k+3w68q/QZeMUPb8UuIkkf58uAb+YMIem3PW2QuwScGz9yEUCkfrJB9QGSm4F6ENyj5iig1+y0xhu91UzTOnOSxCOe7rJhjKD2PkqjNnC7a28PLp4dOr069sRyQYk6O64WIWbVek8ClF1vx1JHxrIZgdj86qsOBIPC+O9q+p+yE+Z/cAO2LC0clYKMNS+jMpYal6wnGZQrMjNky3Tr3PyxvZSimu1J5wDRWLCyK7qBUYefaVyibbgVJng5/CNHWtJnhhX1zrWLsBDYkO+VNlM4BX0DOQmDVddNLS0IGequhrYjHof9mfTp0Bj5QnnKn9rHKH0CW/vjYR58t7vVeSCaIXFm9syz+LZLAvtITr50xob71w4a+HdL5Y6grbnlx6ZNOZotIw8r6NYZabhXHNsOm7dfY="
+)
+
 func TestIdentityPOSIX(t *testing.T) {
 	t.Run("ReadWritePublicKey", func(t *testing.T) {
 		testIdentityReadWrite(t, identityPosixConfig)
@@ -72,11 +78,14 @@ func testIdentityReadWrite(t *testing.T, config backendConfig) {
 	defer cancel()
 
 	// get verifier needed for both read and write
-	serverPubKeyPEM, err := os.ReadFile(defaultServerPublicKey)
+	serverPubKeyPEM, err := os.ReadFile(identityServerPublicKey)
 	assert.NoError(t, err)
-	serverPubKey, err := cryptoutils.UnmarshalPEMToPublicKey(serverPubKeyPEM)
+	block, _ := pem.Decode(serverPubKeyPEM)
+	assert.NotNil(t, block)
+	mldsaKeyAny, err := mldsax509.ParsePKIXPublicKey(block.Bytes)
 	assert.NoError(t, err)
-	verifier, err := signature.LoadDefaultVerifier(serverPubKey)
+	mldsaKey := mldsaKeyAny.(*mldsa.PublicKey)
+	verifier, err := internalmldsa.LoadMLDSAVerifier(mldsaKey)
 	assert.NoError(t, err)
 
 	reader, err := read.NewReader(config.StorageURL, defaultRekorHostname, verifier)
@@ -180,7 +189,7 @@ func testIdentityReadWrite(t *testing.T, config backendConfig) {
 			noteVerifier, err := note.NewNoteVerifier(defaultRekorHostname, verifier)
 			assert.NoError(t, err)
 
-			witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(defaultWitnessVKey)
+			witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(identityWitnessVKey)
 			assert.NoError(t, err)
 
 			noteVerifiers := []signednote.Verifier{noteVerifier, witnessNoteVerifier}
@@ -212,11 +221,14 @@ func testIdentityOIDC(t *testing.T, config backendConfig) {
 	defer cancel()
 
 	// get verifier needed for both read and write
-	serverPubKeyPEM, err := os.ReadFile(defaultServerPublicKey)
+	serverPubKeyPEM, err := os.ReadFile(identityServerPublicKey)
 	assert.NoError(t, err)
-	serverPubKey, err := cryptoutils.UnmarshalPEMToPublicKey(serverPubKeyPEM)
+	block, _ := pem.Decode(serverPubKeyPEM)
+	assert.NotNil(t, block)
+	mldsaKeyAny, err := mldsax509.ParsePKIXPublicKey(block.Bytes)
 	assert.NoError(t, err)
-	verifier, err := signature.LoadDefaultVerifier(serverPubKey)
+	mldsaKey := mldsaKeyAny.(*mldsa.PublicKey)
+	verifier, err := internalmldsa.LoadMLDSAVerifier(mldsaKey)
 	assert.NoError(t, err)
 
 	reader, err := read.NewReader(config.StorageURL, defaultRekorHostname, verifier)
@@ -279,7 +291,7 @@ func testIdentityOIDC(t *testing.T, config backendConfig) {
 	noteVerifier, err := note.NewNoteVerifier(defaultRekorHostname, verifier)
 	assert.NoError(t, err)
 
-	witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(defaultWitnessVKey)
+	witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(identityWitnessVKey)
 	assert.NoError(t, err)
 
 	noteVerifiers := []signednote.Verifier{noteVerifier, witnessNoteVerifier}
