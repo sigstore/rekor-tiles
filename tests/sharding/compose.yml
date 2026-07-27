@@ -27,7 +27,7 @@ services:
     networks:
     - shard2
   gcs1:
-    image: fsouza/fake-gcs-server:1.54.0@sha256:3730da0e31f7e5186a90ec4899dc2c336104e7599df400411392ef17e684c31f
+    image: fsouza/fake-gcs-server:1.55.1@sha256:91afded49de804aa61b5f3eb6c7cd65205acf9e5c5e047cf0ba7d9507af806c8
     volumes:
     - bucket:/data/tiles:rw
     command:
@@ -41,7 +41,7 @@ services:
     networks:
     - shard1
   gcs2:
-    image: fsouza/fake-gcs-server:1.54.0@sha256:3730da0e31f7e5186a90ec4899dc2c336104e7599df400411392ef17e684c31f
+    image: fsouza/fake-gcs-server:1.55.1@sha256:91afded49de804aa61b5f3eb6c7cd65205acf9e5c5e047cf0ba7d9507af806c8
     volumes:
     - bucket:/data/tiles:rw
     command:
