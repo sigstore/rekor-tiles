@@ -31,7 +31,7 @@ import (
 // Initialize adds flags that are shared between all Rekor binaries
 func Initialize(serveCmd *cobra.Command) error {
 	// server configs
-	serveCmd.Flags().Bool("read-only", false, "whether the log should accept new entries")
+	serveCmd.Flags().Bool("read-only", false, "run this server in read-only mode; reject new entries and disable automatic checkpoint publication")
 	serveCmd.Flags().Int("http-port", 3000, "HTTP port to bind to")
 	serveCmd.Flags().String("http-address", "127.0.0.1", "HTTP address to bind to")
 	serveCmd.Flags().Int("http-metrics-port", 2112, "HTTP port to bind metrics to")
