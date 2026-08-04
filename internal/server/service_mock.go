@@ -35,11 +35,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	pbsc "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/transparency-dev/tessera/api/layout"
 	"google.golang.org/genproto/googleapis/api/httpbody"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
@@ -224,6 +226,14 @@ func (s *mockRekorServer) GetCheckpoint(_ context.Context, _ *emptypb.Empty) (*h
 
 func (s mockRekorServer) Check(_ context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
+}
+
+func (s *mockRekorServer) RegisterGRPC(gs *grpc.Server) {
+	pb.RegisterRekorServer(gs, s)
+}
+
+func (s *mockRekorServer) RegisterHTTP(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) error {
+	return pb.RegisterRekorHandlerFromEndpoint(ctx, mux, endpoint, opts)
 }
 
 func generateSelfSignedCert(t testing.TB) (certFile, keyFile string) {
