@@ -3,7 +3,7 @@ module github.com/sigstore/rekor-tiles/v2
 go 1.25.8
 
 require (
-	cloud.google.com/go/spanner v1.92.0
+	cloud.google.com/go/spanner v1.94.0
 	cloud.google.com/go/storage v1.64.0
 	github.com/aws/aws-sdk-go-v2 v1.43.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.31
