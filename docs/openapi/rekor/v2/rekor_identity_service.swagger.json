@@ -123,20 +123,30 @@
         "publicKey": {
           "$ref": "#/definitions/v2PublicKeyCredential"
         },
+        "oidc": {
+          "$ref": "#/definitions/v2OidcCredential"
+        },
         "message": {
           "type": "string",
           "format": "byte",
           "description": "Must be a SHA-256 digest of data."
-        },
-        "context": {
-          "type": "string",
-          "format": "byte",
-          "description": "Optional context value. Must be a SHA-256 digest."
         }
       },
       "title": "A request to add an identity-based transparency log entry (v0.0.1)",
       "required": [
         "message"
+      ]
+    },
+    "v2OidcCredential": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "title": "The raw OIDC identity token"
+        }
+      },
+      "required": [
+        "token"
       ]
     },
     "v2PublicKeyCredential": {
@@ -151,6 +161,11 @@
           "type": "string",
           "format": "byte",
           "description": "The signature computed over the specification identifier, checksum, and context strings,\nas defined by the c2sp.org/identity-transparency specification."
+        },
+        "context": {
+          "type": "string",
+          "format": "byte",
+          "description": "Optional context value to record alongside the message. Must be a SHA-256 digest.\nMust be signed as defined by the c2sp.org/identity-transparency specification."
         }
       },
       "required": [
