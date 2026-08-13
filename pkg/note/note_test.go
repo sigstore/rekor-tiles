@@ -75,6 +75,13 @@ cvxSmCAcfkrJHKF1remfUOtN6Ncu9Dyr/rieoxFDqz31lezTAx3T6lLfgtspxplR
 fycQ0e/nw1JkypGoL1j4cwM=
 -----END PRIVATE KEY-----
 `)
+	// mldsa-priv-key.pem
+	mldsaPrivKey = []byte(`
+-----BEGIN PRIVATE KEY-----
+MDQCAQAwCwYJYIZIAWUDBAMRBCKAII9qENVch/5+4uTrzma75jN+rTCu6Gt6fDSc
+WEjtQxH8
+-----END PRIVATE KEY-----
+`)
 )
 
 func TestKeyHash(t *testing.T) {
@@ -102,6 +109,12 @@ func TestKeyHash(t *testing.T) {
 			key:           rsaPrivKey,
 			expectedKeyID: 2918460683,                                                                            // echo $((0x$({ printf "%s%b%b%s" "testkey" "\x0A" "\xFF" 'PKIX-RSA-PKCS#1v1.5' ; openssl rsa -in rsa-priv-key.pem -pubout -out - | openssl rsa -in /dev/stdin -pubin -outform DER -out - ;  } | sha256sum | cut -d ' ' -f 1 | head -c8)))
 			expectedLogID: hexDecodeOrDie(t, "adf42d0b4478f2d07e5c8c3e63640a7e41b440c19dc47010c3a4936af75d85b6"), // echo $({ printf "%s%b%b%s" "testkey" "\x0A" "\xFF" 'PKIX-RSA-PKCS#1v1.5' ; openssl rsa -in rsa-priv-key.pem -pubout -out - | openssl rsa -in /dev/stdin -pubin -outform DER -out - ;  } | sha256sum | cut -d ' ' -f 1)
+		},
+		{
+			name:          "mldsa",
+			key:           mldsaPrivKey,
+			expectedKeyID: 2079239679,
+			expectedLogID: hexDecodeOrDie(t, "7beeadffbc4d8e7a62f9a444e789a6d472a7502a632523e163824dcda53a008b"),
 		},
 	}
 	for _, test := range tests {
@@ -142,4 +155,40 @@ func hexDecodeOrDie(t *testing.T, text string) []byte {
 		t.Fatal(err)
 	}
 	return decoded
+}
+
+func TestMLDSASignerVerifier(t *testing.T) {
+	ctx := context.Background()
+	origin := "testkey"
+
+	td := t.TempDir()
+	keyFile := filepath.Join(td, "mldsa-priv.pem")
+	if err := os.WriteFile(keyFile, mldsaPrivKey, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	signer, err := signerverifier.NewFileSignerVerifier(keyFile, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noteSigner, err := NewNoteSigner(ctx, origin, signer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	noteVerifier, err := NewNoteVerifier(origin, signer)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	msg := []byte("example.com\n123\ndGVzdGhhc2g=\n")
+	sig, err := noteSigner.Sign(msg)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !noteVerifier.Verify(msg, sig) {
+		t.Fatalf("verification failed")
+	}
 }

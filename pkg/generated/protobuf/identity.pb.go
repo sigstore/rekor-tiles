@@ -21,6 +21,7 @@
 package protobuf
 
 import (
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	_ "google.golang.org/genproto/googleapis/api/annotations"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
@@ -39,11 +40,16 @@ const (
 type PublicKeyCredential struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The public key used to verify the signature.
-	// MUST be an Ed25519 public key (SPKI DER-encoded).
+	// MUST be an Ed25519 public key (SPKI DER-encoded) or an ML-DSA-44 public key (SPKI DER-encoded).
 	PublicKey []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	// The signature computed over the specification identifier, checksum, and context strings,
 	// as defined by the c2sp.org/identity-transparency specification.
-	Signature     []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+	Signature []byte `protobuf:"bytes,2,opt,name=signature,proto3" json:"signature,omitempty"`
+	// Optional context value to record alongside the message. Must be a SHA-256 digest.
+	// Must be signed as defined by the c2sp.org/identity-transparency specification.
+	Context []byte `protobuf:"bytes,3,opt,name=context,proto3" json:"context,omitempty"`
+	// The signature algorithm used. Only PKIX_ED25519 and ML_DSA_44 are supported.
+	Algorithm     v1.PublicKeyDetails `protobuf:"varint,4,opt,name=algorithm,proto3,enum=dev.sigstore.common.v1.PublicKeyDetails" json:"algorithm,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -92,24 +98,82 @@ func (x *PublicKeyCredential) GetSignature() []byte {
 	return nil
 }
 
+func (x *PublicKeyCredential) GetContext() []byte {
+	if x != nil {
+		return x.Context
+	}
+	return nil
+}
+
+func (x *PublicKeyCredential) GetAlgorithm() v1.PublicKeyDetails {
+	if x != nil {
+		return x.Algorithm
+	}
+	return v1.PublicKeyDetails(0)
+}
+
+type OidcCredential struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// The raw OIDC identity token
+	Token         string `protobuf:"bytes,1,opt,name=token,proto3" json:"token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OidcCredential) Reset() {
+	*x = OidcCredential{}
+	mi := &file_rekor_v2_identity_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OidcCredential) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OidcCredential) ProtoMessage() {}
+
+func (x *OidcCredential) ProtoReflect() protoreflect.Message {
+	mi := &file_rekor_v2_identity_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OidcCredential.ProtoReflect.Descriptor instead.
+func (*OidcCredential) Descriptor() ([]byte, []int) {
+	return file_rekor_v2_identity_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *OidcCredential) GetToken() string {
+	if x != nil {
+		return x.Token
+	}
+	return ""
+}
+
 // A request to add an identity-based transparency log entry (v0.0.1)
 type IdentityRequestV001 struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Credential:
 	//
 	//	*IdentityRequestV001_PublicKey
+	//	*IdentityRequestV001_Oidc
 	Credential isIdentityRequestV001_Credential `protobuf_oneof:"credential"`
 	// Must be a SHA-256 digest of data.
-	Message []byte `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
-	// Optional context value. Must be a SHA-256 digest.
-	Context       []byte `protobuf:"bytes,4,opt,name=context,proto3" json:"context,omitempty"`
+	Message       []byte `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *IdentityRequestV001) Reset() {
 	*x = IdentityRequestV001{}
-	mi := &file_rekor_v2_identity_proto_msgTypes[1]
+	mi := &file_rekor_v2_identity_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -121,7 +185,7 @@ func (x *IdentityRequestV001) String() string {
 func (*IdentityRequestV001) ProtoMessage() {}
 
 func (x *IdentityRequestV001) ProtoReflect() protoreflect.Message {
-	mi := &file_rekor_v2_identity_proto_msgTypes[1]
+	mi := &file_rekor_v2_identity_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -134,7 +198,7 @@ func (x *IdentityRequestV001) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IdentityRequestV001.ProtoReflect.Descriptor instead.
 func (*IdentityRequestV001) Descriptor() ([]byte, []int) {
-	return file_rekor_v2_identity_proto_rawDescGZIP(), []int{1}
+	return file_rekor_v2_identity_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *IdentityRequestV001) GetCredential() isIdentityRequestV001_Credential {
@@ -153,16 +217,18 @@ func (x *IdentityRequestV001) GetPublicKey() *PublicKeyCredential {
 	return nil
 }
 
-func (x *IdentityRequestV001) GetMessage() []byte {
+func (x *IdentityRequestV001) GetOidc() *OidcCredential {
 	if x != nil {
-		return x.Message
+		if x, ok := x.Credential.(*IdentityRequestV001_Oidc); ok {
+			return x.Oidc
+		}
 	}
 	return nil
 }
 
-func (x *IdentityRequestV001) GetContext() []byte {
+func (x *IdentityRequestV001) GetMessage() []byte {
 	if x != nil {
-		return x.Context
+		return x.Message
 	}
 	return nil
 }
@@ -175,22 +241,32 @@ type IdentityRequestV001_PublicKey struct {
 	PublicKey *PublicKeyCredential `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3,oneof"`
 }
 
+type IdentityRequestV001_Oidc struct {
+	Oidc *OidcCredential `protobuf:"bytes,2,opt,name=oidc,proto3,oneof"`
+}
+
 func (*IdentityRequestV001_PublicKey) isIdentityRequestV001_Credential() {}
+
+func (*IdentityRequestV001_Oidc) isIdentityRequestV001_Credential() {}
 
 var File_rekor_v2_identity_proto protoreflect.FileDescriptor
 
 const file_rekor_v2_identity_proto_rawDesc = "" +
 	"\n" +
-	"\x17rekor/v2/identity.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\"\\\n" +
+	"\x17rekor/v2/identity.proto\x12\x15dev.sigstore.rekor.v2\x1a\x1fgoogle/api/field_behavior.proto\x1a\x15sigstore_common.proto\"\xc3\x01\n" +
 	"\x13PublicKeyCredential\x12\"\n" +
 	"\n" +
 	"public_key\x18\x01 \x01(\fB\x03\xe0A\x02R\tpublicKey\x12!\n" +
-	"\tsignature\x18\x02 \x01(\fB\x03\xe0A\x02R\tsignature\"\xa9\x01\n" +
+	"\tsignature\x18\x02 \x01(\fB\x03\xe0A\x02R\tsignature\x12\x18\n" +
+	"\acontext\x18\x03 \x01(\fR\acontext\x12K\n" +
+	"\talgorithm\x18\x04 \x01(\x0e2(.dev.sigstore.common.v1.PublicKeyDetailsB\x03\xe0A\x02R\talgorithm\"+\n" +
+	"\x0eOidcCredential\x12\x19\n" +
+	"\x05token\x18\x01 \x01(\tB\x03\xe0A\x02R\x05token\"\xcc\x01\n" +
 	"\x13IdentityRequestV001\x12K\n" +
 	"\n" +
-	"public_key\x18\x01 \x01(\v2*.dev.sigstore.rekor.v2.PublicKeyCredentialH\x00R\tpublicKey\x12\x1d\n" +
-	"\amessage\x18\x03 \x01(\fB\x03\xe0A\x02R\amessage\x12\x18\n" +
-	"\acontext\x18\x04 \x01(\fR\acontextB\f\n" +
+	"public_key\x18\x01 \x01(\v2*.dev.sigstore.rekor.v2.PublicKeyCredentialH\x00R\tpublicKey\x12;\n" +
+	"\x04oidc\x18\x02 \x01(\v2%.dev.sigstore.rekor.v2.OidcCredentialH\x00R\x04oidc\x12\x1d\n" +
+	"\amessage\x18\x03 \x01(\fB\x03\xe0A\x02R\amessageB\f\n" +
 	"\n" +
 	"credentialB\x81\x01\n" +
 	"\x1bdev.sigstore.proto.rekor.v2B\x0fRekorV2IdentityP\x01Z9github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf\xea\x02\x13Sigstore::Rekor::V2b\x06proto3"
@@ -207,18 +283,22 @@ func file_rekor_v2_identity_proto_rawDescGZIP() []byte {
 	return file_rekor_v2_identity_proto_rawDescData
 }
 
-var file_rekor_v2_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_rekor_v2_identity_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_rekor_v2_identity_proto_goTypes = []any{
 	(*PublicKeyCredential)(nil), // 0: dev.sigstore.rekor.v2.PublicKeyCredential
-	(*IdentityRequestV001)(nil), // 1: dev.sigstore.rekor.v2.IdentityRequestV001
+	(*OidcCredential)(nil),      // 1: dev.sigstore.rekor.v2.OidcCredential
+	(*IdentityRequestV001)(nil), // 2: dev.sigstore.rekor.v2.IdentityRequestV001
+	(v1.PublicKeyDetails)(0),    // 3: dev.sigstore.common.v1.PublicKeyDetails
 }
 var file_rekor_v2_identity_proto_depIdxs = []int32{
-	0, // 0: dev.sigstore.rekor.v2.IdentityRequestV001.public_key:type_name -> dev.sigstore.rekor.v2.PublicKeyCredential
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	3, // 0: dev.sigstore.rekor.v2.PublicKeyCredential.algorithm:type_name -> dev.sigstore.common.v1.PublicKeyDetails
+	0, // 1: dev.sigstore.rekor.v2.IdentityRequestV001.public_key:type_name -> dev.sigstore.rekor.v2.PublicKeyCredential
+	1, // 2: dev.sigstore.rekor.v2.IdentityRequestV001.oidc:type_name -> dev.sigstore.rekor.v2.OidcCredential
+	3, // [3:3] is the sub-list for method output_type
+	3, // [3:3] is the sub-list for method input_type
+	3, // [3:3] is the sub-list for extension type_name
+	3, // [3:3] is the sub-list for extension extendee
+	0, // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_rekor_v2_identity_proto_init() }
@@ -226,8 +306,9 @@ func file_rekor_v2_identity_proto_init() {
 	if File_rekor_v2_identity_proto != nil {
 		return
 	}
-	file_rekor_v2_identity_proto_msgTypes[1].OneofWrappers = []any{
+	file_rekor_v2_identity_proto_msgTypes[2].OneofWrappers = []any{
 		(*IdentityRequestV001_PublicKey)(nil),
+		(*IdentityRequestV001_Oidc)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -235,7 +316,7 @@ func file_rekor_v2_identity_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_rekor_v2_identity_proto_rawDesc), len(file_rekor_v2_identity_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
