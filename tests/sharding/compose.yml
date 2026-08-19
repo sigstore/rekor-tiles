@@ -103,7 +103,7 @@ services:
   rekor1:
     build:
       context: ../..
-      target: deploy
+      target: local-deploy
       args:
         STORAGE_BACKEND: gcp
     environment:
@@ -146,7 +146,7 @@ services:
   rekor2:
     build:
       context: ../..
-      target: deploy
+      target: local-deploy
       args:
         STORAGE_BACKEND: gcp
     environment:

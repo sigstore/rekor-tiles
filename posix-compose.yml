@@ -16,7 +16,7 @@ services:
   rekor:
     build:
       context: .
-      target: deploy
+      target: local-deploy
       args:
         STORAGE_BACKEND: posix
     command:
