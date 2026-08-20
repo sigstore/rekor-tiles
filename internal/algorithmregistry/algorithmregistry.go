@@ -21,6 +21,7 @@ import (
 	"crypto/rsa"
 	"fmt"
 	"reflect"
+	"slices"
 
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -36,7 +37,6 @@ var (
 		v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
 		v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
 		v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512,
-		v1.PublicKeyDetails_PKIX_ED25519,
 		v1.PublicKeyDetails_PKIX_ED25519_PH,
 	}
 )
@@ -73,6 +73,10 @@ func AlgorithmRegistry(algorithmOptions []string) (*signature.AlgorithmRegistryC
 			algorithm, err := signature.ParseSignatureAlgorithmFlag(a)
 			if err != nil {
 				return nil, fmt.Errorf("parsing signature algorithm flag: %w", err)
+			}
+			allowed := slices.Contains(AllowedClientSigningAlgorithms, algorithm)
+			if !allowed {
+				return nil, fmt.Errorf("algorithm %s is not in the allowed set", a)
 			}
 			algorithms = append(algorithms, algorithm)
 		}

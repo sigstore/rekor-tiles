@@ -33,28 +33,59 @@ func TestAlgorithmRegistry(t *testing.T) {
 		name             string
 		algorithmOptions []string
 		wantErr          bool
+		errContains      string
 	}{
 		{
 			name:             "defaults",
 			algorithmOptions: nil,
 		},
 		{
-			name: "valid algorithms",
+			name: "valid algorithms subset",
 			algorithmOptions: []string{
 				"ecdsa-sha2-384-nistp384",
 				"ecdsa-sha2-512-nistp521",
-				"ed25519",
 				"rsa-sign-pkcs1-3072-sha256",
 				"rsa-sign-pkcs1-4096-sha256",
 			},
 		},
 		{
-			name: "invalid algorithms",
+			name: "valid algorithms including ed25519-ph",
+			algorithmOptions: []string{
+				"ed25519-ph",
+			},
+		},
+		{
+			name: "invalid algorithm format",
 			algorithmOptions: []string{
 				"foo",
-				"bar",
 			},
-			wantErr: true,
+			wantErr:     true,
+			errContains: "parsing signature algorithm flag",
+		},
+		{
+			name: "valid format but not in allowed set (pure ed25519)",
+			algorithmOptions: []string{
+				"ed25519",
+			},
+			wantErr:     true,
+			errContains: "is not in the allowed set",
+		},
+		{
+			name: "mixed valid and not allowed",
+			algorithmOptions: []string{
+				"ecdsa-sha2-384-nistp384",
+				"ed25519",
+			},
+			wantErr:     true,
+			errContains: "is not in the allowed set",
+		},
+		{
+			name: "valid format but not in allowed set (rsa-pss)",
+			algorithmOptions: []string{
+				"rsa-sign-pss-2048-sha256",
+			},
+			wantErr:     true,
+			errContains: "is not in the allowed set",
 		},
 	}
 	for _, test := range tests {
@@ -62,6 +93,9 @@ func TestAlgorithmRegistry(t *testing.T) {
 			got, gotErr := AlgorithmRegistry(test.algorithmOptions)
 			if test.wantErr {
 				assert.Error(t, gotErr)
+				if test.errContains != "" {
+					assert.Contains(t, gotErr.Error(), test.errContains)
+				}
 				return
 			}
 			assert.NoError(t, gotErr)
