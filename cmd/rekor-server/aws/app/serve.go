@@ -17,7 +17,6 @@ package app
 
 import (
 	"context"
-	"crypto"
 	"crypto/x509"
 	"encoding/base64"
 	"log/slog"
@@ -32,6 +31,7 @@ import (
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/cli"
 	"github.com/sigstore/rekor-tiles/v2/internal/server"
+	signerconfig "github.com/sigstore/rekor-tiles/v2/internal/signerverifier/config"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	awsDriver "github.com/sigstore/rekor-tiles/v2/internal/tessera/aws"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera/aws/signerverifier"
@@ -58,23 +58,9 @@ var serveCmd = &cobra.Command{
 
 		slog.Info("starting rekor-server", "version", version.GetVersionInfo())
 
-		var signerOpts []signerverifier.Option
-		switch {
-		case viper.GetString("signer-filepath") != "":
-			signerOpts = []signerverifier.Option{signerverifier.WithFile(viper.GetString("signer-filepath"), viper.GetString("signer-password"))}
-		case viper.GetString("signer-kmskey") != "":
-			kmshash := viper.GetString("signer-kmshash")
-			hashAlg, ok := hashAlgMap[kmshash]
-			if !ok {
-				slog.Error("invalid hash algorithm for --signer-kmshash", "algorithm", kmshash)
-				os.Exit(1)
-			}
-
-			signerOpts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg)}
-		case viper.GetString("signer-tink-kek-uri") != "":
-			signerOpts = []signerverifier.Option{signerverifier.WithTink(viper.GetString("signer-tink-kek-uri"), viper.GetString("signer-tink-keyset-path"))}
-		default:
-			slog.Error("no signer configured; must provide a signer using a file, KMS, or Tink")
+		signerOpts, err := signerconfig.OptionsFromViper(viper.GetViper())
+		if err != nil {
+			signerconfig.LogError(err)
 			os.Exit(1)
 		}
 		signer, err := signerverifier.New(ctx, signerOpts...)
@@ -211,10 +197,4 @@ func init() {
 		os.Exit(1)
 	}
 	rootCmd.AddCommand(serveCmd)
-}
-
-var hashAlgMap = map[string]crypto.Hash{
-	"sha256": crypto.SHA256,
-	"sha384": crypto.SHA384,
-	"sha512": crypto.SHA512,
 }
