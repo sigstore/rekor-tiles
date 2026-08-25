@@ -29,6 +29,7 @@ import (
 
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.opentelemetry.io/otel"
@@ -61,7 +62,11 @@ var _initMetricsFunc = sync.OnceValue(func() *metrics {
 		reg:           prometheus.NewRegistry(),
 		serverMetrics: grpc_prometheus.NewServerMetrics(grpc_prometheus.WithServerHandlingTimeHistogram()),
 	}
-	m.reg.MustRegister(m.serverMetrics)
+	m.reg.MustRegister(
+		m.serverMetrics,
+		collectors.NewGoCollector(),
+		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
+	)
 
 	f := promauto.With(m.reg)
 
