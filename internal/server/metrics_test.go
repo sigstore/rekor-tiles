@@ -62,6 +62,8 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 		"grpc_server_started_total",    // should imply we have the default set of grpc server metrics
 		"grpc_server_handling_seconds", // should imply we have the default set of latency stats on grpc servers
 		"promhttp_metric_handler",      // should imply we have the default set of promhttp metrics
+		"go_goroutines",                // should imply we have the default set of Go runtime metrics
+		"process_cpu_seconds_total",    // should imply we have the default set of process metrics
 	}
 
 	for _, metric := range expectedMetrics {
