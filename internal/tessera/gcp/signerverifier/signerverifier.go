@@ -14,80 +14,55 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Copied from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/signer.go
-
+// Package signerverifier wires the GCP-specific signer-verifier dependencies into
+// the shared internal/signerverifier package. Importing it loads the GCP KMS
+// provider, and its New supplies the gcp-kms:// Tink key encryption key provider so
+// that GCP callers need only this import.
 package signerverifier
 
 import (
 	"context"
-	"crypto"
-	"fmt"
-	"strings"
-
 	"slices"
+	"time"
 
+	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
 	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/kms"
 
-	// these are imported to load the providers via init() calls
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	// imported by name for WithGoogleAPIClientOption; this also loads the GCP KMS
+	// provider via its init() call
+	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
+	"github.com/tink-crypto/tink-go-gcpkms/v2/integration/gcpkms"
+	"github.com/tink-crypto/tink-go/v2/core/registry"
+	"github.com/tink-crypto/tink-go/v2/tink"
+	"google.golang.org/api/option"
+	"google.golang.org/grpc"
 )
 
-// New returns a SignerVerifier for the given KMS provider, Tink, or a private key file on disk.
-func New(ctx context.Context, opts ...Option) (signature.SignerVerifier, error) {
-	sc := &signerVerifierConfig{}
-	for _, o := range opts {
-		o(sc)
-	}
-	switch {
-	case slices.ContainsFunc(kms.SupportedProviders(),
-		func(s string) bool {
-			return strings.HasPrefix(sc.kms, s)
-		}):
-		return kms.Get(ctx, sc.kms, sc.kmsHash, sc.kmsRPCOpts...)
-	case sc.tinkKEKURI != "":
-		return NewTinkSignerVerifier(ctx, sc.tinkKEKURI, sc.tinkKeysetPath)
-	case sc.filePath != "":
-		return sv.NewFileSignerVerifier(sc.filePath, sc.password)
-	default:
-		return nil, fmt.Errorf("insufficient signing parameters provided, must configure one of file, KMS, or Tink signer-verifiers")
-	}
+// KEKScheme is the key encryption key URI prefix handled by GCP KMS.
+const KEKScheme = "gcp-kms://"
+
+// New returns a SignerVerifier configured for GCP, resolving Tink key encryption
+// keys through GCP KMS. The KEK provider option is appended after the caller's, so
+// it is authoritative and a caller cannot substitute another cloud's provider.
+func New(ctx context.Context, opts ...sv.Option) (signature.SignerVerifier, error) {
+	return sv.New(ctx, append(slices.Clone(opts), sv.WithKEKProvider(KEKScheme, newGCPKEK))...)
 }
 
-type signerVerifierConfig struct {
-	filePath       string
-	password       string
-	kms            string
-	kmsHash        crypto.Hash
-	kmsRPCOpts     []signature.RPCOption
-	tinkKEKURI     string
-	tinkKeysetPath string
-}
-
-type Option func(*signerVerifierConfig)
-
-// WithFile configures a file-based signer-verifier with an optional password.
-func WithFile(filePath, password string) Option {
-	return func(sc *signerVerifierConfig) {
-		sc.filePath = filePath
-		sc.password = password
+// newGCPKEK returns a Tink AEAD encryption key from GCP KMS.
+func newGCPKEK(ctx context.Context, kmsKey string) (tink.AEAD, error) {
+	gcpClient, err := gcpkms.NewClient(ctx, kmsKey)
+	if err != nil {
+		return nil, err
 	}
+	registry.RegisterKMSClient(gcpClient)
+	return gcpClient.GetAEAD(kmsKey)
 }
 
-// WithKMS configures a KMS signer-verifier.
-func WithKMS(kms string, hash crypto.Hash, rpcOpts []signature.RPCOption) Option {
-	return func(sc *signerVerifierConfig) {
-		sc.kms = kms
-		sc.kmsHash = hash
-		sc.kmsRPCOpts = rpcOpts
-	}
-}
-
-// WithTink configures a Tink signer-verifier.
-func WithTink(kekURI, keysetPath string) Option {
-	return func(sc *signerVerifierConfig) {
-		sc.tinkKEKURI = kekURI
-		sc.tinkKeysetPath = keysetPath
+// KMSRPCOptions returns the retry options for GCP KMS calls, to be passed to WithKMS.
+func KMSRPCOptions(retries uint, perRetryTimeout time.Duration) []signature.RPCOption {
+	callOpts := []grpc_retry.CallOption{grpc_retry.WithMax(retries), grpc_retry.WithPerRetryTimeout(perRetryTimeout)}
+	return []signature.RPCOption{
+		gcp.WithGoogleAPIClientOption(option.WithGRPCDialOption(grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(callOpts...)))),
 	}
 }

@@ -17,8 +17,12 @@
 package signerverifier
 
 import (
+	"context"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	tinkUtils "github.com/sigstore/sigstore/pkg/signature/tink"
 	"github.com/tink-crypto/tink-go/v2/keyset"
@@ -26,6 +30,28 @@ import (
 
 	"github.com/sigstore/sigstore/pkg/signature"
 )
+
+// KEKProvider resolves a key encryption key URI to a Tink AEAD.
+type KEKProvider func(ctx context.Context, kmsKey string) (tink.AEAD, error)
+
+// newTinkSignerVerifier returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
+// Provide a path to the encrypted keyset and a cloud KMS key URI for decryption. The
+// KMS key URI is resolved by the injected provider, which only handles URIs carrying
+// its own prefix so that each cloud rejects the others' key URIs.
+func newTinkSignerVerifier(ctx context.Context, prefix string, provider KEKProvider, kekURI, keysetPath string) (signature.SignerVerifier, error) {
+	if kekURI == "" || keysetPath == "" {
+		return nil, fmt.Errorf("key encryption key URI or keyset path unset")
+	}
+	// An empty prefix would match every URI, so it is treated as no provider at all.
+	if prefix == "" || provider == nil || !strings.HasPrefix(kekURI, prefix) {
+		return nil, errors.New("unsupported KMS key type")
+	}
+	kek, err := provider(ctx, kekURI)
+	if err != nil {
+		return nil, err
+	}
+	return NewTinkSignerVerifierWithHandle(kek, keysetPath)
+}
 
 // NewTinkSignerVerifierWithHandle returns a signature.SignerVerifier that wraps crypto.Signer and a hash function.
 // Provide a path to the encrypted keyset and a key handle for decrypting the keyset
