@@ -83,7 +83,7 @@ jobs:
 
   build-container:
     name: Build and push container image
-    uses: ./.github/workflows/build_container.yml # zizmor: ignore[secrets-inherit]
+    uses: $/.github/workflows/build_container.yml # zizmor: ignore[secrets-inherit]
     secrets: inherit
     needs: approval
     permissions:
