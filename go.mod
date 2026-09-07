@@ -5,11 +5,11 @@ go 1.25.8
 require (
 	cloud.google.com/go/spanner v1.94.0
 	cloud.google.com/go/storage v1.65.0
-	github.com/aws/aws-sdk-go-v2 v1.43.7
+	github.com/aws/aws-sdk-go-v2 v1.45.1
 	github.com/aws/aws-sdk-go-v2/config v1.32.38
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.37
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.107.3
-	github.com/aws/smithy-go v1.27.9
+	github.com/aws/smithy-go v1.28.1
 	github.com/chainguard-dev/clog v1.8.1
 	github.com/cyberphone/json-canonicalization v0.0.0-20241213102144-19d51d7fe467
 	github.com/go-test/deep v1.1.1
