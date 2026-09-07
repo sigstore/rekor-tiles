@@ -22,6 +22,7 @@ import (
 type HTTPConfig struct {
 	host               string
 	timeout            time.Duration
+	idleTimeout        time.Duration
 	port               int
 	metricsPort        int
 	maxRequestBodySize int
@@ -36,6 +37,7 @@ func NewHTTPConfig(options ...func(config *HTTPConfig)) *HTTPConfig {
 	config := &HTTPConfig{
 		host:               "localhost",
 		timeout:            defaultTimeout,
+		idleTimeout:        defaultTimeout,
 		port:               8080,
 		metricsPort:        2112,
 		maxRequestBodySize: defaultMaxSize,
@@ -62,6 +64,12 @@ func WithHTTPHost(host string) HTTPOption {
 func WithHTTPTimeout(timeout time.Duration) HTTPOption {
 	return func(config *HTTPConfig) {
 		config.timeout = timeout
+	}
+}
+
+func WithHTTPIdleTimeout(idleTimeout time.Duration) HTTPOption {
+	return func(config *HTTPConfig) {
+		config.idleTimeout = idleTimeout
 	}
 }
 

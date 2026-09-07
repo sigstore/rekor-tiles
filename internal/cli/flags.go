@@ -38,6 +38,7 @@ func Initialize(serveCmd *cobra.Command) error {
 	serveCmd.Flags().Int("grpc-port", 3001, "GRPC port to bind to")
 	serveCmd.Flags().String("grpc-address", "127.0.0.1", "GRPC address to bind to")
 	serveCmd.Flags().Duration("server-timeout", 20*time.Second, "timeout settings for gRPC and HTTP connections")
+	serveCmd.Flags().Duration("server-idle-timeout", 60*time.Second, "idle timeout settings for gRPC and HTTP connections")
 	serveCmd.Flags().Int("max-request-body-size", 4*1024*1024, "maximum request body size in bytes")
 	serveCmd.Flags().String("log-level", "info", "log level for the process. options are [debug, info, warn, error]")
 	serveCmd.Flags().Bool("request-response-logging", false, "enables logging of request and response content; log-level must be 'debug' for this to take effect")

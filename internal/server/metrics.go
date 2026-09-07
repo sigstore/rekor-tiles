@@ -158,7 +158,7 @@ func newHTTPMetrics(_ context.Context, config *HTTPConfig) *httpMetrics {
 			ReadTimeout:       config.timeout,
 			ReadHeaderTimeout: config.timeout,
 			WriteTimeout:      config.timeout,
-			IdleTimeout:       config.timeout,
+			IdleTimeout:       config.idleTimeout,
 		},
 		serverEndpoint: endpoint,
 		otelShutdown:   getMetrics().otelShutdown,

@@ -119,7 +119,7 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		ReadTimeout:       config.timeout,
 		ReadHeaderTimeout: config.timeout,
 		WriteTimeout:      config.timeout,
-		IdleTimeout:       config.timeout,
+		IdleTimeout:       config.idleTimeout,
 		// by default MaxHeaderBytes is 1MB, so no need to set.
 	}
 

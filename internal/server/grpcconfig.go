@@ -32,6 +32,7 @@ type GRPCConfig struct {
 	port                   int
 	host                   string
 	timeout                time.Duration
+	idleTimeout            time.Duration
 	maxMessageSize         int
 	certFile               string
 	keyFile                string
@@ -46,6 +47,7 @@ func NewGRPCConfig(options ...func(config *GRPCConfig)) *GRPCConfig {
 		port:                   8081,
 		host:                   "localhost",
 		timeout:                defaultTimeout,
+		idleTimeout:            defaultTimeout,
 		maxMessageSize:         defaultMaxSize,
 		logLevel:               slog.LevelInfo,
 		requestResponseLogging: false,
@@ -69,11 +71,17 @@ func WithGRPCHost(host string) GRPCOption {
 	}
 }
 
-// WithGRPCTimeout specifies the value to be used in grpc.ConnectionTimeout()
-// and keepalive.ServerParameters.MaxConnectionIdle.
+// WithGRPCTimeout specifies the value to be used in grpc.ConnectionTimeout().
 func WithGRPCTimeout(timeout time.Duration) GRPCOption {
 	return func(config *GRPCConfig) {
 		config.timeout = timeout
+	}
+}
+
+// WithGRPCIdleTimeout specifies the value to be used in keepalive.ServerParameters.MaxConnectionIdle.
+func WithGRPCIdleTimeout(idleTimeout time.Duration) GRPCOption {
+	return func(config *GRPCConfig) {
+		config.idleTimeout = idleTimeout
 	}
 }
 
