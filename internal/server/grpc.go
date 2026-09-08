@@ -72,7 +72,7 @@ func newGRPCServer(config *GRPCConfig, server any) *grpcServer {
 			recovery.UnaryServerInterceptor(recovery.WithRecoveryHandler(grpcPanicRecoveryHandler)), // panic handler should be last
 		),
 		grpc.ConnectionTimeout(config.timeout),
-		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.timeout}),
+		grpc.KeepaliveParams(keepalive.ServerParameters{MaxConnectionIdle: config.idleTimeout}),
 		grpc.MaxRecvMsgSize(config.maxMessageSize),
 		grpc.StatsHandler(NewGrpcStatsHandler()),
 	)
