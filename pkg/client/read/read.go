@@ -62,11 +62,9 @@ func NewReader(readURL, origin string, verifier signature.Verifier, opts ...clie
 	if err != nil {
 		return nil, fmt.Errorf("creating note verifier: %w", err)
 	}
-	transport := http.DefaultTransport
-	if cfg.TLSConfig != nil {
-		transport = &http.Transport{
-			TLSClientConfig: cfg.TLSConfig,
-		}
+	transport, err := cfg.BaseTransport()
+	if err != nil {
+		return nil, err
 	}
 	timeout := cfg.Timeout
 	if timeout == 0 {

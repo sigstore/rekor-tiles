@@ -17,6 +17,7 @@ package write
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -33,8 +34,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// countingTransport records how many requests pass through it.
+type countingTransport struct {
+	calls int
+	inner http.RoundTripper
+}
+
+func (c *countingTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	c.calls++
+	return c.inner.RoundTrip(req)
+}
+
 func TestNewWriter(t *testing.T) {
 	writeURL := "http://localhost:3003"
+	customTransport := &countingTransport{inner: http.DefaultTransport}
 	tests := []struct {
 		name     string
 		opts     []client.Option
@@ -80,6 +93,27 @@ func TestNewWriter(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "with transport",
+			opts: []client.Option{
+				client.WithTransport(customTransport),
+			},
+			expected: &writeClient{
+				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
+				client:  &http.Client{Transport: customTransport, Timeout: 30 * time.Second},
+			},
+		},
+		{
+			name: "with transport and user agent",
+			opts: []client.Option{
+				client.WithTransport(customTransport),
+				client.WithUserAgent("test"),
+			},
+			expected: &writeClient{
+				baseURL: &url.URL{Scheme: "http", Host: "localhost:3003"},
+				client:  &http.Client{Transport: client.CreateRoundTripper(customTransport, "test"), Timeout: 30 * time.Second},
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -89,6 +123,45 @@ func TestNewWriter(t *testing.T) {
 			assert.Equal(t, test.expected.client, got.(*writeClient).client)
 		})
 	}
+}
+
+func TestNewWriter_TransportAndTLSConfig(t *testing.T) {
+	_, err := NewWriter("http://localhost:3003",
+		client.WithTransport(http.DefaultTransport),
+		client.WithTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12}))
+	assert.ErrorContains(t, err, "WithTransport and WithTLSConfig are mutually exclusive")
+}
+
+func TestAdd_WithTransport(t *testing.T) {
+	ctx := context.Background()
+	server := httptest.NewServer(http.HandlerFunc(
+		func(w http.ResponseWriter, r *http.Request) {
+			assert.Equal(t, "test-agent", r.Header.Get("User-Agent"))
+			w.WriteHeader(http.StatusCreated)
+			w.Write([]byte("{}"))
+		}))
+	defer server.Close()
+
+	transport := &countingTransport{inner: http.DefaultTransport}
+	writer, err := NewWriter(server.URL, client.WithTransport(transport), client.WithUserAgent("test-agent"))
+	assert.NoError(t, err)
+
+	entry := &pb.HashedRekordRequestV002{
+		Signature: &pb.Signature{
+			Content: []byte("sig"),
+			Verifier: &pb.Verifier{
+				Verifier: &pb.Verifier_PublicKey{
+					PublicKey: &pb.PublicKey{RawBytes: []byte("key")},
+				},
+				KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P256_SHA_256,
+			},
+		},
+		Digest: []byte("digest"),
+	}
+
+	_, err = writer.Add(ctx, entry)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, transport.calls)
 }
 
 func TestAdd(t *testing.T) {

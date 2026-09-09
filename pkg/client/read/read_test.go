@@ -18,6 +18,7 @@ package read
 import (
 	"context"
 	"crypto/ed25519"
+	"crypto/tls"
 	"crypto/x509"
 	"encoding/pem"
 	"net/http"
@@ -87,6 +88,17 @@ func TestNewReader(t *testing.T) {
 				origin:  "rekor-local",
 			},
 		},
+		{
+			name: "with transport",
+			opts: []client.Option{
+				client.WithTransport(http.DefaultTransport),
+				client.WithUserAgent("test"),
+			},
+			expected: &readClient{
+				baseURL: &url.URL{Scheme: "http", Host: "localhost:7080", Path: "/"},
+				origin:  "rekor-local",
+			},
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -96,6 +108,17 @@ func TestNewReader(t *testing.T) {
 			assert.Equal(t, test.expected.origin, got.(*readClient).origin)
 		})
 	}
+}
+
+func TestNewReader_TransportAndTLSConfig(t *testing.T) {
+	verifier, err := getVerifier(ed25519PrivKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = NewReader("http://localhost:7080", "rekor-local", verifier,
+		client.WithTransport(http.DefaultTransport),
+		client.WithTLSConfig(&tls.Config{MinVersion: tls.VersionTLS12}))
+	assert.ErrorContains(t, err, "WithTransport and WithTLSConfig are mutually exclusive")
 }
 
 func TestReadCheckpoint(t *testing.T) {
