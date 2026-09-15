@@ -14,78 +14,42 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Copied from https://github.com/sigstore/rekor/blob/c820fcaf3afdc91f0acf6824d55c1ac7df249df1/pkg/signer/signer.go
-
+// Package signerverifier wires the AWS-specific signer-verifier dependencies into
+// the shared internal/signerverifier package. Importing it loads the AWS KMS
+// provider, and its New supplies the aws-kms:// Tink key encryption key provider so
+// that AWS callers need only this import.
 package signerverifier
 
 import (
 	"context"
-	"crypto"
-	"fmt"
-	"strings"
-
 	"slices"
 
 	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/kms"
+	"github.com/tink-crypto/tink-go-awskms/v3/integration/awskms"
+	"github.com/tink-crypto/tink-go/v2/core/registry"
+	"github.com/tink-crypto/tink-go/v2/tink"
 
-	// these are imported to load the providers via init() calls
+	// imported to load the AWS KMS provider via its init() call
 	_ "github.com/sigstore/sigstore/pkg/signature/kms/aws"
 )
 
-// New returns a SignerVerifier for the given KMS provider, Tink, or a private key file on disk.
-func New(ctx context.Context, opts ...Option) (signature.SignerVerifier, error) {
-	sc := &signerVerifierConfig{}
-	for _, o := range opts {
-		o(sc)
-	}
-	switch {
-	case slices.ContainsFunc(kms.SupportedProviders(),
-		func(s string) bool {
-			return strings.HasPrefix(sc.kms, s)
-		}):
-		return kms.Get(ctx, sc.kms, sc.kmsHash)
-	case sc.tinkKEKURI != "":
-		return NewTinkSignerVerifier(ctx, sc.tinkKEKURI, sc.tinkKeysetPath)
-	case sc.filePath != "":
-		return sv.NewFileSignerVerifier(sc.filePath, sc.password)
-	default:
-		return nil, fmt.Errorf("insufficient signing parameters provided, must configure one of file, KMS, or Tink signer-verifiers")
-	}
+// KEKScheme is the key encryption key URI prefix handled by AWS KMS.
+const KEKScheme = "aws-kms://"
+
+// New returns a SignerVerifier configured for AWS, resolving Tink key encryption
+// keys through AWS KMS. The KEK provider option is appended after the caller's, so
+// it is authoritative and a caller cannot substitute another cloud's provider.
+func New(ctx context.Context, opts ...sv.Option) (signature.SignerVerifier, error) {
+	return sv.New(ctx, append(slices.Clone(opts), sv.WithKEKProvider(KEKScheme, newAWSKEK))...)
 }
 
-type signerVerifierConfig struct {
-	filePath       string
-	password       string
-	kms            string
-	kmsHash        crypto.Hash
-	tinkKEKURI     string
-	tinkKeysetPath string
-}
-
-type Option func(*signerVerifierConfig)
-
-// WithFile configures a file-based signer-verifier with an optional password.
-func WithFile(filePath, password string) Option {
-	return func(sc *signerVerifierConfig) {
-		sc.filePath = filePath
-		sc.password = password
+// newAWSKEK returns a Tink AEAD encryption key from AWS KMS.
+func newAWSKEK(ctx context.Context, kmsKey string) (tink.AEAD, error) {
+	awsClient, err := awskms.NewClientWithOptions(ctx, kmsKey)
+	if err != nil {
+		return nil, err
 	}
-}
-
-// WithKMS configures a KMS signer-verifier.
-func WithKMS(kms string, hash crypto.Hash) Option {
-	return func(sc *signerVerifierConfig) {
-		sc.kms = kms
-		sc.kmsHash = hash
-	}
-}
-
-// WithTink configures a Tink signer-verifier.
-func WithTink(kekURI, keysetPath string) Option {
-	return func(sc *signerVerifierConfig) {
-		sc.tinkKEKURI = kekURI
-		sc.tinkKeysetPath = keysetPath
-	}
+	registry.RegisterKMSClient(awsClient)
+	return awsClient.GetAEAD(kmsKey)
 }
