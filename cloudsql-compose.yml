@@ -13,39 +13,22 @@
 # limitations under the License.
 
 services:
-  # MinIO - S3-compatible object storage
-  # GCS emulator does not work since it doesn't support exporting
-  # an access key and secret
-  minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
-    command: server /data --console-address ":9001"
+  # S3Proxy - S3-compatible object storage emulator
+  # GCS emulator (fake-gcs-server) does not support exporting an HMAC access key and secret
+  s3proxy:
+    image: andrewgaul/s3proxy:4.1.1@sha256:87662b2a5afcdfa5f478a1c61650bae4c87bbd15f6ff2823236bcfd66ef7fe04
     ports:
-      - "9002:9000"   # S3 API
-      - "9003:9001"   # Web Console
+      - "9002:80"   # S3 API
     environment:
-      - MINIO_ROOT_USER=minioadmin
-      - MINIO_ROOT_PASSWORD=minioadmin
+      - S3PROXY_AUTHORIZATION=none
+      - JCLOUDS_FILESYSTEM_BASEDIR=/data
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
+      test: ["CMD-SHELL", "bash -c 'exec 3<>\"/dev/tcp/127.0.0.1/80\" && printf \"GET /healthz HTTP/1.0\\r\\n\\r\\n\" >&3 && head -n 1 <&3 | grep -q \" 200 \"'"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
     volumes:
-      - minio_data:/data
-
-  # MinIO Client - Create bucket on startup
-  minio_init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set myminio http://minio:9000 minioadmin minioadmin;
-      mc mb myminio/tiles --ignore-existing;
-      mc anonymous set public myminio/tiles;
-      exit 0;
-      "
+      - s3_data:/data/tiles
 
   mysql:
     image: mysql:26.7@sha256:66aec17cd21a956029b83f083b813073859e8355dc1a00e55df6ba02f0e32345
@@ -75,7 +58,7 @@ services:
     environment:
       - GCS_HMAC_ACCESS_KEY_ID=minioadmin
       - GCS_HMAC_SECRET=minioadmin
-      - GCS_ENDPOINT_URL=http://minio:9000
+      - GCS_ENDPOINT_URL=http://s3proxy:80
       - GCS_REGION=us-east-1
     command:
       - "rekor-server"
@@ -106,8 +89,8 @@ services:
       - ./tests/testdata/pki:/pki
       - ./tests/testdata/witness:/witness
     depends_on:
-      minio_init:
-        condition: service_completed_successfully
+      s3proxy:
+        condition: service_healthy
       mysql:
         condition: service_healthy
       witness:
@@ -140,6 +123,6 @@ services:
       - "8100:8100"
 
 volumes:
-  minio_data: {}
+  s3_data: {}
   mysql_data: {}
   witness_data: {}
