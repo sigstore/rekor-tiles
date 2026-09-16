@@ -70,7 +70,7 @@ func newAWSDriver(ctx context.Context, bucket, mysqlDSN string, maxOpenConns, ma
 		return nil, fmt.Errorf("loading AWS SDK config: %w", err)
 	}
 
-	// Configure S3 client options to use path-style addressing for MinIO compatibility
+	// Configure S3 client options to use path-style addressing for S3 emulator compatibility (e.g. S3Proxy)
 	s3Opts := func(o *s3.Options) {
 		o.UsePathStyle = true
 	}
