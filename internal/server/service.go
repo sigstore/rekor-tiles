@@ -45,6 +45,8 @@ const (
 	duplicateEntryHeader = "x-log-index"
 )
 
+var _ Registrar = (*Server)(nil)
+
 type Server struct {
 	pb.UnimplementedRekorServer
 	grpc_health_v1.UnimplementedHealthServer

@@ -28,6 +28,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+var _ Registrar = (*IdentityServer)(nil)
+
 type IdentityServer struct {
 	pb.UnimplementedIdentityRekorServer
 	grpc_health_v1.UnimplementedHealthServer

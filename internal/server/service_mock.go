@@ -158,6 +158,8 @@ func (ms *MockServer) Stop(t *testing.T) {
 	}
 }
 
+var _ Registrar = (*mockRekorServer)(nil)
+
 type mockRekorServer struct {
 	pb.UnimplementedRekorServer
 	grpc_health_v1.UnimplementedHealthServer

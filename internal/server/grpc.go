@@ -51,7 +51,7 @@ import (
 type grpcServer struct {
 	*grpc.Server
 	serverEndpoint string
-	serverImpl     HTTPRegistrar
+	serverImpl     Registrar
 }
 
 // newGRPCServer starts a new grpc server and registers the services.
