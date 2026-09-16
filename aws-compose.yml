@@ -24,6 +24,7 @@ services:
       - S3PROXY_AUTHORIZATION=none
       - JCLOUDS_FILESYSTEM_BASEDIR=/data
     healthcheck:
+      # s3proxy image does not have curl: use /dev/tcp bashism to achieve same
       test:
         - CMD
         - bash
