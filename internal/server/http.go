@@ -33,7 +33,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
-	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -88,19 +87,10 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 		runtime.WithHealthzEndpoint(grpc_health_v1.NewHealthClient(cc)), // localhost:[port]/healthz
 	)
 
-	if _, ok := grpcServer.serverImpl.(pb.RekorServer); ok {
-		err = pb.RegisterRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
-		if err != nil {
-			slog.Error("failed to register rekor handler", "error", err)
-			os.Exit(1)
-		}
-	}
-	if _, ok := grpcServer.serverImpl.(pb.IdentityRekorServer); ok {
-		err = pb.RegisterIdentityRekorHandlerFromEndpoint(ctx, mux, grpcServer.serverEndpoint, opts)
-		if err != nil {
-			slog.Error("failed to register identity handler", "error", err)
-			os.Exit(1)
-		}
+	err = grpcServer.serverImpl.RegisterHTTP(ctx, mux, grpcServer.serverEndpoint, opts)
+	if err != nil {
+		slog.Error("failed to register http handler", "error", err)
+		os.Exit(1)
 	}
 
 	metrics := getMetrics()

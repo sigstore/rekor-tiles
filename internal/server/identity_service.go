@@ -17,10 +17,12 @@ package server
 import (
 	"context"
 
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"google.golang.org/genproto/googleapis/api/httpbody"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/status"
@@ -49,4 +51,14 @@ func (s *IdentityServer) CreateEntry(_ context.Context, _ *pb.IdentityRequestV00
 // Check implements the Healthcheck protocol to report the health of the service.
 func (s IdentityServer) Check(_ context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
+}
+
+// RegisterGRPC registers the Identity Rekor service with the gRPC server.
+func (s *IdentityServer) RegisterGRPC(gs *grpc.Server) {
+	pb.RegisterIdentityRekorServer(gs, s)
+}
+
+// RegisterHTTP registers the Identity Rekor service HTTP handler from endpoint with the gateway mux.
+func (s *IdentityServer) RegisterHTTP(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) error {
+	return pb.RegisterIdentityRekorHandlerFromEndpoint(ctx, mux, endpoint, opts)
 }

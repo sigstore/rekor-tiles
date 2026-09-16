@@ -23,6 +23,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/cyberphone/json-canonicalization/go/src/webpki.org/jsoncanonicalizer"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	pbs "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
@@ -154,4 +155,14 @@ func (s *Server) GetCheckpoint(context.Context, *emptypb.Empty) (*httpbody.HttpB
 // See https://grpc-ecosystem.github.io/grpc-gateway/docs/operations/health_check/.
 func (s Server) Check(_ context.Context, _ *grpc_health_v1.HealthCheckRequest) (*grpc_health_v1.HealthCheckResponse, error) {
 	return &grpc_health_v1.HealthCheckResponse{Status: grpc_health_v1.HealthCheckResponse_SERVING}, nil
+}
+
+// RegisterGRPC registers the Rekor service with the gRPC server.
+func (s *Server) RegisterGRPC(gs *grpc.Server) {
+	pb.RegisterRekorServer(gs, s)
+}
+
+// RegisterHTTP registers the Rekor service HTTP handler from endpoint with the gateway mux.
+func (s *Server) RegisterHTTP(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) error {
+	return pb.RegisterRekorHandlerFromEndpoint(ctx, mux, endpoint, opts)
 }

@@ -153,7 +153,7 @@ var serveCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
-		var rekorServer any
+		var rekorServer server.Registrar
 		if viper.GetBool("identity-mode") {
 			rekorServer = server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry)
 		} else {
