@@ -18,7 +18,6 @@ package app
 import (
 	"bytes"
 	"context"
-	"crypto"
 	"fmt"
 	"io"
 	"log/slog"
@@ -27,18 +26,15 @@ import (
 	"time"
 
 	gcs "cloud.google.com/go/storage"
-	grpc_retry "github.com/grpc-ecosystem/go-grpc-middleware/retry"
+	signerconfig "github.com/sigstore/rekor-tiles/v2/internal/signerverifier/config"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera/gcp/signerverifier"
 	rekornote "github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature"
-	"github.com/sigstore/sigstore/pkg/signature/kms/gcp"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	logformat "github.com/transparency-dev/formats/log"
 	"github.com/transparency-dev/tessera/api/layout"
 	"golang.org/x/mod/sumdb/note"
-	"google.golang.org/api/option"
-	"google.golang.org/grpc"
 )
 
 const (
@@ -132,31 +128,11 @@ func init() {
 	}
 }
 
-var hashAlgMap = map[string]crypto.Hash{
-	"sha256": crypto.SHA256,
-	"sha384": crypto.SHA384,
-	"sha512": crypto.SHA512,
-}
-
 func getSignerVerifier(ctx context.Context) (signature.SignerVerifier, error) {
-	var opts []signerverifier.Option
-	switch {
-	case viper.GetString("signer-filepath") != "":
-		opts = []signerverifier.Option{signerverifier.WithFile(viper.GetString("signer-filepath"), viper.GetString("signer-password"))}
-	case viper.GetString("signer-kmskey") != "":
-		kmshash := viper.GetString("signer-kmshash")
-		hashAlg, ok := hashAlgMap[kmshash]
-		if !ok {
-			return nil, fmt.Errorf("invalid hash algorithm for --signer-kmshash: %s", kmshash)
-		}
-		rpcOpts := make([]signature.RPCOption, 0)
-		callOpts := []grpc_retry.CallOption{grpc_retry.WithMax(viper.GetUint("gcp-kms-retries")), grpc_retry.WithPerRetryTimeout(time.Duration(viper.GetUint32("gcp-kms-timeout")) * time.Second)}
-		rpcOpts = append(rpcOpts, gcp.WithGoogleAPIClientOption(option.WithGRPCDialOption(grpc.WithUnaryInterceptor(grpc_retry.UnaryClientInterceptor(callOpts...)))))
-		opts = []signerverifier.Option{signerverifier.WithKMS(viper.GetString("signer-kmskey"), hashAlg, rpcOpts)}
-	case viper.GetString("signer-tink-kek-uri") != "":
-		opts = []signerverifier.Option{signerverifier.WithTink(viper.GetString("signer-tink-kek-uri"), viper.GetString("signer-tink-keyset-path"))}
-	default:
-		return nil, fmt.Errorf("must provide a signer using a file, KMS, or Tink")
+	opts, err := signerconfig.OptionsFromViper(viper.GetViper(),
+		signerverifier.KMSRPCOptions(viper.GetUint("gcp-kms-retries"), time.Duration(viper.GetUint32("gcp-kms-timeout"))*time.Second)...)
+	if err != nil {
+		return nil, err
 	}
 	signerVerifier, err := signerverifier.New(ctx, opts...)
 	if err != nil {

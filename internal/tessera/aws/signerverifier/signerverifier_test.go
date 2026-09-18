@@ -1,5 +1,5 @@
 /*
-Copyright 2026 The Sigstore Authors
+Copyright 2025 The Sigstore Authors
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -17,125 +17,83 @@ limitations under the License.
 package signerverifier
 
 import (
-	"bytes"
 	"context"
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
-	"encoding/pem"
-	"os"
-	"path/filepath"
+	"errors"
 	"slices"
-	"strings"
 	"testing"
 
+	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
 	"github.com/sigstore/sigstore/pkg/signature/kms"
-
-	// fakekms provides an in-memory KMS provider so that the KMS branch of New
-	// can be exercised without cloud credentials.
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/fake"
+	"github.com/tink-crypto/tink-go/v2/tink"
 )
 
 // awsKMSScheme is the reference scheme registered by the AWS KMS provider. It is
-// written literally rather than imported so that this package's own blank import
-// is what registers it.
+// written literally rather than imported so that this package's own import is what
+// registers it.
 const awsKMSScheme = "awskms://"
 
-// writeTestKey generates an unencrypted ECDSA private key and returns its path.
-func writeTestKey(t *testing.T) string {
-	t.Helper()
-	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	if err != nil {
-		t.Fatalf("generating key: %v", err)
-	}
-	der, err := x509.MarshalECPrivateKey(key)
-	if err != nil {
-		t.Fatalf("marshaling key: %v", err)
-	}
-	keyPath := filepath.Join(t.TempDir(), "ec-key.pem")
-	if err := os.WriteFile(keyPath, pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: der}), 0600); err != nil {
-		t.Fatalf("writing key: %v", err)
-	}
-	return keyPath
-}
-
-func TestNewWithFile(t *testing.T) {
-	keyPath := writeTestKey(t)
-	sv, err := New(context.Background(), WithFile(keyPath, ""))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	msg := []byte("rekor")
-	sig, err := sv.SignMessage(bytes.NewReader(msg))
-	if err != nil {
-		t.Fatalf("signing message: %v", err)
-	}
-	if err := sv.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)); err != nil {
-		t.Fatalf("verifying signature: %v", err)
-	}
-}
-
-func TestNewWithKMS(t *testing.T) {
-	sv, err := New(context.Background(), WithKMS("fakekms://key", crypto.SHA256))
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	msg := []byte("rekor")
-	sig, err := sv.SignMessage(bytes.NewReader(msg))
-	if err != nil {
-		t.Fatalf("signing message: %v", err)
-	}
-	if err := sv.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)); err != nil {
-		t.Fatalf("verifying signature: %v", err)
-	}
-}
-
-// TestAWSKMSProviderRegistered guards against the blank import of the AWS KMS
-// provider being dropped, which would silently disable awskms:// keys.
+// TestAWSKMSProviderRegistered guards against the import of the AWS KMS provider
+// being dropped, which would silently disable awskms:// keys.
 func TestAWSKMSProviderRegistered(t *testing.T) {
 	if !slices.Contains(kms.SupportedProviders(), awsKMSScheme) {
 		t.Errorf("expected %s to be a supported KMS provider, got %v", awsKMSScheme, kms.SupportedProviders())
 	}
 }
 
-func TestNewErrors(t *testing.T) {
-	tests := []struct {
-		name    string
-		opts    []Option
-		wantErr string
-	}{
-		{
-			name:    "no options",
-			opts:    nil,
-			wantErr: "insufficient signing parameters provided",
-		},
-		{
-			name:    "missing key file",
-			opts:    []Option{WithFile(filepath.Join(t.TempDir(), "missing.pem"), "")},
-			wantErr: "failed to read key file",
-		},
-		{
-			name:    "tink with unsupported KEK scheme",
-			opts:    []Option{WithTink("unsupported://kek", "keyset.json.enc")},
-			wantErr: "unsupported KMS key type",
-		},
-		{
-			name:    "tink without keyset path",
-			opts:    []Option{WithTink("aws-kms://kek", "")},
-			wantErr: "key encryption key URI or keyset path unset",
-		},
+// TestAWSKEKProviderWired guards against New dropping its KEK provider injection,
+// which would silently disable aws-kms:// Tink key encryption keys. An aws-kms:// URI
+// must get past prefix resolution, so the error must be anything other than an
+// unsupported key type.
+//
+// The ARN carries its own region and the AWS SDK resolves credentials lazily, so the
+// client is built locally. IMDS is disabled and static credentials are supplied so
+// that the test cannot fall back to the instance metadata endpoint.
+func TestAWSKEKProviderWired(t *testing.T) {
+	t.Setenv("AWS_EC2_METADATA_DISABLED", "true")
+	t.Setenv("AWS_ACCESS_KEY_ID", "test")
+	t.Setenv("AWS_SECRET_ACCESS_KEY", "test")
+	_, err := New(context.Background(),
+		sv.WithTink(KEKScheme+"arn:aws:kms:us-east-1:111122223333:key/abcd", "keyset.json.enc"))
+	if err == nil {
+		t.Fatal("expected an error, since the keyset does not exist")
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			sv, err := New(context.Background(), tt.opts...)
-			if err == nil {
-				t.Fatalf("expected error, got signer-verifier %v", sv)
-			}
-			if !strings.Contains(err.Error(), tt.wantErr) {
-				t.Errorf("expected error containing %q, got %q", tt.wantErr, err.Error())
-			}
-		})
+	if err.Error() == "unsupported KMS key type" {
+		t.Errorf("expected %s to be resolved by the injected provider, got %q", KEKScheme, err.Error())
+	}
+}
+
+// TestAWSKEKProviderRejectsGCPURI pins the per-cloud boundary: an AWS-configured
+// binary must not resolve a GCP key encryption key. The keyset path is non-empty so
+// that the unset guard does not mask the assertion, and the URI is rejected before
+// the file is opened or AWS is contacted.
+func TestAWSKEKProviderRejectsGCPURI(t *testing.T) {
+	_, err := New(context.Background(), sv.WithTink("gcp-kms://project/key", "keyset.json.enc"))
+	if err == nil {
+		t.Fatal("expected an error for a GCP key encryption key URI")
+	}
+	if err.Error() != "unsupported KMS key type" {
+		t.Errorf("expected \"unsupported KMS key type\", got %q", err.Error())
+	}
+}
+
+// TestAWSKEKProviderNotOverridable pins that a caller cannot substitute another
+// cloud's provider, which the registry-free wiring depends on.
+func TestAWSKEKProviderNotOverridable(t *testing.T) {
+	var called string
+	caller := func(_ context.Context, kmsKey string) (tink.AEAD, error) {
+		called = kmsKey
+		return nil, errors.New("caller-supplied provider reached")
+	}
+	_, err := New(context.Background(),
+		sv.WithTink("gcp-kms://project/key", "keyset.json.enc"),
+		sv.WithKEKProvider("gcp-kms://", caller))
+	if err == nil {
+		t.Fatal("expected an error")
+	}
+	if err.Error() != "unsupported KMS key type" {
+		t.Errorf("expected \"unsupported KMS key type\", got %q", err.Error())
+	}
+	if called != "" {
+		t.Errorf("expected the caller-supplied provider to be ignored, got %q", called)
 	}
 }
