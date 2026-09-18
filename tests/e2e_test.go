@@ -55,7 +55,7 @@ import (
 
 const (
 	defaultRekorHostname   = "rekor-local"
-	defaultWitnessVKey     = "rekor-witness-test+a478f5cd+AUtKAvrTeY7srtAMfP5JCUOkZoU+A7F5VA094y5LGr89"
+	defaultWitnessVKey     = "rekor-witness-test+6f51fd97+BKVWUWoHK0o4ZnrT7Om68GjcLvb+FeZfOfYlaQ7XHDVh"
 	defaultServerPublicKey = "./testdata/pki/ed25519-pub-key.pem"
 )
 
