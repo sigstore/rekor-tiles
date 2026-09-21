@@ -29,6 +29,13 @@ updates:
     schedule:
       interval: "weekly"
     groups:
+      codeql-action:
+        # codeql actions must be upgraded together
+        patterns:
+          - "github/codeql-action/*"
+        update-types:
+          - "minor"
+          - "major"
       actions-patch-updates:
         update-types:
           - "patch"
