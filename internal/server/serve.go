@@ -21,12 +21,30 @@ import (
 	"sync"
 	"time"
 
-	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
+	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
+// GRPCRegistrar allows different log implementations to register their gRPC service and health check.
+type GRPCRegistrar interface {
+	RegisterGRPC(s *grpc.Server)
+	grpc_health_v1.HealthServer
+}
+
+// HTTPRegistrar allows different log implementations to register their HTTP gateway handler.
+type HTTPRegistrar interface {
+	RegisterHTTP(ctx context.Context, mux *runtime.ServeMux, endpoint string, opts []grpc.DialOption) error
+}
+
+// Registrar allows different log implementations to register themselves for gRPC and HTTP.
+type Registrar interface {
+	GRPCRegistrar
+	HTTPRegistrar
+}
+
 // Serve starts the grpc server and its http proxy.
-func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, tesseraTimeout time.Duration, s any, tesseraShutdownFn func(context.Context) error) {
+func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, tesseraTimeout time.Duration, s Registrar, tesseraShutdownFn func(context.Context) error) {
 	var wg sync.WaitGroup
 
 	if hc.port == 0 || gc.port == 0 {
@@ -35,18 +53,6 @@ func Serve(ctx context.Context, hc *HTTPConfig, gc *GRPCConfig, tesseraTimeout t
 	}
 	if hc.port == gc.port && hc.host == gc.host {
 		slog.Error("http and grpc cannot serve at the same address", "host", hc.host, "port", hc.port)
-		os.Exit(1)
-	}
-
-	_, isRekor := s.(pb.RekorServer)
-	_, isIdentity := s.(pb.IdentityRekorServer)
-	if !isRekor && !isIdentity {
-		slog.Error("service does not implement RekorServer or IdentityRekorServer")
-		os.Exit(1)
-	}
-
-	if _, ok := s.(grpc_health_v1.HealthServer); !ok {
-		slog.Error("service does not implement gRPC HealthServer")
 		os.Exit(1)
 	}
 
