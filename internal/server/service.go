@@ -116,8 +116,7 @@ func (s *Server) CreateEntry(ctx context.Context, req *pb.CreateEntryRequest) (*
 		// Returns a 499 Client Closed Request
 		return nil, status.Error(codes.Canceled, err.Error())
 	}
-	var dupErr tessera.DuplicateError
-	if errors.As(err, &dupErr) {
+	if dupErr, ok := errors.AsType[tessera.DuplicateError](err); ok {
 		_ = grpc.SetHeader(ctx, metadata.Pairs(
 			duplicateEntryHeader,
 			strconv.FormatUint(dupErr.Index(), 10)))

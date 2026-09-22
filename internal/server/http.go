@@ -30,7 +30,6 @@ import (
 
 	clog "github.com/chainguard-dev/clog/gcp"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"google.golang.org/protobuf/encoding/protojson"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"google.golang.org/grpc"
@@ -55,12 +54,8 @@ func newHTTPProxy(ctx context.Context, config *HTTPConfig, grpcServer *grpcServe
 	// configure a custom marshaler to fail on unknown fields
 	strictMarshaler := runtime.HTTPBodyMarshaler{
 		Marshaler: &runtime.JSONPb{
-			MarshalOptions: protojson.MarshalOptions{
-				EmitUnpopulated: true,
-			},
-			UnmarshalOptions: protojson.UnmarshalOptions{
-				DiscardUnknown: false,
-			},
+			EmitUnpopulated: true,
+			DiscardUnknown:  false,
 		},
 	}
 
