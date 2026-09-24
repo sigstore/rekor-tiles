@@ -21,6 +21,7 @@ import (
 	"crypto/ed25519"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/base64"
@@ -92,6 +93,15 @@ func TestToLogEntry(t *testing.T) {
 		t.Fatal("ECDSA-P384 public key decoding had extra data")
 	}
 	publicKeyP384 := block.Bytes
+
+	rsaPriv2048, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	publicKeyRSA2048, err := x509.MarshalPKIXPublicKey(&rsaPriv2048.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	tests := []struct {
 		name              string
@@ -359,6 +369,60 @@ func TestToLogEntry(t *testing.T) {
 			},
 			expectErr: fmt.Errorf("digest length (33) does not match expected size (32) for algorithm SHA-256"),
 		},
+		{
+			name: "mismatched key details (ECDSA P-256 key with RSA key details)",
+			hashedrekord: &pb.HashedRekordRequestV002{
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_RSA_PKCS1V15_2048_SHA256,
+					},
+				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
+			},
+			expectErr: fmt.Errorf("key details PKIX_RSA_PKCS1V15_2048_SHA256 do not match public key algorithm PKIX_ECDSA_P256_SHA_256"),
+		},
+		{
+			name: "mismatched key details (ECDSA P-256 key with ECDSA P-384 key details)",
+			hashedrekord: &pb.HashedRekordRequestV002{
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: []byte(publicKey),
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_ECDSA_P384_SHA_384,
+					},
+				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
+			},
+			expectErr: fmt.Errorf("key details PKIX_ECDSA_P384_SHA_384 do not match public key algorithm PKIX_ECDSA_P256_SHA_256"),
+		},
+		{
+			name: "unsupported signing algorithm (RSA-PSS)",
+			hashedrekord: &pb.HashedRekordRequestV002{
+				Signature: &pb.Signature{
+					Content: b64DecodeOrDie(t, b64EncodedSignature),
+					Verifier: &pb.Verifier{
+						Verifier: &pb.Verifier_PublicKey{
+							PublicKey: &pb.PublicKey{
+								RawBytes: publicKeyRSA2048,
+							},
+						},
+						KeyDetails: v1.PublicKeyDetails_PKIX_RSA_PSS_2048_SHA256,
+					},
+				},
+				Digest: hexDecodeOrDie(t, hexEncodedDigest),
+			},
+			expectErr: fmt.Errorf("key details PKIX_RSA_PSS_2048_SHA256 do not match public key algorithm PKIX_RSA_PKCS1V15_2048_SHA256"),
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -384,8 +448,7 @@ func TestToLogEntry(t *testing.T) {
 }
 
 // TestToLogEntryEd25519NoPrehash covers a pure Ed25519 key (PKIX_ED25519),
-// which is in the default allowed set but has no associated prehash, so
-// GetHashType returns crypto.Hash(0). ToLogEntry must reject it with a clean
+// which has no associated prehash. ToLogEntry must reject it with a clean
 // error rather than panic on crypto.Hash(0).Size().
 func TestToLogEntryEd25519NoPrehash(t *testing.T) {
 	pub, _, err := ed25519.GenerateKey(rand.Reader)
@@ -413,7 +476,7 @@ func TestToLogEntryEd25519NoPrehash(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = ToLogEntry(req, algReg)
-	assert.ErrorContains(t, err, "unsupported signing algorithm")
+	assert.ErrorContains(t, err, "key details PKIX_ED25519 do not match public key algorithm PKIX_ED25519_PH")
 }
 
 func hexDecodeOrDie(t *testing.T, hash string) []byte {
