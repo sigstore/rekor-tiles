@@ -96,7 +96,7 @@ jobs:
           CODECOV_TOKEN=$(echo $TOKEN_RESPONSE | jq -r .value)
           echo "CODECOV_TOKEN=$CODECOV_TOKEN" >> "$GITHUB_ENV"
       - name: Upload Coverage Report
-        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5 # v7.1.1
         with:
           env_vars: OS
           fail_ci_if_error: true
