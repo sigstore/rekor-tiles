@@ -112,6 +112,7 @@ jobs:
           tags: rekor-server:deploy
           build-args: |
             SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            STORAGE_BACKEND=posix
 
       - name: Test deploy Docker image
         if: ${{ matrix.load == true }}
@@ -129,6 +130,7 @@ jobs:
           tags: rekor-server:debug
           build-args: |
             SERVER_LDFLAGS=${{ env.LDFLAGS }}
+            STORAGE_BACKEND=posix
 
       - name: Test debug Docker image
         if: ${{ matrix.load == true }}
