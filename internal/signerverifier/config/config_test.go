@@ -32,12 +32,36 @@ import (
 	"testing"
 
 	sv "github.com/sigstore/rekor-tiles/v2/internal/signerverifier"
+	"github.com/sigstore/sigstore/pkg/signature"
+	sigkms "github.com/sigstore/sigstore/pkg/signature/kms"
+	"github.com/sigstore/sigstore/pkg/signature/kms/fake"
+	"github.com/sigstore/sigstore/pkg/signature/options"
 	"github.com/spf13/viper"
-
-	// fakekms provides an in-memory KMS provider so that the KMS branch can be
-	// exercised without cloud credentials.
-	_ "github.com/sigstore/sigstore/pkg/signature/kms/fake"
 )
+
+// The fake KMS package registers an in-memory provider as fakekms:// in its init,
+// so that the KMS branch can be exercised without cloud credentials. It also backs
+// the capturing provider registered below.
+
+// capturingKMSScheme is a test-only KMS scheme whose provider records the
+// arguments it was called with, so that a test can observe what the options
+// built by OptionsFromViper actually carry into kms.Get.
+const capturingKMSScheme = "capturingkms://"
+
+type capturedKMSCall struct {
+	keyRef  string
+	hash    crypto.Hash
+	rpcOpts []signature.RPCOption
+}
+
+var lastCapturedKMSCall capturedKMSCall
+
+func init() {
+	sigkms.AddProvider(capturingKMSScheme, func(ctx context.Context, keyRef string, hash crypto.Hash, rpcOpts ...signature.RPCOption) (sigkms.SignerVerifier, error) {
+		lastCapturedKMSCall = capturedKMSCall{keyRef: keyRef, hash: hash, rpcOpts: rpcOpts}
+		return fake.LoadSignerVerifier(ctx, hash)
+	})
+}
 
 func newViper(settings map[string]string) *viper.Viper {
 	v := viper.New()
@@ -179,8 +203,8 @@ func TestOptionsFromViperFileRoundTrip(t *testing.T) {
 	}
 }
 
-// TestOptionsFromViperKMSRoundTrip checks that the KMS key and mapped hash reach
-// the signer, and that caller-supplied RPC options are accepted.
+// TestOptionsFromViperKMSRoundTrip checks that the KMS key and mapped hash carry
+// through to a usable signer.
 func TestOptionsFromViperKMSRoundTrip(t *testing.T) {
 	opts, err := OptionsFromViper(newViper(map[string]string{
 		"signer-kmskey":  "fakekms://key",
@@ -200,6 +224,55 @@ func TestOptionsFromViperKMSRoundTrip(t *testing.T) {
 	}
 	if err := signer.VerifySignature(bytes.NewReader(sig), bytes.NewReader(msg)); err != nil {
 		t.Fatalf("verifying signature: %v", err)
+	}
+}
+
+// TestOptionsFromViperKMSCarriesRPCOptions checks that the key, the mapped hash,
+// and the caller-supplied RPC options all reach the KMS provider.
+func TestOptionsFromViperKMSCarriesRPCOptions(t *testing.T) {
+	lastCapturedKMSCall = capturedKMSCall{}
+	const keyVersion = "42"
+	opts, err := OptionsFromViper(newViper(map[string]string{
+		"signer-kmskey":  capturingKMSScheme + "key",
+		"signer-kmshash": "sha384",
+	}), options.WithKeyVersion(keyVersion))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err = sv.New(context.Background(), opts...); err != nil {
+		t.Fatalf("building signer: %v", err)
+	}
+	if want := capturingKMSScheme + "key"; lastCapturedKMSCall.keyRef != want {
+		t.Errorf("expected key ref %q, got %q", want, lastCapturedKMSCall.keyRef)
+	}
+	if lastCapturedKMSCall.hash != crypto.SHA384 {
+		t.Errorf("expected hash %v, got %v", crypto.SHA384, lastCapturedKMSCall.hash)
+	}
+	if len(lastCapturedKMSCall.rpcOpts) != 1 {
+		t.Fatalf("expected 1 RPC option, got %d", len(lastCapturedKMSCall.rpcOpts))
+	}
+	var got string
+	lastCapturedKMSCall.rpcOpts[0].ApplyKeyVersion(&got)
+	if got != keyVersion {
+		t.Errorf("expected key version %q, got %q", keyVersion, got)
+	}
+}
+
+// TestOptionsFromViperNonKMSIgnoresRPCOptions checks that RPC options are only
+// applied to the KMS branch.
+func TestOptionsFromViperNonKMSIgnoresRPCOptions(t *testing.T) {
+	lastCapturedKMSCall = capturedKMSCall{}
+	opts, err := OptionsFromViper(newViper(map[string]string{
+		"signer-filepath": "key.pem",
+	}), options.WithKeyVersion("42"))
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if _, err = sv.New(context.Background(), opts...); err == nil {
+		t.Fatal("expected an error for a missing key file")
+	}
+	if lastCapturedKMSCall.keyRef != "" {
+		t.Errorf("expected no KMS provider call, got one for %q", lastCapturedKMSCall.keyRef)
 	}
 }
 
