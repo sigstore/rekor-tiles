@@ -19,8 +19,9 @@ updates:
     schedule:
       interval: "weekly"
     groups:
-      go-patch-updates:
+      go-minor-patch-updates:
         update-types:
+          - "minor"
           - "patch"
     cooldown:
       default-days: 7
@@ -34,10 +35,10 @@ updates:
         patterns:
           - "github/codeql-action/*"
         update-types:
-          - "minor"
           - "major"
-      actions-patch-updates:
+      actions-minor-patch-updates:
         update-types:
+          - "minor"
           - "patch"
     cooldown:
       default-days: 7
@@ -47,8 +48,9 @@ updates:
     schedule:
       interval: "weekly"
     groups:
-      docker-patch-updates:
+      docker-minor-patch-updates:
         update-types:
+          - "minor"
           - "patch"
     cooldown:
       default-days: 7
@@ -59,8 +61,9 @@ updates:
     schedule:
       interval: "weekly"
     groups:
-      docker-compose-patch-updates:
+      docker-compose-minor-patch-updates:
         update-types:
+          - "minor"
           - "patch"
     cooldown:
       default-days: 7
