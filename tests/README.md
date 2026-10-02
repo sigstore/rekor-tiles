@@ -81,3 +81,23 @@ When finished, you can clean up the Docker containers if desired:
 ```sh
 docker compose -f cloudsql-compose.yml down --volumes
 ```
+
+### Identity POSIX Server
+
+Start the Docker containers from the top level directory:
+
+```sh
+docker compose -f identity-posix-compose.yml up -d --build --wait --wait-timeout 60
+```
+
+Run the tests:
+
+```sh
+go test -v -tags=e2e -run TestIdentityPOSIX ./tests/
+```
+
+When finished, you can clean up the Docker containers if desired:
+
+```sh
+docker compose -f identity-posix-compose.yml down --volumes
+```

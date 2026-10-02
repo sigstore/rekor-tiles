@@ -127,11 +127,6 @@
           "type": "string",
           "format": "byte",
           "description": "Must be a SHA-256 digest of data."
-        },
-        "context": {
-          "type": "string",
-          "format": "byte",
-          "description": "Optional context value. Must be a SHA-256 digest."
         }
       },
       "title": "A request to add an identity-based transparency log entry (v0.0.1)",
@@ -151,6 +146,11 @@
           "type": "string",
           "format": "byte",
           "description": "The signature computed over the specification identifier, checksum, and context strings,\nas defined by the c2sp.org/identity-transparency specification."
+        },
+        "context": {
+          "type": "string",
+          "format": "byte",
+          "description": "Optional context value to record alongside the message. Must be a SHA-256 digest.\nMust be signed as defined by the c2sp.org/identity-transparency specification."
         }
       },
       "required": [
