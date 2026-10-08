@@ -146,9 +146,12 @@ func extractVerifier(hr *pb.HashedRekordRequestV002) (verifier.Verifier, error) 
 // verifySupportedAlgorithm confirms that the signature and digest algorithm pair is supported by this server
 // instance, and returns details about the signing algorithm to be used while verifying the entry signature.
 func verifySupportedAlgorithm(keyDetails v1.PublicKeyDetails, v verifier.Verifier, algorithmRegistry *signature.AlgorithmRegistryConfig) (signature.AlgorithmDetails, error) {
-	algDetails, err := signature.GetAlgorithmDetails(keyDetails)
+	algDetails, err := signature.GetDefaultAlgorithmDetails(v.PublicKey(), options.WithED25519ph())
 	if err != nil {
 		return signature.AlgorithmDetails{}, fmt.Errorf("getting key algorithm details: %w", err)
+	}
+	if algDetails.GetSignatureAlgorithm() != keyDetails {
+		return signature.AlgorithmDetails{}, fmt.Errorf("key details %s do not match public key algorithm %s", keyDetails, algDetails.GetSignatureAlgorithm())
 	}
 	alg := algDetails.GetHashType()
 
