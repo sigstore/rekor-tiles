@@ -96,12 +96,30 @@ func AlgorithmRegistry(algorithmOptions []string) (*signature.AlgorithmRegistryC
 	return algorithmRegistry, nil
 }
 
-// CheckEntryAlgorithms checks that the combination public key and message
-// digest algorithm are allowed given an algorithm registry.
-func CheckEntryAlgorithms(pubKey crypto.PublicKey, alg crypto.Hash, algorithmRegistry *signature.AlgorithmRegistryConfig) (bool, error) {
-	// Check if all the verifiers public keys (together with the
-	// artifactHashValue) are allowed according to the policy
-	isPermitted, err := algorithmRegistry.IsAlgorithmPermitted(pubKey, alg)
+// CheckEntryAlgorithms checks that the public key and algorithm details match
+// and are allowed given an algorithm registry.
+func CheckEntryAlgorithms(pubKey crypto.PublicKey, algDetails signature.AlgorithmDetails, algorithmRegistry *signature.AlgorithmRegistryConfig) (bool, error) {
+	// Ensure the requested signature algorithm is in the set of supported client algorithms
+	// (e.g. rejects RSA-PSS, which shares the same key type, size, and hash as RSA-PKCS1v15).
+	if !slices.Contains(AllowedClientSigningAlgorithms, algDetails.GetSignatureAlgorithm()) {
+		return false, nil
+	}
+	// Verify that the provided public key matches the parameters (key type, curve/size, and hash)
+	// specified by algDetails.
+	keyRegistry, err := signature.NewAlgorithmRegistryConfig([]v1.PublicKeyDetails{algDetails.GetSignatureAlgorithm()})
+	if err != nil {
+		return false, fmt.Errorf("getting key algorithm registry: %w", err)
+	}
+	keyMatches, err := keyRegistry.IsAlgorithmPermitted(pubKey, algDetails.GetHashType())
+	if err != nil {
+		return false, fmt.Errorf("checking if key matches algorithm details: %w", err)
+	}
+	if !keyMatches {
+		return false, nil
+	}
+	// Verify that the public key and hash combination is permitted by the server's configured
+	// algorithm registry.
+	isPermitted, err := algorithmRegistry.IsAlgorithmPermitted(pubKey, algDetails.GetHashType())
 	if err != nil {
 		return false, fmt.Errorf("checking if algorithm is permitted: %w", err)
 	}

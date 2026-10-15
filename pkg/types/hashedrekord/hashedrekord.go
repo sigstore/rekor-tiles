@@ -150,14 +150,13 @@ func verifySupportedAlgorithm(keyDetails v1.PublicKeyDetails, v verifier.Verifie
 	if err != nil {
 		return signature.AlgorithmDetails{}, fmt.Errorf("getting key algorithm details: %w", err)
 	}
-	alg := algDetails.GetHashType()
 
-	valid, err := algorithmregistry.CheckEntryAlgorithms(v.PublicKey(), alg, algorithmRegistry)
+	valid, err := algorithmregistry.CheckEntryAlgorithms(v.PublicKey(), algDetails, algorithmRegistry)
 	if err != nil {
 		return signature.AlgorithmDetails{}, fmt.Errorf("checking entry algorithm: %w", err)
 	}
 	if !valid {
-		return signature.AlgorithmDetails{}, &algorithmregistry.UnsupportedAlgorithm{Pub: v.PublicKey(), Alg: alg}
+		return signature.AlgorithmDetails{}, &algorithmregistry.UnsupportedAlgorithm{Pub: v.PublicKey(), Alg: algDetails.GetHashType()}
 	}
 	return algDetails, nil
 }
