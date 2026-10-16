@@ -36,6 +36,21 @@ func TestInitializeFlags(t *testing.T) {
 	}
 }
 
+func TestInitializeIdentityFlags(t *testing.T) {
+	cmd := &cobra.Command{Use: "serve-identity"}
+	if err := InitializeIdentity(cmd); err != nil {
+		t.Fatalf("unexpected error initializing identity flags: %v", err)
+	}
+
+	algs, err := cmd.Flags().GetStringSlice("client-signing-algorithms")
+	if err != nil {
+		t.Fatalf("unexpected error getting client-signing-algorithms: %v", err)
+	}
+	if len(algs) != 1 || algs[0] != "ed25519" {
+		t.Errorf("expected default client-signing-algorithms to be [ed25519], got %v", algs)
+	}
+}
+
 func TestServerIdleTimeout(t *testing.T) {
 	tests := []struct {
 		name     string
