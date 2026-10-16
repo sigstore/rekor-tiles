@@ -104,6 +104,64 @@ func TestAlgorithmRegistry(t *testing.T) {
 	}
 }
 
+func TestIdentityAlgorithmRegistry(t *testing.T) {
+	tests := []struct {
+		name             string
+		algorithmOptions []string
+		wantErr          bool
+		errContains      string
+	}{
+		{
+			name:             "defaults",
+			algorithmOptions: nil,
+		},
+		{
+			name: "valid identity algorithm (pure ed25519)",
+			algorithmOptions: []string{
+				"ed25519",
+			},
+		},
+		{
+			name: "invalid algorithm format",
+			algorithmOptions: []string{
+				"foo",
+			},
+			wantErr:     true,
+			errContains: "parsing signature algorithm flag",
+		},
+		{
+			name: "valid format but not in allowed set (ed25519-ph)",
+			algorithmOptions: []string{
+				"ed25519-ph",
+			},
+			wantErr:     true,
+			errContains: "is not in the allowed set",
+		},
+		{
+			name: "valid format but not in allowed set (ecdsa)",
+			algorithmOptions: []string{
+				"ecdsa-sha2-256-nistp256",
+			},
+			wantErr:     true,
+			errContains: "is not in the allowed set",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, gotErr := IdentityAlgorithmRegistry(test.algorithmOptions)
+			if test.wantErr {
+				assert.Error(t, gotErr)
+				if test.errContains != "" {
+					assert.Contains(t, gotErr.Error(), test.errContains)
+				}
+				return
+			}
+			assert.NoError(t, gotErr)
+			assert.NotNil(t, got)
+		})
+	}
+}
+
 func generateRSAKey(t *testing.T, bits int) *rsa.PublicKey {
 	t.Helper()
 	priv, err := rsa.GenerateKey(rand.Reader, bits)

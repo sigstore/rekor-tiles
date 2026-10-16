@@ -64,7 +64,7 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 		return nil, status.Errorf(codes.Unimplemented, "log frozen")
 	}
 
-	leafBytes, err := identity.ToLogEntry(req)
+	leafBytes, err := identity.ToLogEntry(req, s.algorithmRegistry)
 	if err != nil {
 		slog.WarnContext(ctx, "failed validating identity request", "error", err.Error())
 		return nil, status.Errorf(codes.InvalidArgument, "invalid identity request")

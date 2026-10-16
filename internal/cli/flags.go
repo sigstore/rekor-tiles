@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	v1 "github.com/sigstore/protobuf-specs/gen/pb-go/common/v1"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
 	"github.com/sigstore/sigstore/pkg/signature"
@@ -30,6 +31,15 @@ import (
 
 // Initialize adds flags that are shared between all Rekor binaries
 func Initialize(serveCmd *cobra.Command) error {
+	return initialize(serveCmd, algorithmregistry.AllowedClientSigningAlgorithms)
+}
+
+// InitializeIdentity adds flags that are shared between all Rekor identity binaries
+func InitializeIdentity(serveCmd *cobra.Command) error {
+	return initialize(serveCmd, algorithmregistry.AllowedIdentitySigningAlgorithms)
+}
+
+func initialize(serveCmd *cobra.Command, allowedSigningAlgorithms []v1.PublicKeyDetails) error {
 	// server configs
 	serveCmd.Flags().Bool("read-only", false, "run this server in read-only mode; reject new entries and disable automatic checkpoint publication")
 	serveCmd.Flags().Int("http-port", 3000, "HTTP port to bind to")
@@ -70,7 +80,7 @@ func Initialize(serveCmd *cobra.Command) error {
 	serveCmd.Flags().String("witness-policy-path", "", "optional path to witness policy file")
 
 	// allowed entry signing algorithms
-	keyAlgorithmTypes, err := defaultKeyAlgorithms()
+	keyAlgorithmTypes, err := defaultKeyAlgorithms(allowedSigningAlgorithms)
 	if err != nil {
 		return err
 	}
@@ -80,10 +90,9 @@ func Initialize(serveCmd *cobra.Command) error {
 	return nil
 }
 
-func defaultKeyAlgorithms() ([]string, error) {
-	allowedClientSigningAlgorithms := algorithmregistry.AllowedClientSigningAlgorithms
+func defaultKeyAlgorithms(allowedSigningAlgorithms []v1.PublicKeyDetails) ([]string, error) {
 	keyAlgorithmTypes := []string{}
-	for _, keyAlgorithm := range allowedClientSigningAlgorithms {
+	for _, keyAlgorithm := range allowedSigningAlgorithms {
 		keyFlag, err := signature.FormatSignatureAlgorithmFlag(keyAlgorithm)
 		if err != nil {
 			return nil, err

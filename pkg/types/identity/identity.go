@@ -15,13 +15,16 @@
 package identity
 
 import (
+	"crypto"
 	"crypto/ed25519"
 	"crypto/sha256"
 	"crypto/x509"
 	"errors"
 	"fmt"
 
+	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
+	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/transparency-dev/merkle/rfc6962"
 )
 
@@ -115,7 +118,7 @@ func computeLeafHash(req *pb.IdentityRequestV001, rootPubKeyHash []byte) []byte 
 
 // ToLogEntry reconstructs the leaf bytes from bundle-signed inputs.
 // It validates the signature and returns the unhashed leaf format.
-func ToLogEntry(req *pb.IdentityRequestV001) ([]byte, error) {
+func ToLogEntry(req *pb.IdentityRequestV001, algorithmRegistry *signature.AlgorithmRegistryConfig) ([]byte, error) {
 	if err := validate(req); err != nil {
 		return nil, err
 	}
@@ -132,6 +135,15 @@ func ToLogEntry(req *pb.IdentityRequestV001) ([]byte, error) {
 	pub, err := x509.ParsePKIXPublicKey(pubKey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse public key: %w", err)
+	}
+	if algorithmRegistry != nil {
+		valid, err := algorithmregistry.CheckAlgorithm(pub, crypto.Hash(0), algorithmRegistry)
+		if err != nil {
+			return nil, fmt.Errorf("checking entry algorithm: %w", err)
+		}
+		if !valid {
+			return nil, &algorithmregistry.UnsupportedAlgorithm{Pub: pub, Alg: crypto.Hash(0)}
+		}
 	}
 	edKey, ok := pub.(ed25519.PublicKey)
 	if !ok {
@@ -162,7 +174,7 @@ func ToEntryHash(publicKey []byte, signature []byte, message []byte, context []b
 		},
 		Message: message,
 	}
-	leafBytes, err := ToLogEntry(req)
+	leafBytes, err := ToLogEntry(req, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -152,7 +152,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			storage := &mockStorage{addFn: test.addFn}
-			algReg, err := algorithmregistry.AlgorithmRegistry([]string{"ed25519"})
+			algReg, err := algorithmregistry.IdentityAlgorithmRegistry([]string{"ed25519"})
 			if err != nil {
 				t.Fatal(err)
 			}

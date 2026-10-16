@@ -19,7 +19,6 @@ import (
 	"context"
 	"crypto/x509"
 	"encoding/base64"
-	"fmt"
 	"log/slog"
 	"os"
 
@@ -153,29 +152,20 @@ func runServer(cmd *cobra.Command, isIdentity bool) {
 			os.Exit(1)
 		}
 	}
-	algorithms := viper.GetStringSlice("client-signing-algorithms")
-	if isIdentity {
-		if !cmd.Flags().Changed("client-signing-algorithms") {
-			algorithms = []string{"ed25519"}
-		}
-		for _, alg := range algorithms {
-			if alg != "ed25519" {
-				slog.Error(fmt.Sprintf("unsupported algorithm '%s' for identity log", alg))
-				os.Exit(1)
-			}
-		}
-	}
-
-	algorithmRegistry, err := algorithmregistry.AlgorithmRegistry(algorithms)
-	if err != nil {
-		slog.Error("failed to get algorithm registry", "error", err)
-		os.Exit(1)
-	}
-
 	var rekorServer server.Registrar
 	if isIdentity {
+		algorithmRegistry, err := algorithmregistry.IdentityAlgorithmRegistry(viper.GetStringSlice("client-signing-algorithms"))
+		if err != nil {
+			slog.Error("failed to get algorithm registry", "error", err)
+			os.Exit(1)
+		}
 		rekorServer = server.NewIdentityServer(tesseraStorage, readOnly, algorithmRegistry)
 	} else {
+		algorithmRegistry, err := algorithmregistry.AlgorithmRegistry(viper.GetStringSlice("client-signing-algorithms"))
+		if err != nil {
+			slog.Error("failed to get algorithm registry", "error", err)
+			os.Exit(1)
+		}
 		rekorServer = server.NewServer(tesseraStorage, readOnly, algorithmRegistry, logID)
 	}
 
@@ -204,8 +194,14 @@ func runServer(cmd *cobra.Command, isIdentity bool) {
 	)
 }
 
-func addFlags(cmd *cobra.Command) {
-	if err := cli.Initialize(cmd); err != nil {
+func addFlags(cmd *cobra.Command, isIdentity bool) {
+	var err error
+	if isIdentity {
+		err = cli.InitializeIdentity(cmd)
+	} else {
+		err = cli.Initialize(cmd)
+	}
+	if err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)
 	}
@@ -219,9 +215,9 @@ func addFlags(cmd *cobra.Command) {
 }
 
 func init() {
-	addFlags(serveCmd)
+	addFlags(serveCmd, false)
 	rootCmd.AddCommand(serveCmd)
 
-	addFlags(serveIdentityCmd)
+	addFlags(serveIdentityCmd, true)
 	rootCmd.AddCommand(serveIdentityCmd)
 }

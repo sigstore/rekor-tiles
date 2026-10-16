@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"testing"
 
+	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	pb "github.com/sigstore/rekor-tiles/v2/pkg/generated/protobuf"
 	"github.com/stretchr/testify/assert"
 	"github.com/transparency-dev/merkle/rfc6962"
@@ -69,8 +70,10 @@ func generateValidRequest(t *testing.T) (*pb.IdentityRequestV001, []byte) {
 
 func TestToLogEntry(t *testing.T) {
 	req, _ := generateValidRequest(t)
+	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
+	assert.NoError(t, err)
 
-	leafBytes, err := ToLogEntry(req)
+	leafBytes, err := ToLogEntry(req, algReg)
 	assert.NoError(t, err)
 	assert.NotNil(t, leafBytes)
 	assert.Greater(t, len(leafBytes), 0)
@@ -86,13 +89,27 @@ func TestToLogEntry(t *testing.T) {
 
 func TestToLogEntry_InvalidSignature(t *testing.T) {
 	req, _ := generateValidRequest(t)
+	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
+	assert.NoError(t, err)
 
 	// Invalidate the signature by flipping the first byte
 	req.GetPublicKey().Signature[0] ^= 0xFF
 
-	leafBytes, err := ToLogEntry(req)
+	leafBytes, err := ToLogEntry(req, algReg)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid signature")
+	assert.Nil(t, leafBytes)
+}
+
+func TestToLogEntry_UnsupportedAlgorithm(t *testing.T) {
+	req, _ := generateValidRequest(t)
+	// Client algorithm registry does not permit pure Ed25519
+	algReg, err := algorithmregistry.AlgorithmRegistry(nil)
+	assert.NoError(t, err)
+
+	leafBytes, err := ToLogEntry(req, algReg)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "unsupported entry algorithm for Ed25519 key")
 	assert.Nil(t, leafBytes)
 }
 
@@ -109,8 +126,10 @@ func TestValidate_InvalidMessageSize(t *testing.T) {
 
 func TestToEntryHash(t *testing.T) {
 	req, _ := generateValidRequest(t)
+	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
+	assert.NoError(t, err)
 
-	leafBytes, err := ToLogEntry(req)
+	leafBytes, err := ToLogEntry(req, algReg)
 	assert.NoError(t, err)
 
 	expectedHash := rfc6962.DefaultHasher.HashLeaf(leafBytes)
