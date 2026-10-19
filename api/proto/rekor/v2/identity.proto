@@ -32,6 +32,10 @@ message PublicKeyCredential {
     // The signature computed over the specification identifier, checksum, and context strings,
     // as defined by the c2sp.org/identity-transparency specification.
     bytes signature = 2 [(google.api.field_behavior) = REQUIRED];
+
+    // Optional context value to record alongside the message. Must be a SHA-256 digest.
+    // Must be signed as defined by the c2sp.org/identity-transparency specification.
+    bytes context = 3;
 }
 
 // A request to add an identity-based transparency log entry (v0.0.1)
@@ -42,7 +46,4 @@ message IdentityRequestV001 {
     
     // Must be a SHA-256 digest of data.
     bytes message = 3 [(google.api.field_behavior) = REQUIRED];
-    
-    // Optional context value. Must be a SHA-256 digest.
-    bytes context = 4;
 }
