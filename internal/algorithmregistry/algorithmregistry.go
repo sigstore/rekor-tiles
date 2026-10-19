@@ -39,6 +39,11 @@ var (
 		v1.PublicKeyDetails_PKIX_ECDSA_P521_SHA_512,
 		v1.PublicKeyDetails_PKIX_ED25519_PH,
 	}
+	// AllowedIdentitySigningAlgorithms is the default set of supported signing
+	// algorithms for identity log entry signatures.
+	AllowedIdentitySigningAlgorithms = []v1.PublicKeyDetails{
+		v1.PublicKeyDetails_PKIX_ED25519,
+	}
 )
 
 type UnsupportedAlgorithm struct {
@@ -47,7 +52,10 @@ type UnsupportedAlgorithm struct {
 }
 
 func (e *UnsupportedAlgorithm) Error() string {
-	hash := e.Alg.String()
+	hash := "none"
+	if e.Alg != crypto.Hash(0) {
+		hash = e.Alg.String()
+	}
 
 	switch v := e.Pub.(type) {
 	case *rsa.PublicKey:
@@ -65,28 +73,29 @@ func (e *UnsupportedAlgorithm) Error() string {
 
 // AlgorithmRegistry accepts a list of algorithms as strings, parses and formats them into a registry.
 func AlgorithmRegistry(algorithmOptions []string) (*signature.AlgorithmRegistryConfig, error) {
+	return newAlgorithmRegistry(algorithmOptions, AllowedClientSigningAlgorithms)
+}
+
+// IdentityAlgorithmRegistry accepts a list of identity signing algorithms as strings, parses and formats them into a registry.
+func IdentityAlgorithmRegistry(algorithmOptions []string) (*signature.AlgorithmRegistryConfig, error) {
+	return newAlgorithmRegistry(algorithmOptions, AllowedIdentitySigningAlgorithms)
+}
+
+func newAlgorithmRegistry(algorithmOptions []string, allowedAlgorithms []v1.PublicKeyDetails) (*signature.AlgorithmRegistryConfig, error) {
 	var algorithms []v1.PublicKeyDetails
-	if algorithmOptions == nil {
-		algorithms = AllowedClientSigningAlgorithms
+	if len(algorithmOptions) == 0 {
+		algorithms = allowedAlgorithms
 	} else {
 		for _, a := range algorithmOptions {
 			algorithm, err := signature.ParseSignatureAlgorithmFlag(a)
 			if err != nil {
 				return nil, fmt.Errorf("parsing signature algorithm flag: %w", err)
 			}
-			allowed := slices.Contains(AllowedClientSigningAlgorithms, algorithm)
+			allowed := slices.Contains(allowedAlgorithms, algorithm)
 			if !allowed {
 				return nil, fmt.Errorf("algorithm %s is not in the allowed set", a)
 			}
 			algorithms = append(algorithms, algorithm)
-		}
-	}
-	algorithmsStr := make([]string, len(algorithms))
-	var err error
-	for i, a := range algorithms {
-		algorithmsStr[i], err = signature.FormatSignatureAlgorithmFlag(a)
-		if err != nil {
-			return nil, fmt.Errorf("formatting signature algorithm flag: %w", err)
 		}
 	}
 	algorithmRegistry, err := signature.NewAlgorithmRegistryConfig(algorithms)
@@ -119,7 +128,13 @@ func CheckEntryAlgorithms(pubKey crypto.PublicKey, algDetails signature.Algorith
 	}
 	// Verify that the public key and hash combination is permitted by the server's configured
 	// algorithm registry.
-	isPermitted, err := algorithmRegistry.IsAlgorithmPermitted(pubKey, algDetails.GetHashType())
+	return CheckAlgorithm(pubKey, algDetails.GetHashType(), algorithmRegistry)
+}
+
+// CheckAlgorithm checks that the combination of public key and message
+// digest algorithm are allowed given an algorithm registry.
+func CheckAlgorithm(pubKey crypto.PublicKey, alg crypto.Hash, algorithmRegistry *signature.AlgorithmRegistryConfig) (bool, error) {
+	isPermitted, err := algorithmRegistry.IsAlgorithmPermitted(pubKey, alg)
 	if err != nil {
 		return false, fmt.Errorf("checking if algorithm is permitted: %w", err)
 	}

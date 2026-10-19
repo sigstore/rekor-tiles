@@ -21,6 +21,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
+	"slices"
 	"strings"
 	"testing"
 
@@ -91,6 +92,64 @@ func TestAlgorithmRegistry(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			got, gotErr := AlgorithmRegistry(test.algorithmOptions)
+			if test.wantErr {
+				assert.Error(t, gotErr)
+				if test.errContains != "" {
+					assert.Contains(t, gotErr.Error(), test.errContains)
+				}
+				return
+			}
+			assert.NoError(t, gotErr)
+			assert.NotNil(t, got)
+		})
+	}
+}
+
+func TestIdentityAlgorithmRegistry(t *testing.T) {
+	tests := []struct {
+		name             string
+		algorithmOptions []string
+		wantErr          bool
+		errContains      string
+	}{
+		{
+			name:             "defaults",
+			algorithmOptions: nil,
+		},
+		{
+			name: "valid identity algorithm (pure ed25519)",
+			algorithmOptions: []string{
+				"ed25519",
+			},
+		},
+		{
+			name: "invalid algorithm format",
+			algorithmOptions: []string{
+				"foo",
+			},
+			wantErr:     true,
+			errContains: "parsing signature algorithm flag",
+		},
+		{
+			name: "valid format but not in allowed set (ed25519-ph)",
+			algorithmOptions: []string{
+				"ed25519-ph",
+			},
+			wantErr:     true,
+			errContains: "is not in the allowed set",
+		},
+		{
+			name: "valid format but not in allowed set (ecdsa)",
+			algorithmOptions: []string{
+				"ecdsa-sha2-256-nistp256",
+			},
+			wantErr:     true,
+			errContains: "is not in the allowed set",
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got, gotErr := IdentityAlgorithmRegistry(test.algorithmOptions)
 			if test.wantErr {
 				assert.Error(t, gotErr)
 				if test.errContains != "" {
@@ -205,7 +264,15 @@ func TestUnsupportedAlgorithm_Error(t *testing.T) {
 				Pub: rsaKey2048,
 				Alg: crypto.Hash(0),
 			},
-			want: "unsupported entry algorithm for RSA key, size 2048, digest unknown hash value 0",
+			want: "unsupported entry algorithm for RSA key, size 2048, digest none",
+		},
+		{
+			name: "Ed25519 with zero hash value",
+			err: UnsupportedAlgorithm{
+				Pub: ed25519Key,
+				Alg: crypto.Hash(0),
+			},
+			want: "unsupported entry algorithm for Ed25519 key, digest none",
 		},
 	}
 
@@ -220,7 +287,8 @@ func TestUnsupportedAlgorithm_Error(t *testing.T) {
 }
 
 func TestUnsupportedAlgorithmForAllAllowedAlgs(t *testing.T) {
-	for _, a := range AllowedClientSigningAlgorithms {
+	allAlgs := slices.Concat(AllowedClientSigningAlgorithms, AllowedIdentitySigningAlgorithms)
+	for _, a := range allAlgs {
 		details, err := signature.GetAlgorithmDetails(a)
 		if err != nil {
 			t.Fatal(err)
