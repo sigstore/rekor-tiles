@@ -23,6 +23,7 @@ Rekor v2 supports multiple storage backends. Separate binaries for each backend 
 
 * Binary: `rekor-server-gcp`
 * Container `rekor-tiles/gcp`
+* Modes: `serve`, `serve-identity`
 * Sequencing entries: Cloud Spanner
 * Tile storage: Google Cloud Storage (GCS)
 * Use case: Preferred deployment architecture for GCP, highly scalable
@@ -31,6 +32,7 @@ Rekor v2 supports multiple storage backends. Separate binaries for each backend 
 
 * Binary: `rekor-server-aws`
 * Container `rekor-tiles/aws`
+* Modes: `serve`
 * Sequencing: Aurora MySQL or RDS MySQL
 * Tile storage: Amazon S3
 * Use case: Deployment architecture for AWS
@@ -39,6 +41,7 @@ Rekor v2 supports multiple storage backends. Separate binaries for each backend 
 
 * Binary: `rekor-server-posix`
 * Container `rekor-tiles/posix`
+* Modes: `serve`, `serve-identity`
 * Sequencing: Atomic POSIX operations
 * Tile storage: POSIX-compliant filesystem
 * Use case: Lower cost, easy to serve
@@ -47,6 +50,7 @@ Rekor v2 supports multiple storage backends. Separate binaries for each backend 
 
 * Binary: `rekor-server-gcpcloudsql`
 * Container `rekor-tiles/gcpcloudsql`
+* Modes: `serve`
 * Sequencing: CloudSQL
 * Tile storage: Google Cloud Storage (GCS)
 * Use case: Alternative to Spanner sequencing, would only recommend if Spanner cannot be used
@@ -59,6 +63,11 @@ and set the following environment variables:
 * `GCS_HMAC_SECRET`
 * `GCS_REGION`, the region of the bucket
 * `GCS_ENDPOINT_URL`, which should equal `https://storage.googleapis.com`
+
+## Server Modes
+
+* `serve`: Starts the standard Rekor v2 transparency log server (`hashedrekord` and `dsse` entry types). Supported by all storage backends.
+* `serve-identity`: Starts the [identity transparency log](https://c2sp.org/identity-transparency) server (accepting public key and OIDC credentials, configured via `--oidc-config`). Supported by `rekor-server-gcp` and `rekor-server-posix`. Primarily for post-quantum cryptographic signing.
 
 ## Public-good instance
 
