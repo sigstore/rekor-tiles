@@ -16,6 +16,7 @@ package identity_v1
 
 import (
 	"context"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"encoding/json"
@@ -76,36 +77,71 @@ func TestExtractOIDCClaims_InvalidToken(t *testing.T) {
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to authenticate token")
 
-	// 5. Known issuer with invalid signature
+	// 5. Known issuer with invalid signature (RS256)
 	validTok := m.token(t, "test-sub", "foo@example.com")
 	tamperedTok := validTok[:len(validTok)-4] + "AAAA"
 	_, _, err = extractOIDCClaims(ctx, tamperedTok, pool)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "failed to authenticate token")
+
+	// 6. Known issuer with invalid signature (ML-DSA-44)
+	validMLDSATok := m.mldsaToken(t, jose.ML_DSA_44, "test-sub", "foo@example.com")
+	tamperedMLDSATok := validMLDSATok[:len(validMLDSATok)-4] + "AAAA"
+	_, _, err = extractOIDCClaims(ctx, tamperedMLDSATok, pool)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "failed to authenticate token")
 }
 
 type mockOIDC struct {
-	server *httptest.Server
-	priv   *rsa.PrivateKey
-	pub    *rsa.PublicKey
+	server      *httptest.Server
+	priv        *rsa.PrivateKey
+	pub         *rsa.PublicKey
+	mldsa44Priv *mldsa.PrivateKey
+	mldsa65Priv *mldsa.PrivateKey
+	mldsa87Priv *mldsa.PrivateKey
 }
 
 func newMockOIDC(t *testing.T) *mockOIDC {
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	assert.NoError(t, err)
 
-	m := &mockOIDC{priv: priv, pub: &priv.PublicKey}
+	mldsa44Priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	assert.NoError(t, err)
+	mldsa65Priv, err := mldsa.GenerateKey(mldsa.MLDSA65())
+	assert.NoError(t, err)
+	mldsa87Priv, err := mldsa.GenerateKey(mldsa.MLDSA87())
+	assert.NoError(t, err)
+
+	m := &mockOIDC{
+		priv:        priv,
+		pub:         &priv.PublicKey,
+		mldsa44Priv: mldsa44Priv,
+		mldsa65Priv: mldsa65Priv,
+		mldsa87Priv: mldsa87Priv,
+	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
 		json.NewEncoder(w).Encode(map[string]any{
 			"issuer":   m.server.URL,
 			"jwks_uri": m.server.URL + "/keys",
+			"id_token_signing_alg_values_supported": []string{
+				string(jose.RS256),
+				string(jose.ML_DSA_44),
+				string(jose.ML_DSA_65),
+				string(jose.ML_DSA_87),
+			},
 		})
 	})
 	mux.HandleFunc("/keys", func(w http.ResponseWriter, _ *http.Request) {
-		jwk := jose.JSONWebKey{Key: m.pub, KeyID: "test-key", Algorithm: string(jose.RS256)}
-		json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{jwk}})
+		json.NewEncoder(w).Encode(jose.JSONWebKeySet{
+			Keys: []jose.JSONWebKey{
+				{Key: m.pub, KeyID: "test-key", Algorithm: string(jose.RS256)},
+				{Key: m.mldsa44Priv.PublicKey(), KeyID: "mldsa44-key", Algorithm: string(jose.ML_DSA_44)},
+				{Key: m.mldsa65Priv.PublicKey(), KeyID: "mldsa65-key", Algorithm: string(jose.ML_DSA_65)},
+				{Key: m.mldsa87Priv.PublicKey(), KeyID: "mldsa87-key", Algorithm: string(jose.ML_DSA_87)},
+			},
+		})
 	})
 
 	m.server = httptest.NewServer(mux)
@@ -113,8 +149,25 @@ func newMockOIDC(t *testing.T) *mockOIDC {
 }
 
 func (m *mockOIDC) token(t *testing.T, sub, email string) string {
-	key := jose.SigningKey{Algorithm: jose.RS256, Key: m.priv}
-	signer, err := jose.NewSigner(key, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", "test-key"))
+	return m.signedToken(t, jose.SigningKey{Algorithm: jose.RS256, Key: m.priv}, "test-key", sub, email)
+}
+
+func (m *mockOIDC) mldsaToken(t *testing.T, alg jose.SignatureAlgorithm, sub, email string) string {
+	switch alg {
+	case jose.ML_DSA_44:
+		return m.signedToken(t, jose.SigningKey{Algorithm: jose.ML_DSA_44, Key: m.mldsa44Priv}, "mldsa44-key", sub, email)
+	case jose.ML_DSA_65:
+		return m.signedToken(t, jose.SigningKey{Algorithm: jose.ML_DSA_65, Key: m.mldsa65Priv}, "mldsa65-key", sub, email)
+	case jose.ML_DSA_87:
+		return m.signedToken(t, jose.SigningKey{Algorithm: jose.ML_DSA_87, Key: m.mldsa87Priv}, "mldsa87-key", sub, email)
+	default:
+		t.Fatalf("unsupported algorithm: %s", alg)
+		return ""
+	}
+}
+
+func (m *mockOIDC) signedToken(t *testing.T, key jose.SigningKey, kid, sub, email string) string {
+	signer, err := jose.NewSigner(key, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", kid))
 	assert.NoError(t, err)
 
 	cl := struct {
@@ -160,14 +213,24 @@ func TestExtractOIDCClaims_ValidToken(t *testing.T) {
 	ctx = config.With(ctx, cfg)
 	pool := server.NewIssuerPool(cfg)
 
-	tok := m.token(t, "test-sub", "foo@example.com")
-
-	iss, claims, err := extractOIDCClaims(ctx, tok, pool)
-	assert.NoError(t, err)
-	assert.Equal(t, m.server.URL, iss)
-	assert.Equal(t, m.server.URL, claims["issuer"])
-	assert.Equal(t, "foo@example.com", claims["identity"])
-	assert.Equal(t, "test-sub", claims["subject"])
+	for _, tc := range []struct {
+		name  string
+		token string
+	}{
+		{name: "RS256", token: m.token(t, "test-sub", "foo@example.com")},
+		{name: "ML-DSA-44", token: m.mldsaToken(t, jose.ML_DSA_44, "test-sub", "foo@example.com")},
+		{name: "ML-DSA-65", token: m.mldsaToken(t, jose.ML_DSA_65, "test-sub", "foo@example.com")},
+		{name: "ML-DSA-87", token: m.mldsaToken(t, jose.ML_DSA_87, "test-sub", "foo@example.com")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			iss, claims, err := extractOIDCClaims(ctx, tc.token, pool)
+			assert.NoError(t, err)
+			assert.Equal(t, m.server.URL, iss)
+			assert.Equal(t, m.server.URL, claims["issuer"])
+			assert.Equal(t, "foo@example.com", claims["identity"])
+			assert.Equal(t, "test-sub", claims["subject"])
+		})
+	}
 }
 
 // githubClaims holds the additional JWT claims for GitHub OIDC tokens
