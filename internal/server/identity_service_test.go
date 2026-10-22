@@ -132,7 +132,16 @@ func TestCreateIdentityEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	disallowedAlgReg, err := algorithmregistry.AlgorithmRegistry(nil)
+	disallowedAlgReg, err := algorithmregistry.IdentityAlgorithmRegistry([]string{"mldsa-44"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	rsaPriv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rsaPubBytes, err := x509.MarshalPKIXPublicKey(&rsaPriv.PublicKey)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -247,6 +256,21 @@ func TestCreateIdentityEntry(t *testing.T) {
 			name:         "disallowed algorithm",
 			req:          validReq,
 			algReg:       disallowedAlgReg,
+			addFn:        func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			expectError:  fmt.Errorf("invalid identity request"),
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name: "unsupported algorithm with defaultAlgReg",
+			req: &pb.IdentityRequestV001{
+				Credential: &pb.IdentityRequestV001_PublicKey{
+					PublicKey: &pb.PublicKeyCredential{
+						PublicKey: rsaPubBytes,
+						Signature: sig,
+					},
+				},
+				Message: msgHash[:],
+			},
 			addFn:        func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
 			expectError:  fmt.Errorf("invalid identity request"),
 			expectedCode: codes.InvalidArgument,
