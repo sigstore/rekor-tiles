@@ -59,8 +59,8 @@ services:
         condition: service_healthy
   fakeoidc:
     build:
-      context: https://github.com/sigstore/scaffolding.git#main:actions/setup-sigstore-env/fakeoidc
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: tests/fakeoidc/Dockerfile
     restart: always
     ports:
       - "8080:8080"

@@ -29,6 +29,7 @@ import (
 	"slices"
 	"testing"
 
+	"github.com/go-jose/go-jose/v4"
 	"github.com/sigstore/fulcio/pkg/config"
 	"github.com/sigstore/fulcio/pkg/server"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
@@ -486,62 +487,71 @@ func TestToLogEntry_OidcValid(t *testing.T) {
 	ctx = config.With(ctx, cfg)
 	pool := server.NewIssuerPool(cfg)
 
-	tok := m.token(t, "test-sub", "foo@example.com")
-	msgHash := sha256.Sum256([]byte("test message"))
-	req := &pb.IdentityRequestV001{
-		Credential: &pb.IdentityRequestV001_Oidc{
-			Oidc: &pb.OidcCredential{
-				Token: tok,
-			},
-		},
-		Message: msgHash[:],
-	}
+	for _, tc := range []struct {
+		name  string
+		token string
+	}{
+		{name: "RS256", token: m.token(t, "test-sub", "foo@example.com")},
+		{name: "ML-DSA-44", token: m.mldsaToken(t, jose.ML_DSA_44, "test-sub", "foo@example.com")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			msgHash := sha256.Sum256([]byte("test message"))
+			req := &pb.IdentityRequestV001{
+				Credential: &pb.IdentityRequestV001_Oidc{
+					Oidc: &pb.OidcCredential{
+						Token: tc.token,
+					},
+				},
+				Message: msgHash[:],
+			}
 
-	leafBytes, extraData, err := ToLogEntry(ctx, req, nil, pool)
-	assert.NoError(t, err)
-	expectedClaims := map[string]string{
-		"identity": "foo@example.com",
-		"issuer":   m.server.URL,
-		"subject":  "test-sub",
-	}
-	assert.Equal(t, fmt.Appendf(nil, "identity:foo@example.com\nissuer:%s\nsubject:test-sub", m.server.URL), extraData)
+			leafBytes, extraData, err := ToLogEntry(ctx, req, nil, pool)
+			assert.NoError(t, err)
+			expectedClaims := map[string]string{
+				"identity": "foo@example.com",
+				"issuer":   m.server.URL,
+				"subject":  "test-sub",
+			}
+			assert.Equal(t, fmt.Appendf(nil, "identity:foo@example.com\nissuer:%s\nsubject:test-sub", m.server.URL), extraData)
 
-	// Expected leaf layout:
-	// 1 byte version (0x01) + 32B SHA256(issuer) + 32B SHA256(msgHash) +
-	// 3 * 64B sorted (SHA256(SHA256(k)) || SHA256(SHA256(v))) + 32B zero receipt
-	expectedLen := 1 + 32 + 32 + len(expectedClaims)*64 + 32
-	assert.Len(t, leafBytes, expectedLen)
-	assert.Equal(t, LeafVersion, leafBytes[0])
+			// Expected leaf layout:
+			// 1 byte version (0x01) + 32B SHA256(issuer) + 32B SHA256(msgHash) +
+			// 3 * 64B sorted (SHA256(SHA256(k)) || SHA256(SHA256(v))) + 32B zero receipt
+			expectedLen := 1 + 32 + 32 + len(expectedClaims)*64 + 32
+			assert.Len(t, leafBytes, expectedLen)
+			assert.Equal(t, LeafVersion, leafBytes[0])
 
-	expectedRootHash := sha256.Sum256([]byte(m.server.URL))
-	assert.Equal(t, expectedRootHash[:], leafBytes[1:33])
+			expectedRootHash := sha256.Sum256([]byte(m.server.URL))
+			assert.Equal(t, expectedRootHash[:], leafBytes[1:33])
 
-	expectedMsgDoubleHash := sha256.Sum256(msgHash[:])
-	assert.Equal(t, expectedMsgDoubleHash[:], leafBytes[33:65])
+			expectedMsgDoubleHash := sha256.Sum256(msgHash[:])
+			assert.Equal(t, expectedMsgDoubleHash[:], leafBytes[33:65])
 
-	type kvHash struct {
-		k [32]byte
-		v [32]byte
-	}
-	var expectedPairs []kvHash
-	for k, v := range expectedClaims {
-		kh := sha256.Sum256([]byte(k))
-		vh := sha256.Sum256([]byte(v))
-		expectedPairs = append(expectedPairs, kvHash{
-			k: sha256.Sum256(kh[:]),
-			v: sha256.Sum256(vh[:]),
+			type kvHash struct {
+				k [32]byte
+				v [32]byte
+			}
+			var expectedPairs []kvHash
+			for k, v := range expectedClaims {
+				kh := sha256.Sum256([]byte(k))
+				vh := sha256.Sum256([]byte(v))
+				expectedPairs = append(expectedPairs, kvHash{
+					k: sha256.Sum256(kh[:]),
+					v: sha256.Sum256(vh[:]),
+				})
+			}
+			slices.SortFunc(expectedPairs, func(a, b kvHash) int {
+				return bytes.Compare(a.k[:], b.k[:])
+			})
+			offset := 65
+			for _, p := range expectedPairs {
+				assert.Equal(t, p.k[:], leafBytes[offset:offset+32])
+				assert.Equal(t, p.v[:], leafBytes[offset+32:offset+64])
+				offset += 64
+			}
+			assert.Equal(t, make([]byte, 32), leafBytes[offset:offset+32])
 		})
 	}
-	slices.SortFunc(expectedPairs, func(a, b kvHash) int {
-		return bytes.Compare(a.k[:], b.k[:])
-	})
-	offset := 65
-	for _, p := range expectedPairs {
-		assert.Equal(t, p.k[:], leafBytes[offset:offset+32])
-		assert.Equal(t, p.v[:], leafBytes[offset+32:offset+64])
-		offset += 64
-	}
-	assert.Equal(t, make([]byte, 32), leafBytes[offset:offset+32])
 }
 
 func TestToOIDCEntryHash(t *testing.T) {
