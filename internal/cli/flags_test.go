@@ -34,6 +34,9 @@ func TestInitializeFlags(t *testing.T) {
 	if cmd.Flags().Lookup("server-idle-timeout") == nil {
 		t.Error("expected server-idle-timeout flag to be registered")
 	}
+	if cmd.Flags().Lookup("oidc-config") != nil {
+		t.Error("did not expect oidc-config flag to be registered on regular serve command")
+	}
 }
 
 func TestInitializeIdentityFlags(t *testing.T) {
@@ -48,6 +51,9 @@ func TestInitializeIdentityFlags(t *testing.T) {
 	}
 	if len(algs) != 1 || algs[0] != "ed25519" {
 		t.Errorf("expected default client-signing-algorithms to be [ed25519], got %v", algs)
+	}
+	if cmd.Flags().Lookup("oidc-config") == nil {
+		t.Error("expected oidc-config flag to be registered")
 	}
 }
 

@@ -19,12 +19,20 @@ import (
 	"context"
 	"crypto/ed25519"
 	"crypto/rand"
+	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
+	"time"
 
+	"github.com/go-jose/go-jose/v4"
+	"github.com/go-jose/go-jose/v4/jwt"
+	"github.com/sigstore/fulcio/pkg/config"
 	rekor_pb "github.com/sigstore/protobuf-specs/gen/pb-go/rekor/v1"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/tessera"
@@ -32,11 +40,68 @@ import (
 	"github.com/sigstore/rekor-tiles/v2/pkg/types/identity_v1"
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"github.com/transparency-dev/formats/proof"
 	ttessera "github.com/transparency-dev/tessera"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func setupMockOIDC(t *testing.T) (*config.FulcioConfig, string, string) {
+	t.Helper()
+	priv, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: priv}, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", "test-key"))
+	require.NoError(t, err)
+
+	var srv *httptest.Server
+	mux := http.NewServeMux()
+	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"issuer":   srv.URL,
+			"jwks_uri": srv.URL + "/keys",
+		})
+	})
+	mux.HandleFunc("/keys", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		jwk := jose.JSONWebKey{Key: &priv.PublicKey, KeyID: "test-key", Algorithm: string(jose.RS256), Use: "sig"}
+		_ = json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{jwk}})
+	})
+	srv = httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+
+	claims := struct {
+		jwt.Claims
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
+	}{
+		Issuer:        srv.URL,
+		Subject:       "test-sub",
+		Audience:      jwt.Audience{"sigstore"},
+		Expiry:        jwt.NewNumericDate(time.Now().Add(time.Hour)),
+		IssuedAt:      jwt.NewNumericDate(time.Now()),
+		Email:         "foo@example.com",
+		EmailVerified: true,
+	}
+	tok, err := jwt.Signed(signer).Claims(claims).Serialize()
+	require.NoError(t, err)
+
+	cfgJSON := fmt.Sprintf(`{
+		"OIDCIssuers": {
+			"%s": {
+				"IssuerURL": "%s",
+				"ClientID":  "sigstore",
+				"Type":      "email"
+			}
+		}
+	}`, srv.URL, srv.URL)
+	cfg, err := config.Read([]byte(cfgJSON))
+	require.NoError(t, err)
+
+	return cfg, tok, srv.URL
+}
 
 func TestCreateIdentityEntry(t *testing.T) {
 	pub, priv, err := ed25519.GenerateKey(rand.Reader)
@@ -71,6 +136,8 @@ func TestCreateIdentityEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	oidcCfg, oidcTok, oidcIssuerURL := setupMockOIDC(t)
 
 	validReq := &pb.IdentityRequestV001{
 		Credential: &pb.IdentityRequestV001_PublicKey{
@@ -129,6 +196,27 @@ func TestCreateIdentityEntry(t *testing.T) {
 				}, nil
 			},
 			expectedExtraData: fmt.Appendf(nil, "%s:%s", identity_v1.ContextKeyName, hex.EncodeToString(contextVal[:])),
+		},
+		{
+			name: "valid oidc request",
+			req: &pb.IdentityRequestV001{
+				Credential: &pb.IdentityRequestV001_Oidc{
+					Oidc: &pb.OidcCredential{
+						Token: oidcTok,
+					},
+				},
+				Message: msgHash[:],
+			},
+			addFn: func() (*rekor_pb.TransparencyLogEntry, error) {
+				return &rekor_pb.TransparencyLogEntry{
+					InclusionProof: &rekor_pb.InclusionProof{
+						LogIndex:   1,
+						Hashes:     [][]byte{proofHash},
+						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint"},
+					},
+				}, nil
+			},
+			expectedExtraData: fmt.Appendf(nil, "identity:foo@example.com\nissuer:%s\nsubject:test-sub", oidcIssuerURL),
 		},
 		{
 			name:         "read-only mode",
@@ -224,7 +312,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 			if algReg == nil {
 				algReg = defaultAlgReg
 			}
-			server := NewIdentityServer(storage, test.readOnly, algReg)
+			server := NewIdentityServer(storage, test.readOnly, algReg, oidcCfg)
 
 			gotBody, gotErr := server.CreateEntry(context.Background(), test.req)
 			if test.expectError == nil {

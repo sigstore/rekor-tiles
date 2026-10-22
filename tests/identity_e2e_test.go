@@ -54,8 +54,11 @@ var identityPosixConfig = backendConfig{
 }
 
 func TestIdentityPOSIX(t *testing.T) {
-	t.Run("ReadWrite", func(t *testing.T) {
+	t.Run("ReadWritePublicKey", func(t *testing.T) {
 		testIdentityReadWrite(t, identityPosixConfig)
+	})
+	t.Run("ReadWriteOIDC", func(t *testing.T) {
+		testIdentityOIDC(t, identityPosixConfig)
 	})
 }
 
@@ -156,6 +159,116 @@ func testIdentityReadWrite(t *testing.T, config backendConfig) {
 	assert.Equal(t, []byte(expectedExtraData), pr.ExtraData, "ExtraData should contain the formatted context strings")
 
 	leafHash, err := identity_v1.ToEntryHash(pubBytes, sig, req.Message, contextVal[:])
+	require.NoError(t, err)
+
+	var hashes [][]byte
+	for _, h := range pr.Hashes {
+		hCopy := h
+		hashes = append(hashes, hCopy[:])
+	}
+
+	err = proof.VerifyInclusion(rfc6962.DefaultHasher, pr.Index, cp.Size, leafHash, hashes, cp.Hash)
+	assert.NoError(t, err, "Inclusion proof should be valid")
+
+	assert.Equal(t, initialTreeSize, pr.Index, "Index should match the tree size from before uploading")
+
+	// Submitting the same entry again should return 409 Conflict with x-log-index
+	dupReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
+	require.NoError(t, err)
+	dupReq.Header.Set("Content-Type", "application/json")
+	dupResp, err := client.Do(dupReq)
+	require.NoError(t, err)
+	defer dupResp.Body.Close()
+	assert.Equal(t, http.StatusConflict, dupResp.StatusCode)
+	assert.Equal(t, fmt.Sprintf("%d", pr.Index), dupResp.Header.Get("x-log-index"))
+}
+
+func testIdentityOIDC(t *testing.T, config backendConfig) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// get verifier needed for both read and write
+	serverPubKeyPEM, err := os.ReadFile(defaultServerPublicKey)
+	require.NoError(t, err)
+	serverPubKey, err := cryptoutils.UnmarshalPEMToPublicKey(serverPubKeyPEM)
+	require.NoError(t, err)
+	verifier, err := signature.LoadDefaultVerifier(serverPubKey)
+	require.NoError(t, err)
+
+	reader, err := read.NewReader(config.StorageURL, defaultRekorHostname, verifier)
+	require.NoError(t, err)
+	checkpoint, _, err := reader.ReadCheckpoint(ctx)
+	require.NoError(t, err)
+	initialTreeSize := checkpoint.Size
+
+	resp, err := http.Get("http://localhost:8080/token?issuer=http://fakeoidc:8080")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	tokBytes, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	tok := string(tokBytes)
+
+	// Create a random message hash
+	message := make([]byte, 32)
+	_, _ = rand.Read(message)
+	msgHash := sha256.Sum256(message)
+
+	req := &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_Oidc{
+			Oidc: &pb.OidcCredential{
+				Token: tok,
+			},
+		},
+		Message: msgHash[:],
+	}
+
+	b, err := protojson.Marshal(req)
+	require.NoError(t, err)
+
+	url := fmt.Sprintf("%s/api/v2/log/entries", config.ServerURL)
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
+	require.NoError(t, err)
+	httpReq.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	resp, err = client.Do(httpReq)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+
+	require.Equal(t, http.StatusCreated, resp.StatusCode, "Expected 201 Created, got: %s", string(respBody))
+
+	// Ensure the response is a tlog-proof object
+	respStr := string(respBody)
+	t.Logf("Response body: %s", respStr)
+
+	var pr tlogproof.TLogProof
+	err = pr.Unmarshal(respBody)
+	require.NoError(t, err, "Response body should parse as TLogProof")
+
+	expectedExtraData := []byte("identity:foo@bar.com\nissuer:http://fakeoidc:8080\nsubject:foo@bar.com")
+	assert.Equal(t, expectedExtraData, pr.ExtraData, "ExtraData should match expected identity claims")
+
+	noteVerifier, err := note.NewNoteVerifier(defaultRekorHostname, verifier)
+	require.NoError(t, err)
+
+	witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(defaultWitnessVKey)
+	require.NoError(t, err)
+
+	noteVerifiers := []signednote.Verifier{noteVerifier, witnessNoteVerifier}
+
+	cp, parsedNote, err := verify.VerifyWitnessedCheckpoint(string(pr.Checkpoint), noteVerifiers[0], noteVerifiers[1:]...)
+	require.NoError(t, err, "Checkpoint should be valid")
+	assert.Len(t, parsedNote.Sigs, 2, "Expected 2 valid signatures, from the log and witness")
+
+	claims := map[string]string{
+		"identity": "foo@bar.com",
+		"issuer":   "http://fakeoidc:8080",
+		"subject":  "foo@bar.com",
+	}
+	leafHash, err := identity_v1.ToOIDCEntryHash(req.Message, claims)
 	require.NoError(t, err)
 
 	var hashes [][]byte

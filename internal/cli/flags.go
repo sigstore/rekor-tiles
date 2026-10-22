@@ -36,6 +36,7 @@ func Initialize(serveCmd *cobra.Command) error {
 
 // InitializeIdentity adds flags that are shared between all Rekor identity binaries
 func InitializeIdentity(serveCmd *cobra.Command) error {
+	serveCmd.Flags().String("oidc-config", "", "path to the OIDC configuration file")
 	return initialize(serveCmd, algorithmregistry.AllowedIdentitySigningAlgorithms)
 }
 
