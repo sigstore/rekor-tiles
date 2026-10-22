@@ -128,7 +128,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 	contextPayload = append(contextPayload, vDoubleHash[:]...)
 	contextSig := ed25519.Sign(priv, contextPayload)
 
-	defaultAlgReg, err := algorithmregistry.IdentityAlgorithmRegistry([]string{"ed25519"})
+	defaultAlgReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	if err != nil {
 		t.Fatal(err)
 	}

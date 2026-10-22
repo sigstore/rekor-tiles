@@ -20,6 +20,7 @@ import (
 	"crypto/ecdsa"
 	"crypto/ed25519"
 	"crypto/elliptic"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
@@ -36,21 +37,11 @@ import (
 	"github.com/transparency-dev/merkle/rfc6962"
 )
 
-func generateValidRequest(t *testing.T) (*pb.IdentityRequestV001, []byte) {
-	t.Helper()
-	pub, priv, err := ed25519.GenerateKey(rand.Reader)
-	assert.NoError(t, err)
+func generateTestPayload() (msgHash [sha256.Size]byte, contextHash [sha256.Size]byte, payload []byte) {
+	msgHash = sha256.Sum256([]byte("test message"))
+	contextHash = sha256.Sum256([]byte("val1"))
 
-	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
-	assert.NoError(t, err)
-
-	msg := []byte("test message")
-	msgHash := sha256.Sum256(msg)
-
-	v := []byte("val1")
-	vHash := sha256.Sum256(v)
-
-	payload := []byte(SpecDomainSeparator)
+	payload = []byte(SpecDomainSeparator)
 	payload = append(payload, 0x00)
 
 	msgDoubleHash := sha256.Sum256(msgHash[:])
@@ -58,13 +49,24 @@ func generateValidRequest(t *testing.T) (*pb.IdentityRequestV001, []byte) {
 
 	k1 := sha256.Sum256([]byte(ContextKeyName))
 	kDoubleHash := sha256.Sum256(k1[:])
-	vDoubleHash := sha256.Sum256(vHash[:])
+	vDoubleHash := sha256.Sum256(contextHash[:])
 	payload = append(payload, kDoubleHash[:]...)
 	payload = append(payload, vDoubleHash[:]...)
+	return msgHash, contextHash, payload
+}
 
+func generateValidRequest(t *testing.T) *pb.IdentityRequestV001 {
+	t.Helper()
+	pub, priv, err := ed25519.GenerateKey(rand.Reader)
+	assert.NoError(t, err)
+
+	pubBytes, err := x509.MarshalPKIXPublicKey(pub)
+	assert.NoError(t, err)
+
+	msgHash, vHash, payload := generateTestPayload()
 	sig := ed25519.Sign(priv, payload)
 
-	req := &pb.IdentityRequestV001{
+	return &pb.IdentityRequestV001{
 		Credential: &pb.IdentityRequestV001_PublicKey{
 			PublicKey: &pb.PublicKeyCredential{
 				PublicKey: pubBytes,
@@ -74,11 +76,34 @@ func generateValidRequest(t *testing.T) (*pb.IdentityRequestV001, []byte) {
 		},
 		Message: msgHash[:],
 	}
-	return req, payload
+}
+
+func generateValidMLDSARequest(t *testing.T) *pb.IdentityRequestV001 {
+	t.Helper()
+	priv, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	assert.NoError(t, err)
+
+	pubBytes, err := x509.MarshalPKIXPublicKey(priv.PublicKey())
+	assert.NoError(t, err)
+
+	msgHash, vHash, payload := generateTestPayload()
+	sig, err := priv.Sign(nil, payload, nil)
+	assert.NoError(t, err)
+
+	return &pb.IdentityRequestV001{
+		Credential: &pb.IdentityRequestV001_PublicKey{
+			PublicKey: &pb.PublicKeyCredential{
+				PublicKey: pubBytes,
+				Signature: sig,
+				Context:   vHash[:],
+			},
+		},
+		Message: msgHash[:],
+	}
 }
 
 func TestToLogEntry(t *testing.T) {
-	req, _ := generateValidRequest(t)
+	req := generateValidRequest(t)
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
@@ -144,7 +169,51 @@ func TestToLogEntry_NoContext(t *testing.T) {
 }
 
 func TestToLogEntry_InvalidSignature(t *testing.T) {
-	req, _ := generateValidRequest(t)
+	req := generateValidRequest(t)
+	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
+	assert.NoError(t, err)
+
+	// Invalidate the signature by flipping the first byte
+	req.GetPublicKey().Signature[0] ^= 0xFF
+
+	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid signature")
+	assert.Nil(t, leafBytes)
+}
+
+func TestToLogEntry_MLDSA(t *testing.T) {
+	req := generateValidMLDSARequest(t)
+	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
+	assert.NoError(t, err)
+
+	leafBytes, extraData, err := ToLogEntry(context.Background(), req, algReg, nil)
+	assert.NoError(t, err)
+	assert.NotNil(t, leafBytes)
+	assert.Len(t, leafBytes, 1+4*sha256.Size+sha256.Size)
+	assert.Equal(t, LeafVersion, leafBytes[0])
+	assert.Equal(t, fmt.Appendf(nil, "%s:%s", ContextKeyName, hex.EncodeToString(req.GetPublicKey().GetContext())), extraData)
+
+	rootOfTrust := append([]byte("ML-DSA-44"), req.GetPublicKey().GetPublicKey()...)
+	rootOfTrustHash := sha256.Sum256(rootOfTrust)
+	assert.Equal(t, rootOfTrustHash[:], leafBytes[1:33])
+
+	msgHash := sha256.Sum256(req.GetMessage())
+	assert.Equal(t, msgHash[:], leafBytes[33:65])
+
+	k1 := sha256.Sum256([]byte(ContextKeyName))
+	kDoubleHash := sha256.Sum256(k1[:])
+	assert.Equal(t, kDoubleHash[:], leafBytes[65:97])
+
+	vDoubleHash := sha256.Sum256(req.GetPublicKey().GetContext())
+	assert.Equal(t, vDoubleHash[:], leafBytes[97:129])
+
+	sigHash := sha256.Sum256(req.GetPublicKey().GetSignature())
+	assert.Equal(t, sigHash[:], leafBytes[129:161])
+}
+
+func TestToLogEntry_InvalidSignature_MLDSA(t *testing.T) {
+	req := generateValidMLDSARequest(t)
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
@@ -158,7 +227,7 @@ func TestToLogEntry_InvalidSignature(t *testing.T) {
 }
 
 func TestToLogEntry_InvalidSignatureLength(t *testing.T) {
-	req, _ := generateValidRequest(t)
+	req := generateValidRequest(t)
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
@@ -170,8 +239,21 @@ func TestToLogEntry_InvalidSignatureLength(t *testing.T) {
 	assert.Nil(t, leafBytes)
 }
 
+func TestToLogEntry_InvalidSignatureLength_MLDSA(t *testing.T) {
+	req := generateValidMLDSARequest(t)
+	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
+	assert.NoError(t, err)
+
+	req.GetPublicKey().Signature = []byte("short-sig")
+
+	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "invalid signature length, must be 2420 bytes for ML-DSA-44")
+	assert.Nil(t, leafBytes)
+}
+
 func TestToLogEntry_UnsupportedAlgorithm(t *testing.T) {
-	req, _ := generateValidRequest(t)
+	req := generateValidRequest(t)
 	// Client algorithm registry does not permit pure Ed25519
 	algReg, err := algorithmregistry.AlgorithmRegistry(nil)
 	assert.NoError(t, err)
@@ -183,7 +265,7 @@ func TestToLogEntry_UnsupportedAlgorithm(t *testing.T) {
 }
 
 func TestToLogEntry_InvalidPublicKey(t *testing.T) {
-	req, _ := generateValidRequest(t)
+	req := generateValidRequest(t)
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
@@ -195,30 +277,51 @@ func TestToLogEntry_InvalidPublicKey(t *testing.T) {
 	assert.Nil(t, leafBytes)
 }
 
-func TestToLogEntry_NonEd25519Key(t *testing.T) {
-	req, _ := generateValidRequest(t)
-	ecdsaPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-	assert.NoError(t, err)
-	ecdsaDER, err := x509.MarshalPKIXPublicKey(&ecdsaPriv.PublicKey)
-	assert.NoError(t, err)
-	req.GetPublicKey().PublicKey = ecdsaDER
-
+func TestToLogEntry_UnsupportedPublicKey(t *testing.T) {
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
-	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "unsupported entry algorithm for ECDSA key, curve P-256, digest none")
-	assert.Nil(t, leafBytes)
+	t.Run("ECDSA", func(t *testing.T) {
+		req := generateValidRequest(t)
+		ecdsaPriv, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		assert.NoError(t, err)
+		ecdsaDER, err := x509.MarshalPKIXPublicKey(&ecdsaPriv.PublicKey)
+		assert.NoError(t, err)
+		req.GetPublicKey().PublicKey = ecdsaDER
 
-	leafBytes, _, err = ToLogEntry(context.Background(), req, nil, nil)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "public key is not an Ed25519 key")
-	assert.Nil(t, leafBytes)
+		leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported entry algorithm for ECDSA key, curve P-256, digest none")
+		assert.Nil(t, leafBytes)
+
+		leafBytes, _, err = ToLogEntry(context.Background(), req, nil, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported public key type")
+		assert.Nil(t, leafBytes)
+	})
+
+	t.Run("ML-DSA-65", func(t *testing.T) {
+		req := generateValidRequest(t)
+		mldsa65Priv, err := mldsa.GenerateKey(mldsa.MLDSA65())
+		assert.NoError(t, err)
+		mldsa65DER, err := x509.MarshalPKIXPublicKey(mldsa65Priv.PublicKey())
+		assert.NoError(t, err)
+		req.GetPublicKey().PublicKey = mldsa65DER
+
+		leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "unsupported entry algorithm for ML-DSA key, parameter set ML-DSA-65, digest none")
+		assert.Nil(t, leafBytes)
+
+		leafBytes, _, err = ToLogEntry(context.Background(), req, nil, nil)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "public key is not an ML-DSA-44 key")
+		assert.Nil(t, leafBytes)
+	})
 }
 
 func TestValidate(t *testing.T) {
-	validReq, _ := generateValidRequest(t)
+	validReq := generateValidRequest(t)
 
 	tests := []struct {
 		name        string
@@ -292,18 +395,35 @@ func TestValidate(t *testing.T) {
 }
 
 func TestToEntryHash(t *testing.T) {
-	req, _ := generateValidRequest(t)
 	algReg, err := algorithmregistry.IdentityAlgorithmRegistry(nil)
 	assert.NoError(t, err)
 
-	leafBytes, _, err := ToLogEntry(context.Background(), req, algReg, nil)
-	assert.NoError(t, err)
+	tests := []struct {
+		name string
+		req  *pb.IdentityRequestV001
+	}{
+		{
+			name: "Ed25519",
+			req:  generateValidRequest(t),
+		},
+		{
+			name: "ML-DSA-44",
+			req:  generateValidMLDSARequest(t),
+		},
+	}
 
-	expectedHash := rfc6962.DefaultHasher.HashLeaf(leafBytes)
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			leafBytes, _, err := ToLogEntry(context.Background(), tc.req, algReg, nil)
+			assert.NoError(t, err)
 
-	h, err := ToEntryHash(req.GetPublicKey().GetPublicKey(), req.GetPublicKey().GetSignature(), req.Message, req.GetPublicKey().GetContext())
-	assert.NoError(t, err)
-	assert.Equal(t, expectedHash, h)
+			expectedHash := rfc6962.DefaultHasher.HashLeaf(leafBytes)
+
+			h, err := ToEntryHash(tc.req.GetPublicKey().GetPublicKey(), tc.req.GetPublicKey().GetSignature(), tc.req.Message, tc.req.GetPublicKey().GetContext())
+			assert.NoError(t, err)
+			assert.Equal(t, expectedHash, h)
+		})
+	}
 }
 
 func TestValidate_OidcEmptyToken(t *testing.T) {

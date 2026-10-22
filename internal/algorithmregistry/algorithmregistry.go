@@ -18,6 +18,7 @@ import (
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/rsa"
 	"fmt"
 	"reflect"
@@ -43,6 +44,7 @@ var (
 	// algorithms for identity log entry signatures.
 	AllowedIdentitySigningAlgorithms = []v1.PublicKeyDetails{
 		v1.PublicKeyDetails_PKIX_ED25519,
+		v1.PublicKeyDetails_ML_DSA_44,
 	}
 )
 
@@ -66,6 +68,8 @@ func (e *UnsupportedAlgorithm) Error() string {
 		return fmt.Sprintf("unsupported entry algorithm for ECDSA key, curve %s, digest %s", name, hash)
 	case ed25519.PublicKey:
 		return fmt.Sprintf("unsupported entry algorithm for Ed25519 key, digest %s", hash)
+	case *mldsa.PublicKey:
+		return fmt.Sprintf("unsupported entry algorithm for ML-DSA key, parameter set %s, digest %s", v.Parameters(), hash)
 	default:
 		return fmt.Sprintf("unsupported key type %s, digest %s", reflect.TypeOf(v), hash)
 	}

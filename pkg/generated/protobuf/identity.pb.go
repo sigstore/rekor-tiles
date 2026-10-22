@@ -39,7 +39,7 @@ const (
 type PublicKeyCredential struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The public key used to verify the signature.
-	// MUST be an Ed25519 public key (SPKI DER-encoded).
+	// MUST be an Ed25519 public key (SPKI DER-encoded) or an ML-DSA-44 public key (SPKI DER-encoded).
 	PublicKey []byte `protobuf:"bytes,1,opt,name=public_key,json=publicKey,proto3" json:"public_key,omitempty"`
 	// The signature computed over the specification identifier, checksum, and context strings,
 	// as defined by the c2sp.org/identity-transparency specification.

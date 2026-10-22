@@ -49,8 +49,8 @@ func TestInitializeIdentityFlags(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error getting client-signing-algorithms: %v", err)
 	}
-	if len(algs) != 1 || algs[0] != "ed25519" {
-		t.Errorf("expected default client-signing-algorithms to be [ed25519], got %v", algs)
+	if len(algs) != 2 || algs[0] != "ed25519" || algs[1] != "mldsa-44" {
+		t.Errorf("expected default client-signing-algorithms to be [ed25519 mldsa-44], got %v", algs)
 	}
 	if cmd.Flags().Lookup("oidc-config") == nil {
 		t.Error("expected oidc-config flag to be registered")

@@ -19,6 +19,7 @@ import (
 	"context"
 	"crypto"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/hex"
@@ -166,18 +167,35 @@ func ToLogEntry(ctx context.Context, req *pb.IdentityRequestV001, algorithmRegis
 				return nil, nil, &algorithmregistry.UnsupportedAlgorithm{Pub: pub, Alg: crypto.Hash(0)}
 			}
 		}
-		edKey, ok := pub.(ed25519.PublicKey)
-		if !ok {
-			return nil, nil, errors.New("public key is not an Ed25519 key")
-		}
-		if len(sig) != ed25519.SignatureSize {
-			return nil, nil, errors.New("invalid signature length, must be 64 bytes for Ed25519")
-		}
 
-		payload := computeSignaturePayload(req)
+		var algPrefix string
 
-		if !ed25519.Verify(edKey, payload, sig) {
-			return nil, nil, errors.New("invalid signature")
+		switch k := pub.(type) {
+		case ed25519.PublicKey:
+			if len(sig) != ed25519.SignatureSize {
+				return nil, nil, errors.New("invalid signature length, must be 64 bytes for Ed25519")
+			}
+			payload := computeSignaturePayload(req)
+			if !ed25519.Verify(k, payload, sig) {
+				return nil, nil, errors.New("invalid signature")
+			}
+			algPrefix = "Ed25519"
+
+		case *mldsa.PublicKey:
+			if k.Parameters() != mldsa.MLDSA44() {
+				return nil, nil, errors.New("public key is not an ML-DSA-44 key")
+			}
+			if len(sig) != mldsa.MLDSA44().SignatureSize() {
+				return nil, nil, fmt.Errorf("invalid signature length, must be %d bytes for ML-DSA-44", mldsa.MLDSA44().SignatureSize())
+			}
+			payload := computeSignaturePayload(req)
+			if err := mldsa.Verify(k, payload, sig, nil); err != nil {
+				return nil, nil, errors.New("invalid signature")
+			}
+			algPrefix = "ML-DSA-44"
+
+		default:
+			return nil, nil, errors.New("unsupported public key type")
 		}
 
 		// Canonicalize the public key for hashing
@@ -185,7 +203,7 @@ func ToLogEntry(ctx context.Context, req *pb.IdentityRequestV001, algorithmRegis
 		if err != nil {
 			return nil, nil, fmt.Errorf("failed to marshal public key: %w", err)
 		}
-		rootOfTrust := append([]byte("Ed25519"), canonicalPubKey...)
+		rootOfTrust := append([]byte(algPrefix), canonicalPubKey...)
 		rootOfTrustHash := sha256.Sum256(rootOfTrust)
 
 		var extraData []byte

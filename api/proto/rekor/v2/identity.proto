@@ -26,7 +26,7 @@ option ruby_package = "Sigstore::Rekor::V2";
 
 message PublicKeyCredential {
     // The public key used to verify the signature.
-    // MUST be an Ed25519 public key (SPKI DER-encoded).
+    // MUST be an Ed25519 public key (SPKI DER-encoded) or an ML-DSA-44 public key (SPKI DER-encoded).
     bytes public_key = 1 [(google.api.field_behavior) = REQUIRED];
     
     // The signature computed over the specification identifier, checksum, and context strings,
