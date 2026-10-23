@@ -22,12 +22,6 @@ import (
 	"log/slog"
 	"os"
 
-	"k8s.io/klog/v2"
-
-	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
-	"sigs.k8s.io/release-utils/version"
-
 	"github.com/sigstore/fulcio/pkg/config"
 	"github.com/sigstore/rekor-tiles/v2/internal/algorithmregistry"
 	"github.com/sigstore/rekor-tiles/v2/internal/cli"
@@ -37,6 +31,10 @@ import (
 	posixDriver "github.com/sigstore/rekor-tiles/v2/internal/tessera/posix"
 	"github.com/sigstore/rekor-tiles/v2/pkg/note"
 	"github.com/sigstore/sigstore/pkg/signature/options"
+	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
+	"k8s.io/klog/v2"
+	"sigs.k8s.io/release-utils/version"
 )
 
 var serveCmd = &cobra.Command{
