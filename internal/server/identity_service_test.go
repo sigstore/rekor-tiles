@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/ed25519"
+	"crypto/mldsa"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -47,12 +48,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func setupMockOIDC(t *testing.T) (*config.FulcioConfig, string, string) {
+func setupMockOIDC(t *testing.T) (*config.FulcioConfig, string, string, string) {
 	t.Helper()
 	priv, err := rsa.GenerateKey(rand.Reader, 2048)
 	require.NoError(t, err)
 
+	mldsaPriv, err := mldsa.GenerateKey(mldsa.MLDSA44())
+	require.NoError(t, err)
+
 	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.RS256, Key: priv}, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", "test-key"))
+	require.NoError(t, err)
+
+	mldsaSigner, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ML_DSA_44, Key: mldsaPriv}, (&jose.SignerOptions{}).WithType("JWT").WithHeader("kid", "mldsa-key"))
 	require.NoError(t, err)
 
 	var srv *httptest.Server
@@ -60,14 +67,16 @@ func setupMockOIDC(t *testing.T) (*config.FulcioConfig, string, string) {
 	mux.HandleFunc("/.well-known/openid-configuration", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"issuer":   srv.URL,
-			"jwks_uri": srv.URL + "/keys",
+			"issuer":                                srv.URL,
+			"jwks_uri":                              srv.URL + "/keys",
+			"id_token_signing_alg_values_supported": []string{string(jose.RS256), string(jose.ML_DSA_44)},
 		})
 	})
 	mux.HandleFunc("/keys", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		jwk := jose.JSONWebKey{Key: &priv.PublicKey, KeyID: "test-key", Algorithm: string(jose.RS256), Use: "sig"}
-		_ = json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{jwk}})
+		rsaJWK := jose.JSONWebKey{Key: &priv.PublicKey, KeyID: "test-key", Algorithm: string(jose.RS256), Use: "sig"}
+		mldsaJWK := jose.JSONWebKey{Key: mldsaPriv.PublicKey(), KeyID: "mldsa-key", Algorithm: string(jose.ML_DSA_44), Use: "sig"}
+		_ = json.NewEncoder(w).Encode(jose.JSONWebKeySet{Keys: []jose.JSONWebKey{rsaJWK, mldsaJWK}})
 	})
 	srv = httptest.NewServer(mux)
 	t.Cleanup(srv.Close)
@@ -88,6 +97,9 @@ func setupMockOIDC(t *testing.T) (*config.FulcioConfig, string, string) {
 	tok, err := jwt.Signed(signer).Claims(claims).Serialize()
 	require.NoError(t, err)
 
+	mldsaTok, err := jwt.Signed(mldsaSigner).Claims(claims).Serialize()
+	require.NoError(t, err)
+
 	cfgJSON := fmt.Sprintf(`{
 		"OIDCIssuers": {
 			"%s": {
@@ -100,7 +112,7 @@ func setupMockOIDC(t *testing.T) (*config.FulcioConfig, string, string) {
 	cfg, err := config.Read([]byte(cfgJSON))
 	require.NoError(t, err)
 
-	return cfg, tok, srv.URL
+	return cfg, tok, mldsaTok, srv.URL
 }
 
 func TestCreateIdentityEntry(t *testing.T) {
@@ -132,12 +144,21 @@ func TestCreateIdentityEntry(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	disallowedAlgReg, err := algorithmregistry.AlgorithmRegistry(nil)
+	disallowedAlgReg, err := algorithmregistry.IdentityAlgorithmRegistry([]string{"mldsa-44"})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	oidcCfg, oidcTok, oidcIssuerURL := setupMockOIDC(t)
+	rsaPriv, err := rsa.GenerateKey(rand.Reader, 2048)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rsaPubBytes, err := x509.MarshalPKIXPublicKey(&rsaPriv.PublicKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	oidcCfg, oidcTok, oidcMLDSATok, oidcIssuerURL := setupMockOIDC(t)
 
 	validReq := &pb.IdentityRequestV001{
 		Credential: &pb.IdentityRequestV001_PublicKey{
@@ -219,6 +240,27 @@ func TestCreateIdentityEntry(t *testing.T) {
 			expectedExtraData: fmt.Appendf(nil, "identity:foo@example.com\nissuer:%s\nsubject:test-sub", oidcIssuerURL),
 		},
 		{
+			name: "valid oidc mldsa request",
+			req: &pb.IdentityRequestV001{
+				Credential: &pb.IdentityRequestV001_Oidc{
+					Oidc: &pb.OidcCredential{
+						Token: oidcMLDSATok,
+					},
+				},
+				Message: msgHash[:],
+			},
+			addFn: func() (*rekor_pb.TransparencyLogEntry, error) {
+				return &rekor_pb.TransparencyLogEntry{
+					InclusionProof: &rekor_pb.InclusionProof{
+						LogIndex:   1,
+						Hashes:     [][]byte{proofHash},
+						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint"},
+					},
+				}, nil
+			},
+			expectedExtraData: fmt.Appendf(nil, "identity:foo@example.com\nissuer:%s\nsubject:test-sub", oidcIssuerURL),
+		},
+		{
 			name:         "read-only mode",
 			req:          validReq,
 			readOnly:     true,
@@ -247,6 +289,21 @@ func TestCreateIdentityEntry(t *testing.T) {
 			name:         "disallowed algorithm",
 			req:          validReq,
 			algReg:       disallowedAlgReg,
+			addFn:        func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
+			expectError:  fmt.Errorf("invalid identity request"),
+			expectedCode: codes.InvalidArgument,
+		},
+		{
+			name: "unsupported algorithm with defaultAlgReg",
+			req: &pb.IdentityRequestV001{
+				Credential: &pb.IdentityRequestV001_PublicKey{
+					PublicKey: &pb.PublicKeyCredential{
+						PublicKey: rsaPubBytes,
+						Signature: sig,
+					},
+				},
+				Message: msgHash[:],
+			},
 			addFn:        func() (*rekor_pb.TransparencyLogEntry, error) { return &rekor_pb.TransparencyLogEntry{}, nil },
 			expectError:  fmt.Errorf("invalid identity request"),
 			expectedCode: codes.InvalidArgument,

@@ -1,0 +1,136 @@
+#
+# Copyright 2026 The Sigstore Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+services:
+  spanner:
+    image: gcr.io/cloud-spanner-emulator/emulator:1.5.59@sha256:5f71fecd6330211789b75065ade9587d67b3a6b4678e7e5408e42c22f778c63e
+  gcs:
+    image: fsouza/fake-gcs-server:1.56.1@sha256:797ce226d62f947c009dc40246b30cfb456b8473d8241407f9d6f2c04e4d69ef
+    volumes:
+    - bucket:/data/tiles:rw
+    command:
+    - "-scheme=http"
+    - "-port=7080"
+    - "-public-host=localhost:7081"
+    ports:
+    - "7081:7080"
+  rekor_init:
+    build:
+      context: .
+      dockerfile: Dockerfile.emulator_init
+    environment:
+    - GCP_PROJECT=rekor-tiles-e2e
+    - SPANNER_INSTANCE=rekor-tiles
+    - SPANNER_DB=sequencer
+    - SPANNER_EMULATOR_REST_HOST=http://spanner:9020/
+    - SPANNER_EMULATOR_HOST=spanner:9010
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - "test -f /root/finished"
+      timeout: 10s
+      retries: 4
+    depends_on:
+    - spanner
+    - gcs
+  fakeoidc:
+    build:
+      context: .
+      dockerfile: tests/fakeoidc/Dockerfile
+    restart: always
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-O", "/dev/null", "http://localhost:8080/.well-known/openid-configuration"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+  rekor:
+    build:
+      context: .
+      target: local-deploy
+      args:
+        STORAGE_BACKEND: gcp
+    environment:
+    - SPANNER_EMULATOR_HOST=spanner:9010
+    - STORAGE_EMULATOR_HOST=gcs:7080
+    command:
+    - "rekor-server"
+    - "serve-identity"
+    - "--http-address=0.0.0.0"
+    - "--grpc-address=0.0.0.0"
+    - "--hostname=rekor-local"
+    - "--gcp-bucket=tiles"
+    - "--gcp-spanner=projects/rekor-tiles-e2e/instances/rekor-tiles/databases/sequencer"
+    - "--signer-filepath=/pki/mldsa-priv-key.pem"
+    - "--checkpoint-interval=2s"
+    - "--log-level=debug"
+    - "--request-response-logging=true"
+    - "--persistent-antispam=true"
+    - "--witness-policy-path=/witness/mldsa-policy.yaml"
+    - "--oidc-config=/testdata/oidc-config.json"
+    ports:
+    - "3012:3000" # http port
+    - "3013:3001" # grpc port
+    - "2118:2112" # metrics port
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - curl http://localhost:3000/healthz | grep '{"status":"SERVING"}'
+      timeout: 30s
+      retries: 10
+      interval: 3s
+    volumes:
+    - ./tests/testdata/pki:/pki
+    - ./tests/testdata/witness:/witness
+    - ./tests/testdata:/testdata
+    depends_on:
+      rekor_init:
+        condition: service_completed_successfully
+      witness:
+        condition: service_healthy
+      fakeoidc:
+        condition: service_healthy
+
+  witness:
+    build:
+      context: https://github.com/transparency-dev/witness.git#main
+      dockerfile: cmd/omniwitness/Dockerfile
+    volumes:
+      - witness_data:/witness_data:rw
+      - ./tests/testdata/witness:/witness_config
+    command:
+      - "--listen=:8100"
+      - "--db_file=/witness_data/witness.sqlite"
+      - "--private_key_path=/witness_config/mldsa-private.key"
+      - "--additional_logs=/witness_config/mldsa-config.yaml"
+      - "--logtostderr"
+      - "--v=2"
+      - "--rate_limit=100"
+    restart: always
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget --spider --tries=1 http://localhost:8081/metrics || exit 1
+      timeout: 30s
+      retries: 10
+      interval: 3s
+    ports:
+      - "8102:8100"
+
+volumes:
+  bucket: {}
+  witness_data: {}
