@@ -24,7 +24,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"slices"
 	"testing"
@@ -112,7 +112,7 @@ func TestToLogEntry(t *testing.T) {
 	assert.NotNil(t, leafBytes)
 	assert.Len(t, leafBytes, 1+4*sha256.Size+sha256.Size)
 	assert.Equal(t, LeafVersion, leafBytes[0])
-	assert.Equal(t, fmt.Appendf(nil, "%s:%s", ContextKeyName, hex.EncodeToString(req.GetPublicKey().GetContext())), extraData)
+	assert.Equal(t, fmt.Appendf(nil, "%s:%s", ContextKeyName, base64.StdEncoding.EncodeToString(req.GetPublicKey().GetContext())), extraData)
 
 	rootOfTrust := append([]byte("Ed25519"), req.GetPublicKey().GetPublicKey()...)
 	rootOfTrustHash := sha256.Sum256(rootOfTrust)
@@ -192,7 +192,7 @@ func TestToLogEntry_MLDSA(t *testing.T) {
 	assert.NotNil(t, leafBytes)
 	assert.Len(t, leafBytes, 1+4*sha256.Size+sha256.Size)
 	assert.Equal(t, LeafVersion, leafBytes[0])
-	assert.Equal(t, fmt.Appendf(nil, "%s:%s", ContextKeyName, hex.EncodeToString(req.GetPublicKey().GetContext())), extraData)
+	assert.Equal(t, fmt.Appendf(nil, "%s:%s", ContextKeyName, base64.StdEncoding.EncodeToString(req.GetPublicKey().GetContext())), extraData)
 
 	rootOfTrust := append([]byte("ML-DSA-44"), req.GetPublicKey().GetPublicKey()...)
 	rootOfTrustHash := sha256.Sum256(rootOfTrust)
@@ -504,7 +504,10 @@ func TestToLogEntry_OidcValid(t *testing.T) {
 		"issuer":   m.server.URL,
 		"subject":  "test-sub",
 	}
-	assert.Equal(t, fmt.Appendf(nil, "identity:foo@example.com\nissuer:%s\nsubject:test-sub", m.server.URL), extraData)
+	assert.Equal(t, fmt.Appendf(nil, "identity:%s\nissuer:%s\nsubject:%s",
+		base64.StdEncoding.EncodeToString([]byte("foo@example.com")),
+		base64.StdEncoding.EncodeToString([]byte(m.server.URL)),
+		base64.StdEncoding.EncodeToString([]byte("test-sub"))), extraData)
 
 	// Expected leaf layout:
 	// 1 byte version (0x01) + 32B SHA256(issuer) + 32B SHA256(msgHash) +

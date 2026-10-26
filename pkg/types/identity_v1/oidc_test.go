@@ -309,29 +309,3 @@ func TestExtractOIDCClaims_UsernameToken(t *testing.T) {
 	assert.Equal(t, m.server.URL, iss)
 	assert.Equal(t, "alice!127.0.0.1", claims["identity"])
 }
-
-func TestExtractOIDCClaims_NewlineRejection(t *testing.T) {
-	ctx := context.Background()
-
-	m := newMockOIDC(t)
-	defer m.server.Close()
-
-	cfgJSON := fmt.Sprintf(`{
-		"OIDCIssuers": {
-			"%s": {
-				"IssuerURL": "%s",
-				"ClientID":  "sigstore",
-				"Type":      "email"
-			}
-		}
-	}`, m.server.URL, m.server.URL)
-	cfg, err := config.Read([]byte(cfgJSON))
-	assert.NoError(t, err)
-	ctx = config.With(ctx, cfg)
-	pool := server.NewIssuerPool(cfg)
-
-	badTok := m.token(t, "sub\ninjected:val", "foo@example.com")
-	_, _, err = extractOIDCClaims(ctx, badTok, pool)
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "contains invalid newline character")
-}

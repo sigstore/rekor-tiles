@@ -24,7 +24,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
@@ -208,7 +208,7 @@ func testIdentityReadWrite(t *testing.T, config backendConfig) {
 			require.NoError(t, err, "Checkpoint should be valid")
 			assert.Len(t, parsedNote.Sigs, 2, "Expected 2 valid signatures, from the log and witness")
 
-			expectedExtraData := fmt.Sprintf("%s:%s", identity_v1.ContextKeyName, hex.EncodeToString(contextVal[:]))
+			expectedExtraData := fmt.Sprintf("%s:%s", identity_v1.ContextKeyName, base64.StdEncoding.EncodeToString(contextVal[:]))
 			assert.Equal(t, []byte(expectedExtraData), pr.ExtraData, "ExtraData should contain the formatted context strings")
 
 			leafHash, err := identity_v1.ToEntryHash(pubBytes, sig, req.Message, contextVal[:])
@@ -303,7 +303,10 @@ func testIdentityOIDC(t *testing.T, config backendConfig) {
 	err = pr.Unmarshal(respBody)
 	require.NoError(t, err, "Response body should parse as TLogProof")
 
-	expectedExtraData := []byte("identity:foo@bar.com\nissuer:http://fakeoidc:8080\nsubject:foo@bar.com")
+	expectedExtraData := fmt.Appendf(nil, "identity:%s\nissuer:%s\nsubject:%s",
+		base64.StdEncoding.EncodeToString([]byte("foo@bar.com")),
+		base64.StdEncoding.EncodeToString([]byte("http://fakeoidc:8080")),
+		base64.StdEncoding.EncodeToString([]byte("foo@bar.com")))
 	assert.Equal(t, expectedExtraData, pr.ExtraData, "ExtraData should match expected identity claims")
 
 	noteVerifier, err := note.NewNoteVerifier(defaultRekorHostname, verifier)

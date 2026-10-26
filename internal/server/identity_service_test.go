@@ -22,7 +22,7 @@ import (
 	"crypto/rsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -204,7 +204,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 					},
 				}, nil
 			},
-			expectedExtraData: fmt.Appendf(nil, "%s:%s", identity_v1.ContextKeyName, hex.EncodeToString(contextVal[:])),
+			expectedExtraData: fmt.Appendf(nil, "%s:%s", identity_v1.ContextKeyName, base64.StdEncoding.EncodeToString(contextVal[:])),
 		},
 		{
 			name: "valid oidc request",
@@ -225,7 +225,10 @@ func TestCreateIdentityEntry(t *testing.T) {
 					},
 				}, nil
 			},
-			expectedExtraData: fmt.Appendf(nil, "identity:foo@example.com\nissuer:%s\nsubject:test-sub", oidcIssuerURL),
+			expectedExtraData: fmt.Appendf(nil, "identity:%s\nissuer:%s\nsubject:%s",
+				base64.StdEncoding.EncodeToString([]byte("foo@example.com")),
+				base64.StdEncoding.EncodeToString([]byte(oidcIssuerURL)),
+				base64.StdEncoding.EncodeToString([]byte("test-sub"))),
 		},
 		{
 			name:         "read-only mode",
