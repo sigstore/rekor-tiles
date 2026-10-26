@@ -14,7 +14,7 @@
 # limitations under the License.
 
 # Debian 13 (Trixie) image to build binary for distroless/static-debian13
-FROM --platform=$BUILDPLATFORM golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e AS builder
+FROM --platform=$BUILDPLATFORM golang:1.27.3-trixie@sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4 AS builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG STORAGE_BACKEND
@@ -35,14 +35,14 @@ ARG SERVER_LDFLAGS
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -ldflags "${SERVER_LDFLAGS}" -o rekor-server ./cmd/rekor-server/${STORAGE_BACKEND}
 
 # Production deployment build
-FROM gcr.io/distroless/static-debian13:nonroot@sha256:d62067879de890a1def9da0e7766b7d20810a5e5555cef8506b752437d7a3e88 AS deploy
+FROM gcr.io/distroless/static-debian13:nonroot@sha256:18f4cc26c9ffa7f20a359298be7deadac5c607c8e03a02b8119f1a5fc2f82c99 AS deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 # Set the binary as the entrypoint of the container
 CMD ["rekor-server", "serve"]
 
 # Local deployment build (includes a shell and curl)
-FROM golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e AS local-deploy
+FROM golang:1.27.3-trixie@sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4 AS local-deploy
 # Retrieve the binary from the previous stage
 COPY --from=builder /opt/app-root/src/rekor-server /usr/local/bin/rekor-server
 # Set the binary as the entrypoint of the container
@@ -70,7 +70,7 @@ ARG SERVER_LDFLAGS
 RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} CGO_ENABLED=0 go build -gcflags "all=-N -l" -ldflags "${SERVER_LDFLAGS}" -o rekor-server_debug ./cmd/rekor-server/${STORAGE_BACKEND}
 
 # Multi-stage debugger build
-FROM golang:1.27.2-trixie@sha256:47667934874913a449b96faa7ef4777fa285d9ec29126ee80ed61c45b7cccf0e AS debug
+FROM golang:1.27.3-trixie@sha256:fbb7ae40b62ff8afe31662df570d39b4f5052ac32b90dae8e60d7657a20a74f4 AS debug
 ARG TARGETOS
 ARG TARGETARCH
 # Copy dlv binary, either from bin/ when the build and target platform are the same, or
