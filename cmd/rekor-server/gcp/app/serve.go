@@ -53,8 +53,8 @@ var serveCmd = &cobra.Command{
 
 var serveIdentityCmd = &cobra.Command{
 	Use:   "serve-identity",
-	Short: "start the Rekor identity usage server",
-	Long:  "start the Rekor identity usage server",
+	Short: "start the Rekor identity usage server (unstable, do not use in production)",
+	Long:  "start the Rekor identity usage server (unstable, do not use in production)",
 	Run: func(cmd *cobra.Command, _ []string) {
 		runServer(cmd, true)
 	},

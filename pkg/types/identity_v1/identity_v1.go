@@ -22,7 +22,7 @@ import (
 	"crypto/mldsa"
 	"crypto/sha256"
 	"crypto/x509"
-	"encoding/hex"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"slices"
@@ -208,7 +208,7 @@ func ToLogEntry(ctx context.Context, req *pb.IdentityRequestV001, algorithmRegis
 
 		var extraData []byte
 		if contextBytes := cred.PublicKey.GetContext(); len(contextBytes) > 0 {
-			extraData = fmt.Appendf(nil, "%s:%s", ContextKeyName, hex.EncodeToString(contextBytes))
+			extraData = fmt.Appendf(nil, "%s:%s", ContextKeyName, base64.StdEncoding.EncodeToString(contextBytes))
 		}
 		return computeLeaf(req, rootOfTrustHash[:], nil), extraData, nil
 
@@ -227,7 +227,7 @@ func ToLogEntry(ctx context.Context, req *pb.IdentityRequestV001, algorithmRegis
 			slices.Sort(keys)
 			contextPairs := make([]string, 0, len(keys))
 			for _, k := range keys {
-				contextPairs = append(contextPairs, fmt.Sprintf("%s:%s", k, claims[k]))
+				contextPairs = append(contextPairs, fmt.Sprintf("%s:%s", k, base64.StdEncoding.EncodeToString([]byte(claims[k]))))
 			}
 			extraData = []byte(strings.Join(contextPairs, "\n"))
 		}

@@ -82,11 +82,5 @@ func extractOIDCClaims(ctx context.Context, tokenString string, pool identity.Is
 	claims["identity"] = sans[0]
 	claims["issuer"] = exts.Issuer
 
-	for k, v := range claims {
-		if strings.ContainsAny(k, "\r\n") || strings.ContainsAny(v, "\r\n") {
-			return "", nil, fmt.Errorf("claim %q contains invalid newline character", k)
-		}
-	}
-
 	return exts.Issuer, claims, nil
 }
