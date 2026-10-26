@@ -18,6 +18,7 @@ package app
 import (
 	"bytes"
 	"context"
+	"crypto/mldsa"
 	"fmt"
 	"io"
 	"log/slog"
@@ -137,6 +138,13 @@ func getSignerVerifier(ctx context.Context) (signature.SignerVerifier, error) {
 	signerVerifier, err := signerverifier.New(ctx, opts...)
 	if err != nil {
 		return nil, fmt.Errorf("initializing key signer: %w", err)
+	}
+	pubKey, err := signerVerifier.PublicKey()
+	if err != nil {
+		return nil, fmt.Errorf("getting public key: %w", err)
+	}
+	if _, ok := pubKey.(*mldsa.PublicKey); ok {
+		return nil, fmt.Errorf("freezing checkpoints is not supported for ML-DSA keys")
 	}
 	return signerVerifier, nil
 }

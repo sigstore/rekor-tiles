@@ -24,7 +24,8 @@ import (
 	"testing"
 )
 
-const testEcdsaKey = `
+const (
+	testEcdsaKey = `
 -----BEGIN EC PRIVATE KEY-----
 Proc-Type: 4,ENCRYPTED
 DEK-Info: AES-256-CBC,1ee56fe067d83265fe430391edfa6586
@@ -34,12 +35,23 @@ LGJGQWOTIZxrNZ8g4JeS9I3huDWGloZRI2fbTg69HK4EiQQWUc1wS1TWAVoaf4fr
 LclBWxp2UzqHDaNJ0/2DoGFZhaeMU84VA1O41lO+p5Cx4bms0yWeEHwOrf2AmnNY
 l5Zm9zoPpXxaDEPSTs5c1loRmmxPHKgb68oZPxEnsCg=
 -----END EC PRIVATE KEY-----`
+	mldsaPrivKey = `
+-----BEGIN PRIVATE KEY-----
+MDQCAQAwCwYJYIZIAWUDBAMRBCKAII9qENVch/5+4uTrzma75jN+rTCu6Gt6fDSc
+WEjtQxH8
+-----END PRIVATE KEY-----`
+)
 
 func TestFile(t *testing.T) {
 	testKeyPass := `password123`
 	td := t.TempDir()
 	keyFile := filepath.Join(td, "ecdsa-key.pem")
 	if err := os.WriteFile(keyFile, []byte(testEcdsaKey), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	mldsaKeyFile := filepath.Join(td, "mldsa-key.pem")
+	if err := os.WriteFile(mldsaKeyFile, []byte(mldsaPrivKey), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -53,6 +65,12 @@ func TestFile(t *testing.T) {
 			name:    "valid ecdsa",
 			keyPath: keyFile,
 			keyPass: testKeyPass,
+			wantErr: false,
+		},
+		{
+			name:    "valid mldsa",
+			keyPath: mldsaKeyFile,
+			keyPass: "",
 			wantErr: false,
 		},
 		{
