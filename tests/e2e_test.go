@@ -344,6 +344,7 @@ func testPersistentDeduplication(t *testing.T, config backendConfig) {
 			HashedRekordRequestV002: hr,
 		},
 	})
+	assert.NoError(t, err)
 	resp, err := http.Post(config.ServerURL+"/api/v2/log/entries", "application/json", bytes.NewBuffer(payload))
 	assert.NoError(t, err)
 	defer resp.Body.Close()
