@@ -239,9 +239,6 @@ func testIdentityReadWrite(t *testing.T, config backendConfig) {
 }
 
 func testIdentityOIDC(t *testing.T, config backendConfig) {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
 	// get verifier needed for both read and write
 	serverPubKeyPEM, err := os.ReadFile(identityServerPublicKey)
 	require.NoError(t, err)
@@ -252,98 +249,120 @@ func testIdentityOIDC(t *testing.T, config backendConfig) {
 
 	reader, err := read.NewReader(config.StorageURL, defaultRekorHostname, verifier)
 	require.NoError(t, err)
-	checkpoint, _, err := reader.ReadCheckpoint(ctx)
-	require.NoError(t, err)
-	initialTreeSize := checkpoint.Size
 
-	resp, err := http.Get("http://localhost:8080/token?issuer=http://fakeoidc:8080")
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	tokBytes, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	tok := string(tokBytes)
-
-	// Create a random message hash
-	message := make([]byte, 32)
-	_, _ = rand.Read(message)
-	msgHash := sha256.Sum256(message)
-
-	req := &pb.IdentityRequestV001{
-		Credential: &pb.IdentityRequestV001_Oidc{
-			Oidc: &pb.OidcCredential{
-				Token: tok,
-			},
+	tests := []struct {
+		name string
+		alg  string
+	}{
+		{
+			name: "RS256",
+			alg:  "RS256",
 		},
-		Message: msgHash[:],
+		{
+			name: "ML_DSA_44",
+			alg:  "ML-DSA-44",
+		},
 	}
 
-	b, err := protojson.Marshal(req)
-	require.NoError(t, err)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
 
-	url := fmt.Sprintf("%s/api/v2/log/entries", config.ServerURL)
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
-	require.NoError(t, err)
-	httpReq.Header.Set("Content-Type", "application/json")
+			checkpoint, _, err := reader.ReadCheckpoint(ctx)
+			require.NoError(t, err)
+			initialTreeSize := checkpoint.Size
 
-	client := &http.Client{}
-	resp, err = client.Do(httpReq)
-	require.NoError(t, err)
-	defer resp.Body.Close()
+			resp, err := http.Get(fmt.Sprintf("http://localhost:8080/token?issuer=http://fakeoidc:8080&alg=%s", tt.alg))
+			require.NoError(t, err)
+			defer resp.Body.Close()
+			tokBytes, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
+			tok := string(tokBytes)
 
-	respBody, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
+			// Create a random message hash
+			message := make([]byte, 32)
+			_, _ = rand.Read(message)
+			msgHash := sha256.Sum256(message)
 
-	require.Equal(t, http.StatusCreated, resp.StatusCode, "Expected 201 Created, got: %s", string(respBody))
+			req := &pb.IdentityRequestV001{
+				Credential: &pb.IdentityRequestV001_Oidc{
+					Oidc: &pb.OidcCredential{
+						Token: tok,
+					},
+				},
+				Message: msgHash[:],
+			}
 
-	// Ensure the response is a tlog-proof object
-	respStr := string(respBody)
-	t.Logf("Response body: %s", respStr)
+			b, err := protojson.Marshal(req)
+			require.NoError(t, err)
 
-	var pr tlogproof.TLogProof
-	err = pr.Unmarshal(respBody)
-	require.NoError(t, err, "Response body should parse as TLogProof")
+			url := fmt.Sprintf("%s/api/v2/log/entries", config.ServerURL)
+			httpReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
+			require.NoError(t, err)
+			httpReq.Header.Set("Content-Type", "application/json")
 
-	expectedExtraData := []byte("identity:foo@bar.com\nissuer:http://fakeoidc:8080\nsubject:foo@bar.com")
-	assert.Equal(t, expectedExtraData, pr.ExtraData, "ExtraData should match expected identity claims")
+			client := &http.Client{}
+			resp, err = client.Do(httpReq)
+			require.NoError(t, err)
+			defer resp.Body.Close()
 
-	noteVerifier, err := note.NewNoteVerifier(defaultRekorHostname, verifier)
-	require.NoError(t, err)
+			respBody, err := io.ReadAll(resp.Body)
+			require.NoError(t, err)
 
-	witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(identityWitnessVKey)
-	require.NoError(t, err)
+			require.Equal(t, http.StatusCreated, resp.StatusCode, "Expected 201 Created, got: %s", string(respBody))
 
-	noteVerifiers := []signednote.Verifier{noteVerifier, witnessNoteVerifier}
+			// Ensure the response is a tlog-proof object
+			respStr := string(respBody)
+			t.Logf("Response body: %s", respStr)
 
-	cp, parsedNote, err := verify.VerifyWitnessedCheckpoint(string(pr.Checkpoint), noteVerifiers[0], noteVerifiers[1:]...)
-	require.NoError(t, err, "Checkpoint should be valid")
-	assert.Len(t, parsedNote.Sigs, 2, "Expected 2 valid signatures, from the log and witness")
+			var pr tlogproof.TLogProof
+			err = pr.Unmarshal(respBody)
+			require.NoError(t, err, "Response body should parse as TLogProof")
 
-	claims := map[string]string{
-		"identity": "foo@bar.com",
-		"issuer":   "http://fakeoidc:8080",
-		"subject":  "foo@bar.com",
+			expectedExtraData := []byte("identity:foo@bar.com\nissuer:http://fakeoidc:8080\nsubject:foo@bar.com")
+			assert.Equal(t, expectedExtraData, pr.ExtraData, "ExtraData should match expected identity claims")
+
+			noteVerifier, err := note.NewNoteVerifier(defaultRekorHostname, verifier)
+			require.NoError(t, err)
+
+			witnessNoteVerifier, err := f_note.NewVerifierForCosignatureV1(identityWitnessVKey)
+			require.NoError(t, err)
+
+			noteVerifiers := []signednote.Verifier{noteVerifier, witnessNoteVerifier}
+
+			cp, parsedNote, err := verify.VerifyWitnessedCheckpoint(string(pr.Checkpoint), noteVerifiers[0], noteVerifiers[1:]...)
+			require.NoError(t, err, "Checkpoint should be valid")
+			assert.Len(t, parsedNote.Sigs, 2, "Expected 2 valid signatures, from the log and witness")
+
+			claims := map[string]string{
+				"identity": "foo@bar.com",
+				"issuer":   "http://fakeoidc:8080",
+				"subject":  "foo@bar.com",
+			}
+			leafHash, err := identity_v1.ToOIDCEntryHash(req.Message, claims)
+			require.NoError(t, err)
+
+			var hashes [][]byte
+			for _, h := range pr.Hashes {
+				hCopy := h
+				hashes = append(hashes, hCopy[:])
+			}
+
+			err = proof.VerifyInclusion(rfc6962.DefaultHasher, pr.Index, cp.Size, leafHash, hashes, cp.Hash)
+			assert.NoError(t, err, "Inclusion proof should be valid")
+
+			assert.Equal(t, initialTreeSize, pr.Index, "Index should match the tree size from before uploading")
+
+			// Submitting the same entry again should return 409 Conflict with x-log-index
+			dupReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
+			require.NoError(t, err)
+			dupReq.Header.Set("Content-Type", "application/json")
+			dupResp, err := client.Do(dupReq)
+			require.NoError(t, err)
+			defer dupResp.Body.Close()
+			assert.Equal(t, http.StatusConflict, dupResp.StatusCode)
+			assert.Equal(t, fmt.Sprintf("%d", pr.Index), dupResp.Header.Get("x-log-index"))
+		})
 	}
-	leafHash, err := identity_v1.ToOIDCEntryHash(req.Message, claims)
-	require.NoError(t, err)
-
-	var hashes [][]byte
-	for _, h := range pr.Hashes {
-		hCopy := h
-		hashes = append(hashes, hCopy[:])
-	}
-
-	err = proof.VerifyInclusion(rfc6962.DefaultHasher, pr.Index, cp.Size, leafHash, hashes, cp.Hash)
-	assert.NoError(t, err, "Inclusion proof should be valid")
-
-	assert.Equal(t, initialTreeSize, pr.Index, "Index should match the tree size from before uploading")
-
-	// Submitting the same entry again should return 409 Conflict with x-log-index
-	dupReq, err := http.NewRequestWithContext(ctx, "POST", url, bytes.NewReader(b))
-	require.NoError(t, err)
-	dupReq.Header.Set("Content-Type", "application/json")
-	dupResp, err := client.Do(dupReq)
-	require.NoError(t, err)
-	defer dupResp.Body.Close()
-	assert.Equal(t, http.StatusConflict, dupResp.StatusCode)
-	assert.Equal(t, fmt.Sprintf("%d", pr.Index), dupResp.Header.Get("x-log-index"))
 }
