@@ -539,6 +539,94 @@ Parse the entry (i.e. canonicalized body) with `cat rekor_response | jq -r .cano
 }
 ```
 
+### Identity Log (`c2sp.org/identity-transparency/v1`)
+
+To test the identity transparency log (`serve-identity`), spin up the identity service with `fakeoidc`:
+
+```bash
+docker compose -f identity-posix-compose.yml up --build --wait
+```
+
+Generate an artifact and its SHA-256 digest:
+
+```bash
+head -c 128 < /dev/urandom > artifact
+cat artifact | openssl dgst -binary -sha256 > artifact_dgst
+```
+
+#### With an Ed25519 public key
+
+Generate an `Ed25519` key pair and sign the `c2sp.org/identity-transparency/v1` leaf payload (`"c2sp.org/identity-transparency/v1\x00" || SHA256(message)`):
+
+```bash
+openssl genpkey -algorithm ED25519 -out ed25519_private.pem && openssl pkey -in ed25519_private.pem -pubout -out ed25519_public.pem
+printf "c2sp.org/identity-transparency/v1\0" > sig_payload
+cat artifact_dgst | openssl dgst -binary -sha256 >> sig_payload
+openssl pkeyutl -sign -inkey ed25519_private.pem -rawin -in sig_payload -out artifact.sig
+openssl pkeyutl -verify -pubin -inkey ed25519_public.pem -rawin -in sig_payload -sigfile artifact.sig # Should return Signature Verified Successfully
+```
+
+Post an entry:
+
+```bash
+curl -H "Content-Type: application/json" -X POST \
+  http://localhost:3006/api/v2/log/entries -o rekor_response \
+  -d "{ \"message\": \"$(cat artifact_dgst | base64 | tr -d '\n')\", \"publicKey\": { \"publicKey\": \"$(openssl pkey -pubin -in ed25519_public.pem -outform DER | base64 | tr -d '\n')\", \"signature\": \"$(cat artifact.sig | base64 | tr -d '\n')\" } }"
+```
+
+#### With an ML-DSA-44 public key
+
+Generate an `ML-DSA-44` key pair (requires OpenSSL 3.5+) and sign the `c2sp.org/identity-transparency/v1` leaf payload (`"c2sp.org/identity-transparency/v1\x00" || SHA256(message)`):
+
+```bash
+openssl genpkey -algorithm ML-DSA-44 -out mldsa44_private.pem && openssl pkey -in mldsa44_private.pem -pubout -out mldsa44_public.pem
+printf "c2sp.org/identity-transparency/v1\0" > sig_payload
+cat artifact_dgst | openssl dgst -binary -sha256 >> sig_payload
+openssl pkeyutl -sign -inkey mldsa44_private.pem -rawin -in sig_payload -out artifact.sig
+openssl pkeyutl -verify -pubin -inkey mldsa44_public.pem -rawin -in sig_payload -sigfile artifact.sig # Should return Signature Verified Successfully
+```
+
+Post an entry:
+
+```bash
+curl -H "Content-Type: application/json" -X POST \
+  http://localhost:3006/api/v2/log/entries -o rekor_response \
+  -d "{ \"message\": \"$(cat artifact_dgst | base64 | tr -d '\n')\", \"publicKey\": { \"publicKey\": \"$(openssl pkey -pubin -in mldsa44_public.pem -outform DER | base64 | tr -d '\n')\", \"signature\": \"$(cat artifact.sig | base64 | tr -d '\n')\" } }"
+```
+
+#### With an OIDC token
+
+Fetch a token from the local `fakeoidc` server (or use `gcloud auth print-identity-token --audiences=sigstore` against a live instance) and post an entry:
+
+```bash
+OIDC_TOKEN=$(curl -s "http://localhost:8080/token?issuer=http://fakeoidc:8080")
+curl -H "Content-Type: application/json" -X POST \
+  http://localhost:3006/api/v2/log/entries -o rekor_response \
+  -d "{ \"message\": \"$(cat artifact_dgst | base64 | tr -d '\n')\", \"oidc\": { \"token\": \"${OIDC_TOKEN}\" } }"
+```
+
+#### Viewing the response
+
+View the C2SP `tlog-proof` response with `cat rekor_response`. Example:
+
+```text
+c2sp.org/tlog-proof@v1
+extra eyJpc3MiOiJodHRwOi8vZmFrZW9pZGM6ODA4MCIsInN1YiI6InRlc3QtdXNlciJ9
+index 0
+
+rekor-local
+1
+1B5f7/cR6T+7b2F1Z2h0ZXI9...
+
+— rekor-local 2AtE...
+```
+
+If an `extra` line is present (for OIDC claims or `context`), decode it with:
+
+```bash
+grep '^extra ' rekor_response | cut -d' ' -f2 | base64 -d
+```
+
 ## gRPC
 
 To query the server using gRPC, follow the above instructions to set up the server and generate an artifact.
@@ -564,3 +652,19 @@ grpcurl -d "{ \"hashed_rekord_request_v002\":{ \"digest\":\"$(cat artifact_dgst|
 ```
 
 View the response with `cat rekor_response | jq .`.
+
+### Identity Log gRPC
+
+List available methods on the identity server (port `3007`):
+
+```bash
+grpcurl -plaintext localhost:3007 list dev.sigstore.rekor.v2.IdentityRekor
+```
+
+Post an entry:
+
+```bash
+grpcurl -d "{ \"message\": \"$(cat artifact_dgst | base64 | tr -d '\n')\", \"public_key\": { \"public_key\": \"$(openssl pkey -pubin -in ed25519_public.pem -outform DER | base64 | tr -d '\n')\", \"signature\": \"$(cat artifact.sig | base64 | tr -d '\n')\" } }" -plaintext localhost:3007 dev.sigstore.rekor.v2.IdentityRekor.CreateEntry > rekor_response
+```
+
+Decode the `google.api.HttpBody` response with `cat rekor_response | jq -r .data | base64 -d`.
