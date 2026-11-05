@@ -67,7 +67,8 @@ and set the following environment variables:
 ## Server Modes
 
 * `serve`: Starts the standard Rekor v2 transparency log server (`hashedrekord` and `dsse` entry types). Supported by all storage backends.
-* `serve-identity`: **Unstable, do not use in production as the leaf format is very likely to change**. Starts the [identity transparency log](https://c2sp.org/identity-transparency) server (accepting public key and OIDC credentials, configured via `--oidc-config`). Supported by `rekor-server-gcp` and `rekor-server-posix`. Primarily for post-quantum cryptographic signing.
+<!-- TODO: Replace with https://c2sp.org/identity-transparency once https://github.com/C2SP/C2SP/pull/244 is merged -->
+* `serve-identity`: **Unstable, do not use in production as the leaf format is very likely to change**. Starts the [identity transparency log](https://github.com/C2SP/C2SP/pull/244) server (accepting public key and OIDC credentials, configured via `--oidc-config`). Supported by `rekor-server-gcp` and `rekor-server-posix`. Primarily for post-quantum cryptographic signing.
 
 ## Public-good instance
 

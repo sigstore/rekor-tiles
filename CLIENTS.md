@@ -14,7 +14,8 @@ or create their own client.
 
 Rekor v2 provides two server modes:
 * `serve` (`dev.sigstore.rekor.v2.Rekor`): The standard Rekor v2 transparency log service (`hashedrekord` entries).
-* `serve-identity` (`dev.sigstore.rekor.v2.IdentityRekor`): **Unstable/experimental** [identity transparency log](https://c2sp.org/identity-transparency) service (`c2sp.org/identity-transparency/v1`), accepting public key (`Ed25519`, `ML-DSA-44`) and OIDC credentials.
+<!-- TODO: Replace with https://c2sp.org/identity-transparency once https://github.com/C2SP/C2SP/pull/244 is merged -->
+* `serve-identity` (`dev.sigstore.rekor.v2.IdentityRekor`): **Unstable/experimental** [identity transparency log](https://github.com/C2SP/C2SP/pull/244) service (`c2sp.org/identity-transparency/v1`), accepting public key (`Ed25519`, `ML-DSA-44`) and OIDC credentials.
 
 Both services implement one write API, `POST /api/v2/log/entries`.
 
@@ -120,7 +121,8 @@ When running in `serve-identity` mode (`IdentityRekor` service), `POST /api/v2/l
 }
 ```
 
-Instead of a `TransparencyLogEntry` JSON object, `serve-identity` returns a C2SP [`tlog-proof`](https://github.com/C2SP/C2SP/blob/main/tlog-proof.md) (`c2sp.org/tlog-proof@v1`). If context or OIDC claims are present, the `extra` line in the proof contains base64-encoded `key:base64(value)` lines (sorted by key). Entries in the tile log are binary [`c2sp.org/identity-transparency/v1`](https://c2sp.org/identity-transparency) leaves rather than JSON `canonicalized_body` objects.
+<!-- TODO: Replace with https://c2sp.org/identity-transparency once https://github.com/C2SP/C2SP/pull/244 is merged -->
+Instead of a `TransparencyLogEntry` JSON object, `serve-identity` returns a C2SP [`tlog-proof`](https://github.com/C2SP/C2SP/blob/main/tlog-proof.md) (`c2sp.org/tlog-proof@v1`). If context or OIDC claims are present, the `extra` line in the proof contains base64-encoded `key:base64(value)` lines (sorted by key). Entries in the tile log are binary [`c2sp.org/identity-transparency/v1`](https://github.com/C2SP/C2SP/pull/244) leaves rather than JSON `canonicalized_body` objects.
 
 ### Entry Type for `serve`
 
