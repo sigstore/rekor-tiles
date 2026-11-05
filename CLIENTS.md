@@ -6,13 +6,21 @@ Rekor v2.
 ## Rekor v2 API
 
 Rekor v2 supports HTTP or gRPC, like Fulcio. For Go, we have implemented a client
-already. For other languages, they can either use the
+already ([`pkg/client/write`](https://github.com/sigstore/rekor-tiles/tree/main/pkg/client/write) and
+[`pkg/client/read`](https://github.com/sigstore/rekor-tiles/tree/main/pkg/client/read)). For other languages, they can either use the
 [OpenAPI docs](https://github.com/sigstore/rekor-tiles/tree/main/docs/openapi),
 [gRPC service proto](https://github.com/sigstore/rekor-tiles/tree/main/api/proto),
 or create their own client.
 
-The service implements one write API, `/api/v2/log/entries`. Example JSON request bodies
-below:
+Rekor v2 provides two server modes:
+* `serve` (`dev.sigstore.rekor.v2.Rekor`): The standard Rekor v2 transparency log service (`hashedrekord` entries).
+* `serve-identity` (`dev.sigstore.rekor.v2.IdentityRekor`): **Unstable/experimental** [identity transparency log](https://c2sp.org/identity-transparency) service (`c2sp.org/identity-transparency/v1`), accepting public key (`Ed25519`, `ML-DSA-44`) and OIDC credentials.
+
+Both services implement one write API, `POST /api/v2/log/entries`.
+
+### `serve` API
+
+Example JSON request bodies are shown below:
 
 ```jsonc
 // Request with a Fulcio certificate
@@ -71,7 +79,7 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
                 "digest": "<base64-encoded digest of artifact>"
             },
             "signature": {
-                "content": "<base64-encoded signature",
+                "content": "<base64-encoded signature>",
                 "verifier": {
                     // Must match signing algorithm
                     "keyDetails": "PKIX_ECDSA_P256_SHA_256",
@@ -85,7 +93,36 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
 }
 ```
 
-### Entry Type
+### Identity Log API (`serve-identity`, experimental)
+
+_Note: This API and leaf format are unstable and will change. Do not run this in production._
+
+When running in `serve-identity` mode (`IdentityRekor` service), `POST /api/v2/log/entries` accepts an `IdentityRequestV001` message containing a 32-byte SHA-256 `message` digest and either a `publicKey` credential or an `oidc` credential:
+
+```jsonc
+// Request with a public key credential (Ed25519 or ML-DSA-44)
+{
+    "message": "<base64 32-byte SHA-256 digest of artifact>",
+    "publicKey": {
+        "publicKey": "<base64 SPKI DER-encoded Ed25519 or ML-DSA-44 public key>",
+        "signature": "<base64 signature over c2sp.org/identity-transparency/v1 payload>",
+        // Optional 32-byte SHA-256 context digest
+        "context": "<base64 32-byte SHA-256 digest>"
+    }
+}
+
+// Request with an OIDC credential
+{
+    "message": "<base64 32-byte SHA-256 digest of artifact>",
+    "oidc": {
+        "token": "<raw OIDC JWT token>"
+    }
+}
+```
+
+Instead of a `TransparencyLogEntry` JSON object, `serve-identity` returns a C2SP [`tlog-proof`](https://github.com/C2SP/C2SP/blob/main/tlog-proof.md) (`c2sp.org/tlog-proof@v1`). If context or OIDC claims are present, the `extra` line in the proof contains base64-encoded `key:base64(value)` lines (sorted by key). Entries in the tile log are binary [`c2sp.org/identity-transparency/v1`](https://c2sp.org/identity-transparency) leaves rather than JSON `canonicalized_body` objects.
+
+### Entry Type for `serve`
 
 Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV002`), dropping
 a number of unused types such as `jar`, `alpine`, `rpm`, and the older
@@ -122,8 +159,16 @@ hash of the PAE and the signature in a `hashedrekord` request.
 
 ### Certificate and Public Key Verifiers
 
-Rekor v2 only supports signature verification using a certificate or a
-public key, dropping support for PGP, minisign, pkcs7, SSH and TUF.
+Running with `serve` (`hashedrekord`), Rekor v2 only supports signature verification using an X.509 certificate or a
+public key, dropping support for PGP, minisign, pkcs7, SSH and TUF. By default, the allowed `keyDetails` algorithms are:
+* `PKIX_RSA_PKCS1V15_2048_SHA256`, `PKIX_RSA_PKCS1V15_3072_SHA256`, `PKIX_RSA_PKCS1V15_4096_SHA256`
+* `PKIX_ECDSA_P256_SHA_256`, `PKIX_ECDSA_P384_SHA_384`, `PKIX_ECDSA_P521_SHA_512`
+* `PKIX_ED25519_PH`
+
+With `serve-identity` (`IdentityRequestV001`), Rekor v2 supports:
+* Public key credentials (`Ed25519` and `ML-DSA-44` SPKI DER-encoded public keys)
+* OIDC credentials (JWTs verified in the same way they're verified by the code signing CA). Currently, ML-DSA signed JWTs are not supported, though this will be implemented soon.
+
 Additional verifiers may be added in the future, but this will also require
 updating the client specification.
 
@@ -171,7 +216,7 @@ that clients may need to handle:
     in the verified checkpoint (which is needlessly repetitive). Note that `root_hash`
     is no longer hex-encoded.
 * `TransparencyLogEntry.log_id.key_id` is no longer hex-encoded.
-  * Reiterating, `TransparencyLogEntry.log_id.key_d` will be the non-truncated checkpoint
+  * Reiterating, `TransparencyLogEntry.log_id.key_id` will be the non-truncated checkpoint
     key ID as documented in the C2SP signed-note
     [spec](https://github.com/C2SP/C2SP/blob/main/signed-note.md#signatures).
     If clients treat `log_id` as an opaque string to lookup the correct instance
@@ -210,13 +255,13 @@ of a transparency log to verify a bundle's checkpoint and proof:
    matching on `checkpoint_key_id` or `log_id` (`log_id` will be deprecated)
 2. Enumerate all `TransparencyLogInstance` entries in the `TrustedRoot`. For a checkpoint,
    compare the key ID from a signature line on the checkpoint to `checkpoint_key_id[0:4]`
-3. Enumerate all `TransparencyLogInstance` entries in the the `TrustedRoot`. Calculate
+3. Enumerate all `TransparencyLogInstance` entries in the `TrustedRoot`. Calculate
    the checkpoint key ID from each instance using the instance's public key and the
    origin (the origin should be the scheme-less log URL) following the
    [C2SP spec](https://github.com/C2SP/C2SP/blob/main/signed-note.md#signatures).
    Compare that computed key ID truncated to 4 bytes to the key ID on the checkpoint
    signature line.
-   Below is a copy from the TrustedRoot documentation:
+   Below is a copy from the TrustedRoot documentation (plus `ML-DSA-44`):
    ```proto
     For Ed25519 signatures, the key ID is computed per the C2SP spec:
     * key ID = SHA-256(key name || 0x0A || 0x01 || 32-byte Ed25519 public key)[:4]
@@ -224,14 +269,14 @@ of a transparency log to verify a bundle's checkpoint and proof:
     * key ID = SHA-256(PKIX ASN.1 DER-encoded public key, in SubjectPublicKeyInfo format)[:4]
     For RSA signatures, the signature type will be 0xFF with an appended identifier for the format, "PKIX-RSA-PKCS#1v1.5":
     * key ID = SHA-256(key name || 0x0A || 0xFF || PKIX-RSA-PKCS#1v1.5 || PKIX ASN.1 DER-encoded public key)[:4]
+    For ML-DSA-44 signatures, the signature type is 0x06:
+    * key ID = SHA-256(key name || 0x0A || 0x06 || 1312-byte raw ML-DSA-44 public key)[:4]
     ```
 
-Rekor will no longer include log IDs in the response, and instead clients
+In the future, Rekor will no longer include `log_id` in the `TransparencyLogEntry` response (and the experimental `serve-identity` `tlog-proof` response already omits `log_id`), so clients
 should use the checkpoint key ID as specified in the
 [C2SP spec](https://github.com/C2SP/C2SP/blob/main/signed-note.md#signatures)
-to lookup the correct log public key to verify a bundle. Each transparency
-log instance in the TrustedRoot will include a `checkpoint_key_id` instead
-of a `log_id`.
+to lookup the correct log public key to verify a bundle.
 
 For more information, log IDs are not necessarily unique identifiers for
 a log, since a log may reuse its public key among instances. Additionally,
@@ -313,7 +358,7 @@ An example SigningConfig with annotations is below:
     // selecting multiple, select at most one from an operator.
     "rekorTlogUrls": [
         {
-            "url": "https://log2025-01.rekor.sigstore.dev",
+            "url": "https://log2025-1.rekor.sigstore.dev",
             "majorApiVersion": 2,
             "validFor": {
                 "start": "<UTC timestamp>"
@@ -353,7 +398,7 @@ An example SigningConfig with annotations is below:
     // how many TSAs should be used to request timestamps from.
     "tsaUrls": [
         {
-            "url": "https://oauth2.sigstore.dev/auth",
+            "url": "https://timestamp.sigstore.dev/api/v1/timestamp",
             "majorApiVersion": 1,
             "validFor": {
                 "start": "<UTC timestamp>"
@@ -408,6 +453,8 @@ handles these checkpoints, which could include:
     * ECDSA: `key ID = SHA-256(PKIX ASN.1 DER-encoded public key, in SubjectPublicKeyInfo format)[:4]`
   * For RSA, the signature type is `0xFF` and we append `PKIX-RSA-PKCS#1v1.5`,
     `key ID = SHA-256(key name || 0x0A || 0xFF || PKIX-RSA-PKCS#1v1.5 || PKIX ASN.1 DER-encoded public key)[:4]`
+  * For ML-DSA-44, the signature type is `0x06`,
+    `key ID = SHA-256(key name || 0x0A || 0x06 || 1312-byte raw ML-DSA-44 public key)[:4]`, and the checkpoint signature uses the [C2SP `tlog-cosignature` (`subtree/v1`) format](https://github.com/C2SP/C2SP/blob/main/tlog-cosignature.md) (an 8-byte big-endian Unix timestamp followed by the raw `ML-DSA-44` signature over the `subtree/v1` message). Note that checkpoints with extension lines cannot be signed or verified with `ML-DSA-44`.
 
 ## Monitoring/Auditing
 
@@ -426,8 +473,9 @@ if tiles are not filled frequently.
 The APIs to request checkpoints, tiles, and entry bundles are defined
 in the
 [tlog-tiles spec](https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#apis).
-For Go, [trillian-tessera](https://github.com/transparency-dev/trillian-tessera/tree/main/client)
-provides a client to compute proofs and fetch tiles.
+For Go, [tessera](https://github.com/transparency-dev/tessera/tree/main/client)
+and [`pkg/client/read`](https://github.com/sigstore/rekor-tiles/tree/main/pkg/client/read)
+provide clients to compute proofs and fetch tiles.
 
 ## Future: Witnessing
 
@@ -556,6 +604,8 @@ cat artifact | openssl dgst -binary -sha256 > artifact_dgst
 
 #### With an Ed25519 public key
 
+_Note: The public instance does not support Ed25519 keys as credentials_
+
 Generate an `Ed25519` key pair and sign the `c2sp.org/identity-transparency/v1` leaf payload (`"c2sp.org/identity-transparency/v1\x00" || SHA256(message)`):
 
 ```bash
@@ -611,7 +661,7 @@ View the C2SP `tlog-proof` response with `cat rekor_response`. Example:
 
 ```text
 c2sp.org/tlog-proof@v1
-extra eyJpc3MiOiJodHRwOi8vZmFrZW9pZGM6ODA4MCIsInN1YiI6InRlc3QtdXNlciJ9
+extra aWRlbnRpdHk6Wm05dlFHSmhjaTVqYjI0PQppc3N1ZXI6YUhSMGNEb3ZMMlpoYTJWdmFXUmpPamd3T0RBPQpzdWJqZWN0OlptOXZRR0poY2k1amIyMD0=
 index 0
 
 rekor-local
@@ -621,7 +671,7 @@ rekor-local
 — rekor-local 2AtE...
 ```
 
-If an `extra` line is present (for OIDC claims or `context`), decode it with:
+If an `extra` line is present (for OIDC claims or `context`), decode the `key:base64(value)` lines with:
 
 ```bash
 grep '^extra ' rekor_response | cut -d' ' -f2 | base64 -d
