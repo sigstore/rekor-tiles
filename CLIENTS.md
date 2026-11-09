@@ -6,13 +6,22 @@ Rekor v2.
 ## Rekor v2 API
 
 Rekor v2 supports HTTP or gRPC, like Fulcio. For Go, we have implemented a client
-already. For other languages, they can either use the
+already ([`pkg/client/write`](https://github.com/sigstore/rekor-tiles/tree/main/pkg/client/write) and
+[`pkg/client/read`](https://github.com/sigstore/rekor-tiles/tree/main/pkg/client/read)). For other languages, they can either use the
 [OpenAPI docs](https://github.com/sigstore/rekor-tiles/tree/main/docs/openapi),
 [gRPC service proto](https://github.com/sigstore/rekor-tiles/tree/main/api/proto),
 or create their own client.
 
-The service implements one write API, `/api/v2/log/entries`. Example JSON request bodies
-below:
+Rekor v2 provides two server modes:
+* `serve` (`dev.sigstore.rekor.v2.Rekor`): The standard Rekor v2 transparency log service (`hashedrekord` entries).
+<!-- TODO: Replace with https://c2sp.org/identity-transparency once https://github.com/C2SP/C2SP/pull/244 is merged -->
+* `serve-identity` (`dev.sigstore.rekor.v2.IdentityRekor`): **Unstable/experimental** [identity transparency log](https://github.com/C2SP/C2SP/pull/244) service (`c2sp.org/identity-transparency/v1`), accepting public key (`Ed25519`, `ML-DSA-44`) and OIDC credentials.
+
+Both services implement one write API, `POST /api/v2/log/entries`.
+
+### `serve` API
+
+Example JSON request bodies are shown below:
 
 ```jsonc
 // Request with a Fulcio certificate
@@ -71,7 +80,7 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
                 "digest": "<base64-encoded digest of artifact>"
             },
             "signature": {
-                "content": "<base64-encoded signature",
+                "content": "<base64-encoded signature>",
                 "verifier": {
                     // Must match signing algorithm
                     "keyDetails": "PKIX_ECDSA_P256_SHA_256",
@@ -85,9 +94,39 @@ The client MUST gracefully fail when the client is not aware of a `kind` and `ap
 }
 ```
 
-### Entry Type
+### Identity Log API (`serve-identity`, experimental)
 
-Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV002`), dropping
+_Note: This API and leaf format are unstable and will change. Do not run this in production._
+
+When running in `serve-identity` mode (`IdentityRekor` service), `POST /api/v2/log/entries` accepts an `IdentityRequestV001` message containing a 32-byte SHA-256 `message` digest and either a `publicKey` credential or an `oidc` credential:
+
+```jsonc
+// Request with a public key credential (Ed25519 or ML-DSA-44)
+{
+    "message": "<base64 32-byte SHA-256 digest of artifact>",
+    "publicKey": {
+        "publicKey": "<base64 SPKI DER-encoded Ed25519 or ML-DSA-44 public key>",
+        "signature": "<base64 signature over c2sp.org/identity-transparency/v1 payload>",
+        // Optional 32-byte SHA-256 context digest
+        "context": "<base64 32-byte SHA-256 digest>"
+    }
+}
+
+// Request with an OIDC credential
+{
+    "message": "<base64 32-byte SHA-256 digest of artifact>",
+    "oidc": {
+        "token": "<raw OIDC JWT token>"
+    }
+}
+```
+
+<!-- TODO: Replace with https://c2sp.org/identity-transparency once https://github.com/C2SP/C2SP/pull/244 is merged -->
+Instead of a `TransparencyLogEntry` JSON object, `serve-identity` returns a C2SP [`tlog-proof`](https://github.com/C2SP/C2SP/blob/main/tlog-proof.md) (`c2sp.org/tlog-proof@v1`). If context or OIDC claims are present, the `extra` line in the proof contains base64-encoded `key:base64(value)` lines (sorted by key). Entries in the tile log are binary [`c2sp.org/identity-transparency/v1`](https://github.com/C2SP/C2SP/pull/244) leaves rather than JSON `canonicalized_body` objects.
+
+### Entry Type for `serve`
+
+In `serve` mode, Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV002`), dropping
 a number of unused types such as `jar`, `alpine`, `rpm`, and the older
 types `rekord`, `intoto`, and `dsse`.
 Additional types may be added in the future if there is demand, but this
@@ -122,8 +161,16 @@ hash of the PAE and the signature in a `hashedrekord` request.
 
 ### Certificate and Public Key Verifiers
 
-Rekor v2 only supports signature verification using a certificate or a
-public key, dropping support for PGP, minisign, pkcs7, SSH and TUF.
+Running with `serve` (`hashedrekord`), Rekor v2 only supports signature verification using an X.509 certificate or a
+public key, dropping support for PGP, minisign, pkcs7, SSH and TUF. By default, the allowed `keyDetails` algorithms are:
+* `PKIX_RSA_PKCS1V15_2048_SHA256`, `PKIX_RSA_PKCS1V15_3072_SHA256`, `PKIX_RSA_PKCS1V15_4096_SHA256`
+* `PKIX_ECDSA_P256_SHA_256`, `PKIX_ECDSA_P384_SHA_384`, `PKIX_ECDSA_P521_SHA_512`
+* `PKIX_ED25519_PH`
+
+With `serve-identity` (`IdentityRequestV001`), Rekor v2 supports:
+* Public key credentials (`Ed25519` and `ML-DSA-44` SPKI DER-encoded public keys)
+* OIDC credentials (JWTs verified in the same way they're verified by the code signing CA). Currently, ML-DSA signed JWTs are not supported, though this will be implemented soon.
+
 Additional verifiers may be added in the future, but this will also require
 updating the client specification.
 
@@ -171,7 +218,7 @@ that clients may need to handle:
     in the verified checkpoint (which is needlessly repetitive). Note that `root_hash`
     is no longer hex-encoded.
 * `TransparencyLogEntry.log_id.key_id` is no longer hex-encoded.
-  * Reiterating, `TransparencyLogEntry.log_id.key_d` will be the non-truncated checkpoint
+  * Reiterating, `TransparencyLogEntry.log_id.key_id` will be the non-truncated checkpoint
     key ID as documented in the C2SP signed-note
     [spec](https://github.com/C2SP/C2SP/blob/main/signed-note.md#signatures).
     If clients treat `log_id` as an opaque string to lookup the correct instance
@@ -210,13 +257,13 @@ of a transparency log to verify a bundle's checkpoint and proof:
    matching on `checkpoint_key_id` or `log_id` (`log_id` will be deprecated)
 2. Enumerate all `TransparencyLogInstance` entries in the `TrustedRoot`. For a checkpoint,
    compare the key ID from a signature line on the checkpoint to `checkpoint_key_id[0:4]`
-3. Enumerate all `TransparencyLogInstance` entries in the the `TrustedRoot`. Calculate
+3. Enumerate all `TransparencyLogInstance` entries in the `TrustedRoot`. Calculate
    the checkpoint key ID from each instance using the instance's public key and the
    origin (the origin should be the scheme-less log URL) following the
    [C2SP spec](https://github.com/C2SP/C2SP/blob/main/signed-note.md#signatures).
    Compare that computed key ID truncated to 4 bytes to the key ID on the checkpoint
    signature line.
-   Below is a copy from the TrustedRoot documentation:
+   Below is a copy from the TrustedRoot documentation (plus `ML-DSA-44`):
    ```proto
     For Ed25519 signatures, the key ID is computed per the C2SP spec:
     * key ID = SHA-256(key name || 0x0A || 0x01 || 32-byte Ed25519 public key)[:4]
@@ -224,14 +271,14 @@ of a transparency log to verify a bundle's checkpoint and proof:
     * key ID = SHA-256(PKIX ASN.1 DER-encoded public key, in SubjectPublicKeyInfo format)[:4]
     For RSA signatures, the signature type will be 0xFF with an appended identifier for the format, "PKIX-RSA-PKCS#1v1.5":
     * key ID = SHA-256(key name || 0x0A || 0xFF || PKIX-RSA-PKCS#1v1.5 || PKIX ASN.1 DER-encoded public key)[:4]
+    For ML-DSA-44 signatures, the signature type is 0x06:
+    * key ID = SHA-256(key name || 0x0A || 0x06 || 1312-byte raw ML-DSA-44 public key)[:4]
     ```
 
-Rekor will no longer include log IDs in the response, and instead clients
+In the future, Rekor will no longer include `log_id` in the `TransparencyLogEntry` response (and the experimental `serve-identity` `tlog-proof` response already omits `log_id`), so clients
 should use the checkpoint key ID as specified in the
 [C2SP spec](https://github.com/C2SP/C2SP/blob/main/signed-note.md#signatures)
-to lookup the correct log public key to verify a bundle. Each transparency
-log instance in the TrustedRoot will include a `checkpoint_key_id` instead
-of a `log_id`.
+to lookup the correct log public key to verify a bundle.
 
 For more information, log IDs are not necessarily unique identifiers for
 a log, since a log may reuse its public key among instances. Additionally,
@@ -313,7 +360,7 @@ An example SigningConfig with annotations is below:
     // selecting multiple, select at most one from an operator.
     "rekorTlogUrls": [
         {
-            "url": "https://log2025-01.rekor.sigstore.dev",
+            "url": "https://log2025-1.rekor.sigstore.dev",
             "majorApiVersion": 2,
             "validFor": {
                 "start": "<UTC timestamp>"
@@ -353,7 +400,7 @@ An example SigningConfig with annotations is below:
     // how many TSAs should be used to request timestamps from.
     "tsaUrls": [
         {
-            "url": "https://oauth2.sigstore.dev/auth",
+            "url": "https://timestamp.sigstore.dev/api/v1/timestamp",
             "majorApiVersion": 1,
             "validFor": {
                 "start": "<UTC timestamp>"
@@ -408,6 +455,8 @@ handles these checkpoints, which could include:
     * ECDSA: `key ID = SHA-256(PKIX ASN.1 DER-encoded public key, in SubjectPublicKeyInfo format)[:4]`
   * For RSA, the signature type is `0xFF` and we append `PKIX-RSA-PKCS#1v1.5`,
     `key ID = SHA-256(key name || 0x0A || 0xFF || PKIX-RSA-PKCS#1v1.5 || PKIX ASN.1 DER-encoded public key)[:4]`
+  * For ML-DSA-44, the signature type is `0x06`,
+    `key ID = SHA-256(key name || 0x0A || 0x06 || 1312-byte raw ML-DSA-44 public key)[:4]`, and the checkpoint signature uses the [C2SP `tlog-cosignature` (`subtree/v1`) format](https://github.com/C2SP/C2SP/blob/main/tlog-cosignature.md) (an 8-byte big-endian Unix timestamp followed by the raw `ML-DSA-44` signature over the `subtree/v1` message). Note that checkpoints with extension lines cannot be signed or verified with `ML-DSA-44`.
 
 ## Monitoring/Auditing
 
@@ -426,8 +475,9 @@ if tiles are not filled frequently.
 The APIs to request checkpoints, tiles, and entry bundles are defined
 in the
 [tlog-tiles spec](https://github.com/C2SP/C2SP/blob/main/tlog-tiles.md#apis).
-For Go, [trillian-tessera](https://github.com/transparency-dev/trillian-tessera/tree/main/client)
-provides a client to compute proofs and fetch tiles.
+For Go, [tessera](https://github.com/transparency-dev/tessera/tree/main/client)
+and [`pkg/client/read`](https://github.com/sigstore/rekor-tiles/tree/main/pkg/client/read)
+provide clients to compute proofs and fetch tiles.
 
 ## Future: Witnessing
 
@@ -539,6 +589,96 @@ Parse the entry (i.e. canonicalized body) with `cat rekor_response | jq -r .cano
 }
 ```
 
+### Identity Log (`c2sp.org/identity-transparency/v1`)
+
+To test the identity transparency log (`serve-identity`), spin up the identity service with `fakeoidc`:
+
+```bash
+docker compose -f identity-posix-compose.yml up --build --wait
+```
+
+Generate an artifact and its SHA-256 digest:
+
+```bash
+head -c 128 < /dev/urandom > artifact
+cat artifact | openssl dgst -binary -sha256 > artifact_dgst
+```
+
+#### With an Ed25519 public key
+
+_Note: The public instance does not support Ed25519 keys as credentials_
+
+Generate an `Ed25519` key pair and sign the `c2sp.org/identity-transparency/v1` leaf payload (`"c2sp.org/identity-transparency/v1\x00" || SHA256(message)`):
+
+```bash
+openssl genpkey -algorithm ED25519 -out ed25519_private.pem && openssl pkey -in ed25519_private.pem -pubout -out ed25519_public.pem
+printf "c2sp.org/identity-transparency/v1\0" > sig_payload
+cat artifact_dgst | openssl dgst -binary -sha256 >> sig_payload
+openssl pkeyutl -sign -inkey ed25519_private.pem -rawin -in sig_payload -out artifact.sig
+openssl pkeyutl -verify -pubin -inkey ed25519_public.pem -rawin -in sig_payload -sigfile artifact.sig # Should return Signature Verified Successfully
+```
+
+Post an entry:
+
+```bash
+curl -H "Content-Type: application/json" -X POST \
+  http://localhost:3006/api/v2/log/entries -o rekor_response \
+  -d "{ \"message\": \"$(cat artifact_dgst | base64 | tr -d '\n')\", \"publicKey\": { \"publicKey\": \"$(openssl pkey -pubin -in ed25519_public.pem -outform DER | base64 | tr -d '\n')\", \"signature\": \"$(cat artifact.sig | base64 | tr -d '\n')\" } }"
+```
+
+#### With an ML-DSA-44 public key
+
+Generate an `ML-DSA-44` key pair (requires OpenSSL 3.5+) and sign the `c2sp.org/identity-transparency/v1` leaf payload (`"c2sp.org/identity-transparency/v1\x00" || SHA256(message)`):
+
+```bash
+openssl genpkey -algorithm ML-DSA-44 -out mldsa44_private.pem && openssl pkey -in mldsa44_private.pem -pubout -out mldsa44_public.pem
+printf "c2sp.org/identity-transparency/v1\0" > sig_payload
+cat artifact_dgst | openssl dgst -binary -sha256 >> sig_payload
+openssl pkeyutl -sign -inkey mldsa44_private.pem -rawin -in sig_payload -out artifact.sig
+openssl pkeyutl -verify -pubin -inkey mldsa44_public.pem -rawin -in sig_payload -sigfile artifact.sig # Should return Signature Verified Successfully
+```
+
+Post an entry:
+
+```bash
+curl -H "Content-Type: application/json" -X POST \
+  http://localhost:3006/api/v2/log/entries -o rekor_response \
+  -d "{ \"message\": \"$(cat artifact_dgst | base64 | tr -d '\n')\", \"publicKey\": { \"publicKey\": \"$(openssl pkey -pubin -in mldsa44_public.pem -outform DER | base64 | tr -d '\n')\", \"signature\": \"$(cat artifact.sig | base64 | tr -d '\n')\" } }"
+```
+
+#### With an OIDC token
+
+Fetch a token from the local `fakeoidc` server (or use `gcloud auth print-identity-token --audiences=sigstore` against a live instance) and post an entry:
+
+```bash
+OIDC_TOKEN=$(curl -s "http://localhost:8080/token?issuer=http://fakeoidc:8080")
+curl -H "Content-Type: application/json" -X POST \
+  http://localhost:3006/api/v2/log/entries -o rekor_response \
+  -d "{ \"message\": \"$(cat artifact_dgst | base64 | tr -d '\n')\", \"oidc\": { \"token\": \"${OIDC_TOKEN}\" } }"
+```
+
+#### Viewing the response
+
+View the C2SP `tlog-proof` response with `cat rekor_response`. Example:
+
+```text
+c2sp.org/tlog-proof@v1
+extra aWRlbnRpdHk6Wm05dlFHSmhjaTVqYjI0PQppc3N1ZXI6YUhSMGNEb3ZMMlpoYTJWdmFXUmpPamd3T0RBPQpzdWJqZWN0OlptOXZRR0poY2k1amIyMD0=
+index 0
+
+rekor-local
+1
+1B5f7/cR6T+7b2F1Z2h0ZXI9...
+
+— rekor-local 2AtE...
+```
+
+If an `extra` line is present (for OIDC claims or `context`), decode the `key:base64(value)` lines with:
+
+```bash
+grep '^extra ' rekor_response | cut -d' ' -f2 | base64 -d
+```
+
 ## gRPC
 
 To query the server using gRPC, follow the above instructions to set up the server and generate an artifact.
@@ -564,3 +704,19 @@ grpcurl -d "{ \"hashed_rekord_request_v002\":{ \"digest\":\"$(cat artifact_dgst|
 ```
 
 View the response with `cat rekor_response | jq .`.
+
+### Identity Log gRPC
+
+List available methods on the identity server (port `3007`):
+
+```bash
+grpcurl -plaintext localhost:3007 list dev.sigstore.rekor.v2.IdentityRekor
+```
+
+Post an entry:
+
+```bash
+grpcurl -d "{ \"message\": \"$(cat artifact_dgst | base64 | tr -d '\n')\", \"public_key\": { \"public_key\": \"$(openssl pkey -pubin -in ed25519_public.pem -outform DER | base64 | tr -d '\n')\", \"signature\": \"$(cat artifact.sig | base64 | tr -d '\n')\" } }" -plaintext localhost:3007 dev.sigstore.rekor.v2.IdentityRekor.CreateEntry > rekor_response
+```
+
+Decode the `google.api.HttpBody` response with `cat rekor_response | jq -r .data | base64 -d`.
