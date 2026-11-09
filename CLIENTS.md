@@ -126,7 +126,7 @@ Instead of a `TransparencyLogEntry` JSON object, `serve-identity` returns a C2SP
 
 ### Entry Type for `serve`
 
-Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV002`), dropping
+In `serve` mode, Rekor v2 only supports `hashedrekord` (`HashedRekordLogEntryV002`), dropping
 a number of unused types such as `jar`, `alpine`, `rpm`, and the older
 types `rekord`, `intoto`, and `dsse`.
 Additional types may be added in the future if there is demand, but this
