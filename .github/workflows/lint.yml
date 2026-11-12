@@ -24,12 +24,12 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
           check-latest: true
@@ -40,7 +40,7 @@ jobs:
           awk -F '[@:]' '/FROM golangci\/golangci-lint/{print "version="$2; exit}' Dockerfile.golangci-lint >> "$GITHUB_OUTPUT"
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        uses: golangci/golangci-lint-action@v9.3.0
         with:
           version: ${{ steps.golangci-lint-version.outputs.version }}
           args: --timeout=5m --verbose
@@ -49,12 +49,12 @@ jobs:
     name: shellcheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@00cae500b08a931fb5698e11e79bfbd38e612a38 # v2.0.0
+        uses: ludeeus/action-shellcheck@2.0.0
         with:
           scandir: ./tests/sharding
           severity: warning
@@ -63,7 +63,7 @@ jobs:
     name: zizmor
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
@@ -72,18 +72,36 @@ jobs:
           ZIZMOR=$(grep FROM Dockerfile.zizmor | cut -d' ' -f 2)
           docker run --rm -v $PWD:/source $ZIZMOR /source
 
+  actions-lock:
+    name: actions-lock
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install gh-actions-lock
+        run: gh extension install github/gh-actions-lock
+        env:
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Verify actions lockfile
+        run: gh actions-lock --verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+
   go-fix:
     name: go fix
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
           check-latest: true

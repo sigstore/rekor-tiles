@@ -45,21 +45,21 @@ jobs:
       id-token: write
 
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       - name: Extract version of Go to use
         run: echo "GOVERSION=$(awk -F 'golang:' 'NF>1 {split($2, a, /[-@]/); print a[1]; exit}' Dockerfile)" >> $GITHUB_ENV
 
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      - uses: actions/setup-go@v7.0.0
         with:
           go-version: ${{ env.GOVERSION }}
           check-latest: true
           cache: false # avoid cache-poisoning attacks
 
       # Syft is used by GoReleaser to generate SBOMs
-      - uses: anchore/sbom-action/download-syft@66cbf4bc1f1c0d2edc94016e65bc221b6bb0ad6c # v0.24.3
+      - uses: anchore/sbom-action/download-syft@v0.24.3
 
       # Initialize build arguments
       - name: Set build arguments
@@ -68,7 +68,7 @@ jobs:
           echo "LDFLAGS=$LDFLAGS" >> $GITHUB_ENV
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@a4f02ab5355a589de60d917a659ce617ed19b3de # v7.3.0
+        uses: goreleaser/goreleaser-action@v7.3.0
         with:
           version: latest
           args: release --clean
@@ -77,7 +77,7 @@ jobs:
           LDFLAGS: ${{ env.LDFLAGS }}
 
       - name: Generate artifact attestation
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        uses: actions/attest@v4.2.2
         with:
           subject-path: ./dist/rekor-server-*
 

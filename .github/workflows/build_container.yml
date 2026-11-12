@@ -52,13 +52,13 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
 
       # Uses the `docker/login-action` action to log in to the Container registry registry using the account and password that will publish the packages. Once published, the packages are scoped to the account defined here.
       - name: Log in to the Container registry
-        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        uses: docker/login-action@v4.7.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -67,13 +67,13 @@ jobs:
       # This step uses [docker/metadata-action](https://github.com/docker/metadata-action#about) to extract tags and labels that will be applied to the specified image. The `id` "meta" allows the output of this step to be referenced in a subsequent step. The `images` value provides the base name for the tags and labels.
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302 # v6.2.0
+        uses: docker/metadata-action@v6.2.0
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/${{ matrix.storage }}
 
       # Set up builder for multi-platform builds
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+        uses: docker/setup-buildx-action@v4.4.1
         with:
           cache-binary: false # avoid cache-poisoning attacks
 
@@ -89,7 +89,7 @@ jobs:
       - name: Build and push per-commit Docker image
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
         id: push-per-commit
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .
           target: local-deploy
@@ -103,7 +103,7 @@ jobs:
       - name: Build and push per-tag Docker image
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
         id: push-per-tag
-        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        uses: docker/build-push-action@v7.4.0
         with:
           context: .
           target: deploy
@@ -118,14 +118,14 @@ jobs:
       # This step generates an artifact attestation for the image, which is an unforgeable statement about where and how it was built. It increases supply chain security for people who consume the image. For more information, see [Using artifact attestations to establish provenance for builds](https://docs.github.com/actions/security-guides/using-artifact-attestations-to-establish-provenance-for-builds).
       - name: Generate artifact attestation
         if: ${{ !startsWith(github.ref, 'refs/tags/') }}
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        uses: actions/attest@v4.2.2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/${{ matrix.storage }}
           subject-digest: ${{ steps.push-per-commit.outputs.digest }}
           push-to-registry: true
       - name: Generate artifact attestation
         if: ${{ startsWith(github.ref, 'refs/tags/') }}
-        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4.2.2
+        uses: actions/attest@v4.2.2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_BASE_NAME }}/${{ matrix.storage }}
           subject-digest: ${{ steps.push-per-tag.outputs.digest }}
