@@ -45,7 +45,7 @@ import (
 var serveCmd = &cobra.Command{
 	Use:   "serve",
 	Short: "start the Rekor server",
-	Long:  "start the Rekor server",
+	Long:  "start the Rekor server\n\n" + cli.EnvHelp,
 	Run: func(cmd *cobra.Command, _ []string) {
 		runServer(cmd, false)
 	},
@@ -54,13 +54,17 @@ var serveCmd = &cobra.Command{
 var serveIdentityCmd = &cobra.Command{
 	Use:   "serve-identity",
 	Short: "start the Rekor identity usage server (unstable, do not use in production)",
-	Long:  "start the Rekor identity usage server (unstable, do not use in production)",
+	Long:  "start the Rekor identity usage server (unstable, do not use in production)\n\n" + cli.EnvHelp,
 	Run: func(cmd *cobra.Command, _ []string) {
 		runServer(cmd, true)
 	},
 }
 
 func runServer(cmd *cobra.Command, isIdentity bool) {
+	if err := cli.SetFlagsFromEnv(cmd.Flags()); err != nil {
+		slog.Error(err.Error())
+		os.Exit(1)
+	}
 	if err := viper.BindPFlags(cmd.Flags()); err != nil {
 		slog.Error(err.Error())
 		os.Exit(1)

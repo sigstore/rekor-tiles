@@ -65,6 +65,8 @@ services:
       - GCS_HMAC_SECRET=minioadmin
       - GCS_ENDPOINT_URL=http://s3proxy:80
       - GCS_REGION=us-east-1
+      # passed through the environment to keep the password out of the process arguments
+      - REKOR_GCP_CLOUDSQL_DSN=rekor:rekorpassword@tcp(mysql:3306)/sequencer?parseTime=true
     command:
       - "rekor-server"
       - "serve"
@@ -72,7 +74,6 @@ services:
       - "--grpc-address=0.0.0.0"
       - "--hostname=rekor-local"
       - "--gcp-bucket=tiles"
-      - "--gcp-cloudsql-dsn=rekor:rekorpassword@tcp(mysql:3306)/sequencer?parseTime=true"
       - "--signer-filepath=/pki/ed25519-priv-key.pem"
       - "--checkpoint-interval=2s"
       - "--log-level=debug"
