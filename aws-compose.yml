@@ -69,6 +69,8 @@ services:
       - AWS_REGION=us-east-1
       - AWS_ENDPOINT_URL=http://s3proxy:80
       - AWS_S3_FORCE_PATH_STYLE=true
+      # passed through the environment to keep the password out of the process arguments
+      - REKOR_AWS_MYSQL_DSN=rekor:rekorpassword@tcp(mysql:3306)/sequencer?parseTime=true
     command:
       - "rekor-server"
       - "serve"
@@ -76,7 +78,6 @@ services:
       - "--grpc-address=0.0.0.0"
       - "--hostname=rekor-local"
       - "--aws-bucket=tiles"
-      - "--aws-mysql-dsn=rekor:rekorpassword@tcp(mysql:3306)/sequencer?parseTime=true"
       - "--signer-filepath=/pki/ed25519-priv-key.pem"
       - "--checkpoint-interval=2s"
       - "--log-level=debug"
