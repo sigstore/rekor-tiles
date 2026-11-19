@@ -178,7 +178,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 					InclusionProof: &rekor_pb.InclusionProof{
 						LogIndex:   1,
 						Hashes:     [][]byte{proofHash},
-						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint"},
+						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint\n"},
 					},
 				}, nil
 			},
@@ -200,7 +200,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 					InclusionProof: &rekor_pb.InclusionProof{
 						LogIndex:   1,
 						Hashes:     [][]byte{proofHash},
-						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint"},
+						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint\n"},
 					},
 				}, nil
 			},
@@ -221,7 +221,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 					InclusionProof: &rekor_pb.InclusionProof{
 						LogIndex:   1,
 						Hashes:     [][]byte{proofHash},
-						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint"},
+						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint\n"},
 					},
 				}, nil
 			},
@@ -321,7 +321,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 				return &rekor_pb.TransparencyLogEntry{
 					InclusionProof: &rekor_pb.InclusionProof{
 						LogIndex:   -1,
-						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint"},
+						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint\n"},
 					},
 				}, nil
 			},
