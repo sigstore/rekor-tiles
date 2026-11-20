@@ -44,6 +44,7 @@ type metrics struct {
 	// metrics
 	newHashedRekordEntries     prometheus.Counter
 	newIdentityEntries         prometheus.Counter
+	duplicateIdentityEntries   prometheus.Counter
 	httpLatency                *prometheus.HistogramVec
 	httpRequestsCount          *prometheus.CounterVec
 	httpRequestSize            *prometheus.HistogramVec
@@ -79,6 +80,11 @@ var _initMetricsFunc = sync.OnceValue(func() *metrics {
 	m.newIdentityEntries = f.NewCounter(prometheus.CounterOpts{
 		Name: "rekor_v2_new_identity_entries",
 		Help: "The total number of new identity log entries",
+	})
+
+	m.duplicateIdentityEntries = f.NewCounter(prometheus.CounterOpts{
+		Name: "rekor_v2_duplicate_identity_entries",
+		Help: "The total number of identity requests that matched an existing log entry",
 	})
 
 	// grpc_packet_part should always be "payload" but we can measure "header" or "trailer" in the future

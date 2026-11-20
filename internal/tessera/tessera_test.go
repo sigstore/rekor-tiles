@@ -24,6 +24,9 @@ import (
 
 	"github.com/sigstore/sigstore/pkg/signature"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	logformat "github.com/transparency-dev/formats/log"
+	"github.com/transparency-dev/merkle/rfc6962"
 	"github.com/transparency-dev/tessera"
 )
 
@@ -92,6 +95,267 @@ gb/AnEEsBNpTobDduU3OSNaiTp6liYf31FoE6AB/s8o=
 			assert.Equal(t, test.expectTreeSize, got.InclusionProof.TreeSize)
 			assert.Equal(t, test.expectHash, got.InclusionProof.RootHash)
 			assert.Equal(t, test.expectBody, got.CanonicalizedBody)
+		})
+	}
+}
+
+func TestAddOrGet(t *testing.T) {
+	ctx := context.Background()
+	entry := tessera.NewEntry([]byte("stuff"))
+	leafHash := entry.LeafHash()
+	otherLeaf := tessera.NewEntry([]byte("other")).LeafHash()
+	thirdLeaf := tessera.NewEntry([]byte("third")).LeafHash()
+	rootSize2 := rfc6962.DefaultHasher.HashChildren(leafHash, otherLeaf)
+	rootSize3 := rfc6962.DefaultHasher.HashChildren(rootSize2, thirdLeaf)
+
+	cpSize1 := append(logformat.Checkpoint{Origin: "test.origin", Size: 1, Hash: leafHash}.Marshal(), []byte("\n— test.origin AAAA\n")...)
+	cpSize2 := append(logformat.Checkpoint{Origin: "test.origin", Size: 2, Hash: rootSize2}.Marshal(), []byte("\n— test.origin AAAA\n")...)
+	cpSize3 := append(logformat.Checkpoint{Origin: "test.origin", Size: 3, Hash: rootSize3}.Marshal(), []byte("\n— test.origin AAAA\n")...)
+
+	tests := []struct {
+		name                   string
+		initialCP              []byte
+		addFn                  func(context.Context, *tessera.Entry) tessera.IndexFuture
+		readTileFn             func(context.Context, uint64, uint64, uint8) ([]byte, error)
+		readCheckpointFn       func(context.Context) ([]byte, error)
+		cancelOnTileRead       bool
+		expectDup              bool
+		expectTreeSize         int64
+		expectHash             []byte
+		expectHashes           [][]byte
+		expectCheckpoint       []byte
+		expectErr              string
+		expectVerifyErr        bool
+		expectCheckpointCalled bool
+		expectTileCalls        int
+	}{
+		{
+			name:      "new entry",
+			initialCP: cpSize1,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
+				return leafHash, nil
+			},
+			expectDup:        false,
+			expectTreeSize:   1,
+			expectHash:       leafHash,
+			expectHashes:     [][]byte{},
+			expectCheckpoint: cpSize1,
+		},
+		{
+			name:      "duplicate entry returns proof",
+			initialCP: cpSize2,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: true}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
+				return append(append([]byte{}, leafHash...), otherLeaf...), nil
+			},
+			expectDup:        true,
+			expectTreeSize:   2,
+			expectHash:       rootSize2,
+			expectHashes:     [][]byte{otherLeaf},
+			expectCheckpoint: cpSize2,
+			expectTileCalls:  1,
+		},
+		{
+			name:      "duplicate inclusion proof verification failure does not retry",
+			initialCP: cpSize2,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: true}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
+				return append(append([]byte{}, thirdLeaf...), thirdLeaf...), nil
+			},
+			// TODO: Remove readCheckpointFn/expectCheckpointCalled once the tessera@v1.0.4 retry workaround is removed.
+			readCheckpointFn: func(_ context.Context) ([]byte, error) {
+				return cpSize3, nil
+			},
+			expectErr:              "verifying inclusion proof",
+			expectVerifyErr:        true,
+			expectCheckpointCalled: false,
+			expectTileCalls:        1,
+		},
+		{
+			name:      "integration failed",
+			initialCP: cpSize1,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{}, fmt.Errorf("server error") }
+			},
+			expectErr: "add entry: await: server error",
+		},
+		// TODO: The cases below are temporary tests for the stale-checkpoint retry workaround
+		// in storage.add (needed until we upgrade past tessera@v1.0.4 to pick up
+		// transparency-dev/tessera#1260 and #1241). Remove them when removing the retry.
+		{
+			name:      "duplicate retries with fresh checkpoint on stale partial tile",
+			initialCP: cpSize2,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: true}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, p uint8) ([]byte, error) {
+				if p == 2 {
+					return nil, fmt.Errorf("storage: object doesn't exist")
+				}
+				return append(append(append([]byte{}, leafHash...), otherLeaf...), thirdLeaf...), nil
+			},
+			readCheckpointFn: func(_ context.Context) ([]byte, error) {
+				return cpSize3, nil
+			},
+			expectDup:              true,
+			expectTreeSize:         3,
+			expectHash:             rootSize3,
+			expectHashes:           [][]byte{otherLeaf, thirdLeaf},
+			expectCheckpoint:       cpSize3,
+			expectCheckpointCalled: true,
+			expectTileCalls:        2,
+		},
+		{
+			name:      "duplicate tile read failure with checkpoint error preserves original error",
+			initialCP: cpSize2,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: true}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
+				return nil, fmt.Errorf("tile unavailable")
+			},
+			readCheckpointFn: func(_ context.Context) ([]byte, error) {
+				return nil, fmt.Errorf("checkpoint unavailable")
+			},
+			expectErr:              "tile unavailable",
+			expectCheckpointCalled: true,
+			expectTileCalls:        1,
+		},
+		{
+			name:      "duplicate unchanged checkpoint skips second proof build",
+			initialCP: cpSize2,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: true}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
+				return nil, fmt.Errorf("tile unavailable")
+			},
+			readCheckpointFn: func(_ context.Context) ([]byte, error) {
+				return cpSize2, nil
+			},
+			expectErr:              "tile unavailable",
+			expectCheckpointCalled: true,
+			expectTileCalls:        1,
+		},
+		{
+			name:      "duplicate retry failure surfaces retry error",
+			initialCP: cpSize2,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: true}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, p uint8) ([]byte, error) {
+				if p == 2 {
+					return nil, fmt.Errorf("first failure")
+				}
+				return nil, fmt.Errorf("retry failure")
+			},
+			readCheckpointFn: func(_ context.Context) ([]byte, error) {
+				return cpSize3, nil
+			},
+			expectErr:              "retry failure",
+			expectCheckpointCalled: true,
+			expectTileCalls:        2,
+		},
+		{
+			name:      "duplicate canceled context does not retry",
+			initialCP: cpSize2,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: true}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
+				return nil, context.Canceled
+			},
+			readCheckpointFn: func(_ context.Context) ([]byte, error) {
+				return cpSize3, nil
+			},
+			cancelOnTileRead:       true,
+			expectErr:              "context canceled",
+			expectCheckpointCalled: false,
+			expectTileCalls:        1,
+		},
+		{
+			name:      "non-duplicate tile read failure does not retry",
+			initialCP: cpSize2,
+			addFn: func(_ context.Context, _ *tessera.Entry) tessera.IndexFuture {
+				return func() (tessera.Index, error) { return tessera.Index{Index: 0, IsDup: false}, nil }
+			},
+			readTileFn: func(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {
+				return nil, fmt.Errorf("tile unavailable")
+			},
+			readCheckpointFn: func(_ context.Context) ([]byte, error) {
+				return cpSize3, nil
+			},
+			expectErr:              "tile unavailable",
+			expectCheckpointCalled: false,
+			expectTileCalls:        1,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testCtx, cancel := context.WithCancel(ctx)
+			defer cancel()
+			var readTileCalls int
+			readTileFn := test.readTileFn
+			if readTileFn != nil {
+				orig := readTileFn
+				readTileFn = func(ctx context.Context, l, i uint64, p uint8) ([]byte, error) {
+					readTileCalls++
+					if test.cancelOnTileRead {
+						cancel()
+					}
+					return orig(ctx, l, i, p)
+				}
+			}
+			var readCheckpointCalled bool
+			readCheckpointFn := test.readCheckpointFn
+			if readCheckpointFn != nil {
+				orig := readCheckpointFn
+				readCheckpointFn = func(ctx context.Context) ([]byte, error) {
+					readCheckpointCalled = true
+					return orig(ctx)
+				}
+			}
+			s := storage{
+				awaiter: tessera.NewPublicationAwaiter(testCtx, func(_ context.Context) ([]byte, error) {
+					return test.initialCP, nil
+				}, 5*time.Millisecond),
+				addFn:            test.addFn,
+				readTileFn:       readTileFn,
+				readCheckpointFn: readCheckpointFn,
+			}
+			got, gotDup, gotErr := s.AddOrGet(testCtx, entry)
+			if test.readCheckpointFn != nil {
+				assert.Equal(t, test.expectCheckpointCalled, readCheckpointCalled)
+			}
+			if test.expectTileCalls > 0 {
+				assert.Equal(t, test.expectTileCalls, readTileCalls)
+			}
+			if test.expectErr != "" {
+				require.ErrorContains(t, gotErr, test.expectErr)
+				assert.Nil(t, got)
+				assert.False(t, gotDup)
+				if test.expectVerifyErr {
+					var verifyErr InclusionProofVerificationError
+					assert.ErrorAs(t, gotErr, &verifyErr)
+				}
+				return
+			}
+			require.NoError(t, gotErr)
+			assert.Equal(t, test.expectDup, gotDup)
+			assert.Equal(t, int64(0), got.LogIndex)
+			assert.Equal(t, test.expectTreeSize, got.InclusionProof.TreeSize)
+			assert.Equal(t, test.expectHash, got.InclusionProof.RootHash)
+			assert.Equal(t, test.expectHashes, got.InclusionProof.Hashes)
+			assert.Equal(t, string(test.expectCheckpoint), got.InclusionProof.Checkpoint.Envelope)
+			assert.Equal(t, entry.Data(), got.CanonicalizedBody)
 		})
 	}
 }

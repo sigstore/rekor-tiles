@@ -254,11 +254,16 @@ MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEeLw7gX40qy1z7JUhGMAaaDITbV7p
 }
 
 type mockStorage struct {
-	addFn func() (*rekor_pb.TransparencyLogEntry, error)
+	addFn      func() (*rekor_pb.TransparencyLogEntry, error)
+	addOrGetFn func() (*rekor_pb.TransparencyLogEntry, bool, error)
 }
 
 func (s *mockStorage) Add(_ context.Context, _ *ttessera.Entry) (*rekor_pb.TransparencyLogEntry, error) {
 	return s.addFn()
+}
+
+func (s *mockStorage) AddOrGet(_ context.Context, _ *ttessera.Entry) (*rekor_pb.TransparencyLogEntry, bool, error) {
+	return s.addOrGetFn()
 }
 
 func (s *mockStorage) ReadTile(_ context.Context, _, _ uint64, _ uint8) ([]byte, error) {

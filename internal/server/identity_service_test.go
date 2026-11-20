@@ -43,9 +43,36 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/transparency-dev/formats/proof"
 	ttessera "github.com/transparency-dev/tessera"
+	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
+
+type mockTransportStream struct {
+	header metadata.MD
+}
+
+func (m *mockTransportStream) Method() string                 { return "" }
+func (m *mockTransportStream) SendHeader(_ metadata.MD) error { return nil }
+func (m *mockTransportStream) SetTrailer(_ metadata.MD) error { return nil }
+func (m *mockTransportStream) SetHeader(md metadata.MD) error {
+	m.header = metadata.Join(m.header, md)
+	return nil
+}
+
+func counterValue(t *testing.T, name string) float64 {
+	t.Helper()
+	mfs, err := getMetrics().reg.Gather()
+	require.NoError(t, err)
+	for _, mf := range mfs {
+		if mf.GetName() == name && len(mf.GetMetric()) > 0 {
+			return mf.GetMetric()[0].GetCounter().GetValue()
+		}
+	}
+	t.Fatalf("metric %q not found", name)
+	return 0
+}
 
 func setupMockOIDC(t *testing.T) (*config.FulcioConfig, string, string) {
 	t.Helper()
@@ -166,6 +193,7 @@ func TestCreateIdentityEntry(t *testing.T) {
 		readOnly          bool
 		algReg            *signature.AlgorithmRegistryConfig
 		addFn             func() (*rekor_pb.TransparencyLogEntry, error)
+		isDup             bool
 		expectError       error
 		expectedCode      codes.Code
 		expectedExtraData []byte
@@ -290,11 +318,18 @@ func TestCreateIdentityEntry(t *testing.T) {
 			expectedCode: codes.Canceled,
 		},
 		{
-			name:         "duplicate entry",
-			req:          validReq,
-			addFn:        func() (*rekor_pb.TransparencyLogEntry, error) { return nil, tessera.DuplicateError{} },
-			expectError:  fmt.Errorf("an equivalent entry already exists in the transparency log"),
-			expectedCode: codes.AlreadyExists,
+			name: "duplicate entry",
+			req:  validReq,
+			addFn: func() (*rekor_pb.TransparencyLogEntry, error) {
+				return &rekor_pb.TransparencyLogEntry{
+					InclusionProof: &rekor_pb.InclusionProof{
+						LogIndex:   1,
+						Hashes:     [][]byte{proofHash},
+						Checkpoint: &rekor_pb.Checkpoint{Envelope: "checkpoint\n"},
+					},
+				}, nil
+			},
+			isDup: true,
 		},
 		{
 			name: "failed integration",
@@ -331,18 +366,39 @@ func TestCreateIdentityEntry(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			storage := &mockStorage{addFn: test.addFn}
+			storage := &mockStorage{
+				addOrGetFn: func() (*rekor_pb.TransparencyLogEntry, bool, error) {
+					tle, err := test.addFn()
+					return tle, test.isDup, err
+				},
+			}
 			algReg := test.algReg
 			if algReg == nil {
 				algReg = defaultAlgReg
 			}
 			server := NewIdentityServer(storage, test.readOnly, algReg, oidcCfg)
 
-			gotBody, gotErr := server.CreateEntry(context.Background(), test.req)
+			beforeNew := counterValue(t, "rekor_v2_new_identity_entries")
+			beforeDup := counterValue(t, "rekor_v2_duplicate_identity_entries")
+
+			stream := &mockTransportStream{}
+			ctx := grpc.NewContextWithServerTransportStream(context.Background(), stream)
+			gotBody, gotErr := server.CreateEntry(ctx, test.req)
 			if test.expectError == nil {
 				assert.NoError(t, gotErr)
 				assert.NotNil(t, gotBody)
 				assert.Equal(t, "text/plain", gotBody.ContentType)
+
+				if test.isDup {
+					assert.Empty(t, stream.header.Get(httpStatusCodeHeader))
+					assert.Empty(t, stream.header.Get(duplicateEntryHeader))
+					assert.Equal(t, float64(0), counterValue(t, "rekor_v2_new_identity_entries")-beforeNew)
+					assert.Equal(t, float64(1), counterValue(t, "rekor_v2_duplicate_identity_entries")-beforeDup)
+				} else {
+					assert.Equal(t, []string{"201"}, stream.header.Get(httpStatusCodeHeader))
+					assert.Equal(t, float64(1), counterValue(t, "rekor_v2_new_identity_entries")-beforeNew)
+					assert.Equal(t, float64(0), counterValue(t, "rekor_v2_duplicate_identity_entries")-beforeDup)
+				}
 
 				var p proof.TLogProof
 				assert.NoError(t, p.Unmarshal(gotBody.Data))

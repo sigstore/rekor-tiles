@@ -122,7 +122,7 @@ When running in `serve-identity` mode (`IdentityRekor` service), `POST /api/v2/l
 ```
 
 <!-- TODO: Replace with https://c2sp.org/identity-transparency once https://github.com/C2SP/C2SP/pull/244 is merged -->
-Instead of a `TransparencyLogEntry` JSON object, `serve-identity` returns a C2SP [`tlog-proof`](https://github.com/C2SP/C2SP/blob/main/tlog-proof.md) (`c2sp.org/tlog-proof@v1`). If context or OIDC claims are present, the `extra` line in the proof contains base64-encoded `key:base64(value)` lines (sorted by key). Entries in the tile log are binary [`c2sp.org/identity-transparency/v1`](https://github.com/C2SP/C2SP/pull/244) leaves rather than JSON `canonicalized_body` objects.
+Instead of a `TransparencyLogEntry` JSON object, `serve-identity` returns a C2SP [`tlog-proof`](https://github.com/C2SP/C2SP/blob/main/tlog-proof.md) (`c2sp.org/tlog-proof@v1`), with HTTP `201 Created` for new entries and HTTP `200 OK` (with a freshly computed proof for the existing index against the latest checkpoint; gRPC returns `OK` for both) if the entry was already logged. If context or OIDC claims are present, the `extra` line in the proof contains base64-encoded `key:base64(value)` lines (sorted by key). Entries in the tile log are binary [`c2sp.org/identity-transparency/v1`](https://github.com/C2SP/C2SP/pull/244) leaves rather than JSON `canonicalized_body` objects.
 
 ### Entry Type for `serve`
 
