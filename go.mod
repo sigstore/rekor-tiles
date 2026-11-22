@@ -21,7 +21,7 @@ require (
 	github.com/prometheus/client_golang v1.25.0
 	github.com/sigstore/fulcio v1.10.0
 	github.com/sigstore/protobuf-specs v0.5.2
-	github.com/sigstore/sigstore v1.11.3
+	github.com/sigstore/sigstore v1.11.4
 	github.com/sigstore/sigstore-go v1.4.0
 	github.com/sigstore/sigstore/pkg/signature/kms/aws v1.11.3
 	github.com/sigstore/sigstore/pkg/signature/kms/gcp v1.11.2
