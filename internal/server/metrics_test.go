@@ -54,6 +54,7 @@ func TestServe_httpMetricsSmoke(t *testing.T) {
 	expectedMetrics := []string{
 		"rekor_v2_new_hashedrekord_entries",
 		"rekor_v2_new_identity_entries",
+		"rekor_v2_duplicate_identity_entries",
 		"build_info",
 		"rekor_v2_http_api_latency",
 		"rekor_v2_http_requests_total",

@@ -18,7 +18,6 @@ import (
 	"context"
 	"errors"
 	"log/slog"
-	"strconv"
 
 	"github.com/grpc-ecosystem/grpc-gateway/v2/runtime"
 	"github.com/sigstore/fulcio/pkg/config"
@@ -77,18 +76,12 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 	}
 
 	entry := ttessera.NewEntry(leafBytes)
-	tle, err := s.storage.Add(ctx, entry)
+	tle, isDup, err := s.storage.AddOrGet(ctx, entry)
 	if errors.Is(err, ttessera.ErrPushback) {
 		return nil, status.Errorf(codes.Unavailable, "reached max pushback; retry")
 	}
 	if errors.Is(err, context.Canceled) {
 		return nil, status.Error(codes.Canceled, err.Error())
-	}
-	if dupErr, ok := errors.AsType[tessera.DuplicateError](err); ok {
-		_ = grpc.SetHeader(ctx, metadata.Pairs(
-			duplicateEntryHeader,
-			strconv.FormatUint(dupErr.Index(), 10)))
-		return nil, status.Error(codes.AlreadyExists, err.Error())
 	}
 	if errors.As(err, &tessera.InclusionProofVerificationError{}) {
 		getMetrics().inclusionProofFailureCount.Inc()
@@ -117,8 +110,12 @@ func (s *IdentityServer) CreateEntry(ctx context.Context, req *pb.IdentityReques
 	}
 	proofBytes := p.Marshal()
 
-	_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "201"))
-	getMetrics().newIdentityEntries.Inc()
+	if isDup {
+		getMetrics().duplicateIdentityEntries.Inc()
+	} else {
+		_ = grpc.SetHeader(ctx, metadata.Pairs(httpStatusCodeHeader, "201"))
+		getMetrics().newIdentityEntries.Inc()
+	}
 	return &httpbody.HttpBody{
 		ContentType: "text/plain",
 		Data:        proofBytes,

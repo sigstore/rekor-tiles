@@ -16,7 +16,9 @@
 package tessera
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -67,14 +69,16 @@ func (e InclusionProofVerificationError) Unwrap() error {
 // Storage provides the functions to add entries to a Tessera log.
 type Storage interface {
 	Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error)
+	AddOrGet(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, bool, error)
 	ReadTile(ctx context.Context, level, index uint64, p uint8) ([]byte, error)
 }
 
 type storage struct {
-	origin     string
-	awaiter    *tessera.PublicationAwaiter
-	addFn      tessera.AddFn
-	readTileFn client.TileFetcherFunc
+	origin           string
+	awaiter          *tessera.PublicationAwaiter
+	addFn            tessera.AddFn
+	readTileFn       client.TileFetcherFunc
+	readCheckpointFn client.CheckpointFetcherFunc
 }
 
 // NewAppendOptions initializes the Tessera append options with a checkpoint signer, which is the only non-optional append option.
@@ -127,32 +131,59 @@ func NewStorage(ctx context.Context, origin string, driver tessera.Driver, appen
 	slog.Info("starting Tessera sequencer")
 	awaiter := tessera.NewPublicationAwaiter(ctx, reader.ReadCheckpoint, 1*time.Second)
 	return &storage{
-		origin:     origin,
-		awaiter:    awaiter,
-		addFn:      appender.Add,
-		readTileFn: reader.ReadTile,
+		origin:           origin,
+		awaiter:          awaiter,
+		addFn:            appender.Add,
+		readTileFn:       reader.ReadTile,
+		readCheckpointFn: reader.ReadCheckpoint,
 	}, shutdown, nil
 }
 
 // Add adds a Tessera entry to the log, waits for it to be sequenced into the log,
 // and returns the log index and inclusion proof as a TransparencyLogEntry object.
 func (s *storage) Add(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, error) {
+	tle, _, err := s.add(ctx, entry, false)
+	return tle, err
+}
+
+// AddOrGet adds a Tessera entry to the log or, if deduplicated by antispam,
+// builds and verifies an inclusion proof for the existing log index.
+// The boolean return value reports whether the entry was a duplicate.
+func (s *storage) AddOrGet(ctx context.Context, entry *tessera.Entry) (*rekor_pb.TransparencyLogEntry, bool, error) {
+	return s.add(ctx, entry, true)
+}
+
+func (s *storage) add(ctx context.Context, entry *tessera.Entry, resolveDup bool) (*rekor_pb.TransparencyLogEntry, bool, error) {
 	idx, dup, checkpointBody, err := s.addEntry(ctx, entry)
 	if err != nil {
-		return nil, fmt.Errorf("add entry: %w", err)
+		return nil, false, fmt.Errorf("add entry: %w", err)
 	}
-	if dup {
-		return nil, DuplicateError{index: idx.U()}
+	if dup && !resolveDup {
+		return nil, false, DuplicateError{index: idx.U()}
 	}
 	inclusionProof, err := s.buildProof(ctx, idx, checkpointBody, entry.LeafHash())
+	if err != nil && dup && s.readCheckpointFn != nil && ctx.Err() == nil {
+		if _, isVerifyErr := errors.AsType[InclusionProofVerificationError](err); !isVerifyErr {
+			// The cached checkpoint from PublicationAwaiter may reference a partial tile
+			// that was since garbage-collected; retry once with a freshly fetched checkpoint.
+			// TODO(https://github.com/sigstore/rekor-tiles/issues/1067)
+			freshCP, cpErr := s.readCheckpointFn(ctx)
+			if cpErr != nil {
+				slog.WarnContext(ctx, "failed to read fresh checkpoint for inclusion proof retry", "index", idx.U(), "error", cpErr)
+			} else if !bytes.Equal(freshCP, checkpointBody) {
+				slog.WarnContext(ctx, "retrying inclusion proof with fresh checkpoint", "index", idx.U(), "error", err)
+				inclusionProof, err = s.buildProof(ctx, idx, freshCP, entry.LeafHash())
+			}
+		}
+	}
 	if err != nil {
-		return nil, fmt.Errorf("building inclusion proof: %w", err)
+		return nil, false, fmt.Errorf("building inclusion proof: %w", err)
 	}
 	return &rekor_pb.TransparencyLogEntry{
 		LogIndex:          idx.I(),
 		InclusionProof:    inclusionProof,
 		CanonicalizedBody: entry.Data(),
-	}, nil
+	}, dup, nil
 }
 
 // ReadTile looks up the tile at the given level, index within the level, and
