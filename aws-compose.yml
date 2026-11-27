@@ -17,7 +17,7 @@
 services:
   # S3Proxy - S3-compatible object storage emulator
   s3proxy:
-    image: andrewgaul/s3proxy:4.1.1@sha256:87662b2a5afcdfa5f478a1c61650bae4c87bbd15f6ff2823236bcfd66ef7fe04
+    image: andrewgaul/s3proxy:4.2.0@sha256:2ea6a1178aecdfdda5caa2b37e10fc73c9359f066b4a0a3f8ff1efbac9634159
     ports:
       - "9000:80"   # S3 API
     environment:
